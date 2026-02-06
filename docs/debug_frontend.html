@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>前端数据调试工具</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.success { background: #52c41a; color: white; }
+        .status.fail { background: #f5222d; color: white; }
+        .status.warning { background: #faad14; color: white; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        pre {
+            background: #f6f6f6;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .highlight {
+            background: yellow;
+            padding: 2px 4px;
+            font-weight: bold;
+        }
+        h2 {
+            color: #1890ff;
+            border-bottom: 2px solid #1890ff;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 前端数据调试工具</h1>
+    
+    <div class="card">
+        <h2>Step 1: 检查 localStorage</h2>
+        <button onclick="checkLocalStorage()">检查存储数据</button>
+        <button onclick="setCompetitionId()">设置 Competition ID = 21</button>
+        <button onclick="clearStorage()">清空所有数据</button>
+        <pre id="localStorageResult"></pre>
+    </div>
+    
+    <div class="card">
+        <h2>Step 2: 测试登录 API</h2>
+        <button onclick="testLogin()">测试登录</button>
+        <pre id="loginResult"></pre>
+    </div>
+    
+    <div class="card">
+        <h2>Step 3: 测试报名列表 API</h2>
+        <button onclick="testRegistrations()">获取报名列表</button>
+        <button onclick="testWithCompId1()">使用 Competition ID = 1</button>
+        <button onclick="testWithCompId21()">使用 Competition ID = 21</button>
+        <pre id="registrationsResult"></pre>
+    </div>
+    
+    <div class="card">
+        <h2>Step 4: 问题诊断</h2>
+        <button onclick="diagnose()">全面诊断</button>
+        <pre id="diagnoseResult"></pre>
+    </div>
+
+    <script>
+        let token = null;
+        
+        function checkLocalStorage() {
+            const result = document.getElementById('localStorageResult');
+            const data = {
+                token: localStorage.getItem('token'),
+                currentCompetitionId: localStorage.getItem('currentCompetitionId'),
+                userInfo: localStorage.getItem('userInfo')
+            };
+            
+            let html = '<strong>当前 localStorage 数据：</strong>\n\n';
+            html += `Token: ${data.token ? data.token.substring(0, 30) + '...' : '<span class="highlight">❌ 未设置</span>'}\n`;
+            html += `Competition ID: <span class="highlight">${data.currentCompetitionId || '❌ 未设置（将使用默认值 1）'}</span>\n`;
+            html += `UserInfo: ${data.userInfo ? '✅ 已设置' : '❌ 未设置'}\n`;
+            
+            result.innerHTML = html;
+        }
+        
+        function setCompetitionId() {
+            localStorage.setItem('currentCompetitionId', '21');
+            checkLocalStorage();
+            alert('✅ Competition ID 已设置为 21\n请刷新前端页面！');
+        }
+        
+        function clearStorage() {
+            if (confirm('确定要清空所有数据吗？')) {
+                localStorage.clear();
+                checkLocalStorage();
+                alert('✅ 已清空所有数据');
+            }
+        }
+        
+        async function testLogin() {
+            const result = document.getElementById('loginResult');
+            result.textContent = '正在登录...';
+            
+            try {
+                const response = await fetch('http://localhost:6031/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: '13800000041',
+                        name: 'CommitteeAdmin A',
+                        title: 'Committee Member',
+                        role: 'COMMITTEE_ADMIN',
+                        institutionId: null,
+                        reviewerGroupCode: null,
+                        interviewGroupCode: null,
+                        expertBackground: null
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    token = data.data.token;
+                    localStorage.setItem('token', token);
+                    result.innerHTML = `<span class="status success">✅ 登录成功</span>\n\nToken: ${token.substring(0, 50)}...\n\n完整响应:\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    result.innerHTML = `<span class="status fail">❌ 登录失败</span>\n\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="status fail">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+        
+        async function testRegistrations() {
+            const competitionId = localStorage.getItem('currentCompetitionId') || 1;
+            await fetchRegistrations(competitionId);
+        }
+        
+        async function testWithCompId1() {
+            await fetchRegistrations(1);
+        }
+        
+        async function testWithCompId21() {
+            await fetchRegistrations(21);
+        }
+        
+        async function fetchRegistrations(competitionId) {
+            const result = document.getElementById('registrationsResult');
+            result.textContent = `正在获取报名列表 (competitionId=${competitionId})...`;
+            
+            if (!token) {
+                token = localStorage.getItem('token');
+            }
+            
+            if (!token) {
+                result.innerHTML = '<span class="status fail">❌ 未登录</span>\n\n请先点击"测试登录"按钮';
+                return;
+            }
+            
+            try {
+                const url = `http://localhost:6031/api/registrations?competitionId=${competitionId}`;
+                const response = await fetch(url, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const count = data.data ? data.data.length : 0;
+                    
+                    let html = `<span class="status success">✅ 请求成功</span>\n\n`;
+                    html += `URL: ${url}\n`;
+                    html += `Competition ID: <span class="highlight">${competitionId}</span>\n`;
+                    html += `返回数据量: <span class="highlight">${count} 条</span>\n\n`;
+                    
+                    if (count > 0) {
+                        html += `第一条数据示例:\n${JSON.stringify(data.data[0], null, 2)}\n\n`;
+                        html += `<span class="status success">✅ 有数据！前端应该能显示</span>`;
+                    } else {
+                        html += `<span class="status warning">⚠️  返回空数组</span>\n`;
+                        html += `可能原因:\n`;
+                        html += `1. Competition ID ${competitionId} 没有报名数据\n`;
+                        html += `2. 请尝试使用 Competition ID = 21`;
+                    }
+                    
+                    result.innerHTML = html;
+                } else {
+                    result.innerHTML = `<span class="status fail">❌ 请求失败</span>\n\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                result.innerHTML = `<span class="status fail">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+        
+        async function diagnose() {
+            const result = document.getElementById('diagnoseResult');
+            result.textContent = '正在诊断...';
+            
+            let html = '<strong>🔍 全面诊断结果</strong>\n\n';
+            
+            // 检查 1: localStorage
+            const competitionId = localStorage.getItem('currentCompetitionId');
+            const storedToken = localStorage.getItem('token');
+            
+            html += '【检查 1】 localStorage\n';
+            html += `  Competition ID: ${competitionId ? `<span class="highlight">${competitionId}</span>` : '<span class="status fail">❌ 未设置</span>'}\n`;
+            html += `  Token: ${storedToken ? '<span class="status success">✅ 已设置</span>' : '<span class="status fail">❌ 未设置</span>'}\n\n`;
+            
+            // 检查 2: 后端连通性
+            html += '【检查 2】 后端连通性\n';
+            try {
+                const healthResponse = await fetch('http://localhost:6031/actuator/health', { timeout: 3000 });
+                html += `  Health Check: <span class="status success">✅ 后端运行正常</span>\n\n`;
+            } catch (e) {
+                html += `  Health Check: <span class="status fail">❌ 后端无响应</span>\n\n`;
+            }
+            
+            // 检查 3: 测试不同 Competition ID
+            html += '【检查 3】 测试不同 Competition ID\n';
+            
+            if (!token && storedToken) {
+                token = storedToken;
+            }
+            
+            if (token) {
+                for (const id of [1, 21]) {
+                    try {
+                        const response = await fetch(`http://localhost:6031/api/registrations?competitionId=${id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        const data = await response.json();
+                        const count = data.success && data.data ? data.data.length : 0;
+                        
+                        if (count > 0) {
+                            html += `  Competition ID ${id}: <span class="status success">✅ ${count} 条数据</span>\n`;
+                        } else {
+                            html += `  Competition ID ${id}: <span class="status warning">⚠️  无数据</span>\n`;
+                        }
+                    } catch (e) {
+                        html += `  Competition ID ${id}: <span class="status fail">❌ 请求失败</span>\n`;
+                    }
+                }
+            } else {
+                html += '  <span class="status fail">❌ 无 Token，请先登录</span>\n';
+            }
+            
+            html += '\n<strong>📋 诊断结论</strong>\n';
+            
+            if (!competitionId) {
+                html += '<span class="status warning">⚠️  Competition ID 未设置</span>\n';
+                html += '  → 解决方案: 点击上面的"设置 Competition ID = 21"按钮\n\n';
+            }
+            
+            if (!storedToken) {
+                html += '<span class="status warning">⚠️  未登录</span>\n';
+                html += '  → 解决方案: 在前端页面重新登录\n\n';
+            }
+            
+            html += '\n<strong>🎯 建议操作</strong>\n';
+            html += '1. 点击"设置 Competition ID = 21"按钮\n';
+            html += '2. 刷新前端页面 (http://localhost:6039)\n';
+            html += '3. 重新登录\n';
+            html += '4. 进入"书审阶段 > 报名与分组"页面\n';
+            html += '5. 应该能看到 33 条报名数据';
+            
+            result.innerHTML = html;
+        }
+        
+        // 页面加载时自动检查
+        window.onload = function() {
+            checkLocalStorage();
+        };
+    </script>
+</body>
+</html>

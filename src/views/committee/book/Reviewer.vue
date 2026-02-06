@@ -1,0 +1,612 @@
+<template>
+  <div class="reviewer-assignment-page">
+    <!-- 阶段进度 -->
+    <StageProgress :stages="stagesList" current-stage="BOOK" simple />
+
+    <div class="page-header">
+      <h2>书审评委分配</h2>
+      <el-button type="primary" @click="showAutoAssignDialog">
+        <el-icon><MagicStick /></el-icon>
+        自动分配
+      </el-button>
+    </div>
+
+    <div class="content-wrapper">
+      <!-- 左侧：报名列表 -->
+      <el-card class="left-panel" shadow="hover">
+        <template #header>
+          <div class="panel-header">
+            <span style="font-weight: 600;">📋 报名列表</span>
+            <el-tag type="info">共 {{ registrations.length }} 项</el-tag>
+          </div>
+        </template>
+
+        <!-- 筛选 -->
+        <el-form :inline="true" size="small" style="margin-bottom: 15px;">
+          <el-form-item label="竞赛组别">
+            <el-select v-model="registrationFilter.groupType" placeholder="全部" clearable style="width: 120px">
+              <el-option label="基层组" value="BASIC" />
+              <el-option label="综合组" value="COMPREHENSIVE" />
+              <el-option label="进阶组" value="ADVANCED" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="分组">
+            <el-select v-model="registrationFilter.groupCode" placeholder="全部" clearable style="width: 120px">
+              <el-option
+                v-for="code in allGroupCodes"
+                :key="code"
+                :label="code"
+                :value="code"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="loadRegistrations">查询</el-button>
+            <el-button @click="resetRegistrationFilter">重置</el-button>
+          </el-form-item>
+        </el-form>
+
+        <!-- 报名表格 -->
+        <el-table
+          :data="registrations"
+          v-loading="loadingRegistrations"
+          height="600"
+          @selection-change="handleRegistrationSelectionChange"
+          size="small"
+          border
+        >
+          <el-table-column type="selection" width="45" />
+          <el-table-column prop="registrationId" label="编号" width="80" />
+          <el-table-column prop="projectName" label="项目名称" show-overflow-tooltip min-width="150" />
+          <el-table-column prop="institutionName" label="机构" show-overflow-tooltip width="180" />
+          <el-table-column prop="groupType" label="组别" width="90">
+            <template #default="{ row }">
+              <el-tag v-if="row.groupType === 'BASIC'" type="success" size="small">基层组</el-tag>
+              <el-tag v-else-if="row.groupType === 'COMPREHENSIVE'" type="warning" size="small">综合组</el-tag>
+              <el-tag v-else-if="row.groupType === 'ADVANCED'" type="danger" size="small">进阶组</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="groupCode" label="分组" width="70" />
+        </el-table>
+      </el-card>
+
+      <!-- 右侧：评委列表 -->
+      <el-card class="right-panel" shadow="hover">
+        <template #header>
+          <div class="panel-header">
+            <span style="font-weight: 600;">👨‍⚖️ 评委列表</span>
+            <el-tag type="success">共 {{ reviewers.length }} 位</el-tag>
+          </div>
+        </template>
+
+        <!-- 评委操作 -->
+        <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+          <el-button type="primary" size="small" @click="handleManualAssign" :disabled="selectedRegistrations.length === 0 || selectedReviewers.length === 0">
+            <el-icon><User /></el-icon>
+            分配评委 ({{ selectedRegistrations.length }} 项 × {{ selectedReviewers.length }} 位)
+          </el-button>
+          <el-button size="small" @click="loadReviewers">
+            <el-icon><Refresh /></el-icon>
+            刷新
+          </el-button>
+        </div>
+
+        <el-alert
+          v-if="selectedRegistrations.length > 0"
+          :title="`已选 ${selectedRegistrations.length} 个报名项目`"
+          type="info"
+          :closable="false"
+          style="margin-bottom: 15px;"
+        />
+
+        <!-- 评委表格 -->
+        <el-table
+          :data="reviewers"
+          v-loading="loadingReviewers"
+          height="580"
+          @selection-change="handleReviewerSelectionChange"
+          :row-class-name="getReviewerRowClass"
+          size="small"
+          border
+        >
+          <el-table-column type="selection" width="45" :selectable="isReviewerSelectable" />
+          <el-table-column prop="name" label="姓名" width="100" />
+          <el-table-column prop="title" label="职称" width="100" />
+          <el-table-column prop="institutionName" label="机构" show-overflow-tooltip min-width="120" />
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag v-if="isSameInstitution(row)" type="danger" size="small">同机构</el-tag>
+              <el-tag v-else-if="isAlreadyAssigned(row)" type="warning" size="small">已分配</el-tag>
+              <el-tag v-else type="success" size="small">可分配</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="背景" width="80">
+            <template #default="{ row }">
+              <el-tag v-if="row.expertBackground === 'MANAGEMENT'" size="small">管理</el-tag>
+              <el-tag v-else-if="row.expertBackground === 'MEDICAL'" type="success" size="small">医疗</el-tag>
+              <el-tag v-else-if="row.expertBackground === 'NURSING'" type="warning" size="small">护理</el-tag>
+              <el-tag v-else-if="row.expertBackground" size="small">其他</el-tag>
+              <el-tag v-else type="info" size="small">未设置</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="负荷" width="70">
+            <template #default="{ row }">
+              <el-tag :type="getLoadTagType(row.currentLoad)" size="small">
+                {{ row.currentLoad ?? 0 }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+    </div>
+
+    <!-- 自动分配对话框 -->
+    <el-dialog v-model="autoAssignDialogVisible" title="自动分配书审评委" width="500px">
+      <el-form :model="autoAssignForm" label-width="140px">
+        <el-form-item label="每个项目评委数">
+          <el-input-number 
+            v-model="autoAssignForm.reviewersPerRegistration" 
+            :min="1" 
+            :max="5"
+            style="width: 100%"
+          />
+          <div style="font-size: 12px; color: #909399; margin-top: 5px;">
+            建议每个项目分配 2-3 位评委
+          </div>
+        </el-form-item>
+        <el-form-item label="自动分配说明">
+          <el-alert type="info" :closable="false">
+            <div style="font-size: 13px; line-height: 1.6;">
+              系统将自动为所有书审报名分配评委，并满足：<br>
+              • 同机构回避<br>
+              • 评审负荷均衡<br>
+              • 避免重复评审
+            </div>
+          </el-alert>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="autoAssignDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleAutoAssign" :loading="autoAssigning">
+          确认分配
+        </el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { MagicStick, User, Refresh } from '@element-plus/icons-vue'
+import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers, getReviewTasksByStage } from '@/api/admin'
+import StageProgress from '@/components/StageProgress.vue'
+import { useCompetitionStages } from '@/composables/useCompetitionStages'
+
+const { stagesList } = useCompetitionStages()
+
+const competitionId = ref(localStorage.getItem('currentCompetitionId') || '21')
+
+// 报名列表
+const registrations = ref([])
+const loadingRegistrations = ref(false)
+const selectedRegistrations = ref([])
+const registrationFilter = ref({
+  competitionId: competitionId.value,
+  groupType: '',
+  groupCode: ''
+})
+
+// 评委列表
+const reviewers = ref([])
+const loadingReviewers = ref(false)
+const selectedReviewers = ref([])
+
+// 自动分配
+const autoAssignDialogVisible = ref(false)
+const autoAssigning = ref(false)
+const autoAssignForm = ref({
+  reviewersPerRegistration: 2
+})
+
+// 所有分组代码
+const allGroupCodes = computed(() => {
+  const codes = []
+  // A1-A10 (基层组)
+  for (let i = 1; i <= 10; i++) {
+    codes.push(`A${i}`)
+  }
+  // B1-B10 (综合组)
+  for (let i = 1; i <= 10; i++) {
+    codes.push(`B${i}`)
+  }
+  // C1-C10 (进阶组)
+  for (let i = 1; i <= 10; i++) {
+    codes.push(`C${i}`)
+  }
+  return codes
+})
+
+// 加载报名列表
+const loadRegistrations = async () => {
+  loadingRegistrations.value = true
+  try {
+    const res = await filterRegistrations(registrationFilter.value)
+    if (res.success) {
+      registrations.value = res.data || []
+      console.log(`✅ 加载报名列表成功：${registrations.value.length} 条`)
+    } else {
+      ElMessage.error(res.message || '加载报名列表失败')
+      registrations.value = []
+    }
+  } catch (error) {
+    console.error('❌ 加载报名列表失败:', error)
+    ElMessage.error('加载失败，请检查网络')
+    registrations.value = []
+  } finally {
+    loadingRegistrations.value = false
+  }
+}
+
+// 加载评委列表
+const loadReviewers = async () => {
+  loadingReviewers.value = true
+  try {
+    const res = await getReviewers({
+      competitionId: competitionId.value
+    })
+    if (res.success) {
+      reviewers.value = res.data || []
+      console.log(`✅ 加载评委列表成功：${reviewers.value.length} 位`)
+    } else {
+      ElMessage.error(res.message || '加载评委列表失败')
+      reviewers.value = []
+    }
+  } catch (error) {
+    console.error('❌ 加载评委列表失败:', error)
+    ElMessage.error('加载失败，请检查网络')
+    reviewers.value = []
+  } finally {
+    loadingReviewers.value = false
+  }
+}
+
+// 重置筛选
+const resetRegistrationFilter = () => {
+  registrationFilter.value = {
+    competitionId: competitionId.value,
+    groupType: '',
+    groupCode: ''
+  }
+  loadRegistrations()
+}
+
+// 已分配的任务映射 {registrationId: [reviewerId1, reviewerId2, ...]}
+const assignedTasks = ref({})
+
+// 加载已分配的任务
+const loadAssignedTasks = async () => {
+  if (selectedRegistrations.value.length === 0) {
+    assignedTasks.value = {}
+    return
+  }
+
+  try {
+    const res = await getReviewTasksByStage({
+      competitionId: competitionId.value,
+      stage: 'BOOK'
+    })
+    
+    if (res.success) {
+      const tasks = res.data || []
+      const mapping = {}
+      
+      // 构建映射：registrationId -> [reviewerIds]
+      tasks.forEach(task => {
+        if (!mapping[task.registrationId]) {
+          mapping[task.registrationId] = []
+        }
+        mapping[task.registrationId].push(task.reviewerId)
+      })
+      
+      assignedTasks.value = mapping
+      console.log('✅ 加载已分配任务:', mapping)
+    }
+  } catch (error) {
+    console.error('❌ 加载已分配任务失败:', error)
+  }
+}
+
+// 选中报名
+const handleRegistrationSelectionChange = async (selection) => {
+  selectedRegistrations.value = selection
+  console.log('✅ 选中报名:', selection.length, '项')
+  
+  // 加载已分配的任务
+  await loadAssignedTasks()
+}
+
+// 选中评委
+const handleReviewerSelectionChange = (selection) => {
+  selectedReviewers.value = selection
+  console.log('✅ 选中评委:', selection)
+}
+
+// 判断评委是否与选中的报名项目同机构
+const isSameInstitution = (reviewer) => {
+  if (selectedRegistrations.value.length === 0) return false
+  
+  // 使用 institutionName 比较（报名列表API不返回institutionId）
+  return selectedRegistrations.value.some(
+    registration => registration.institutionName === reviewer.institutionName
+  )
+}
+
+// 判断评委是否已分配过选中的项目
+const isAlreadyAssigned = (reviewer) => {
+  if (selectedRegistrations.value.length === 0) return false
+  
+  return selectedRegistrations.value.some(registration => {
+    const assignedReviewers = assignedTasks.value[registration.registrationId] || []
+    return assignedReviewers.includes(reviewer.id)
+  })
+}
+
+// 评委是否可选
+const isReviewerSelectable = (row) => {
+  if (selectedRegistrations.value.length === 0) return true
+  
+  // 同机构或已分配过，都不可选
+  return !isSameInstitution(row) && !isAlreadyAssigned(row)
+}
+
+// 评委行样式
+const getReviewerRowClass = ({ row }) => {
+  if (isSameInstitution(row) || isAlreadyAssigned(row)) {
+    return 'disabled-row'
+  }
+  return ''
+}
+
+// 手动分配
+const handleManualAssign = async () => {
+  if (selectedRegistrations.value.length === 0) {
+    ElMessage.warning('请先选择至少一个报名项目')
+    return
+  }
+  if (selectedReviewers.value.length === 0) {
+    ElMessage.warning('请至少选择一位评委')
+    return
+  }
+
+  // 检查所有冲突
+  const conflicts = []
+  
+  console.log('🔍 开始检测冲突...')
+  console.log('选中的报名:', selectedRegistrations.value.map(r => ({ id: r.registrationId, name: r.projectName, institutionId: r.institutionId })))
+  console.log('选中的评委:', selectedReviewers.value.map(r => ({ id: r.id, name: r.name, institutionId: r.institutionId })))
+  console.log('已分配任务映射:', assignedTasks.value)
+  
+  selectedRegistrations.value.forEach(registration => {
+    selectedReviewers.value.forEach(reviewer => {
+      console.log(`检查: ${registration.projectName} ← ${reviewer.name}`)
+      console.log(`  项目机构: ${registration.institutionName}`)
+      console.log(`  评委机构: ${reviewer.institutionName}`)
+      
+      // 检查同机构（使用 institutionName 比较，因为报名列表API不返回institutionId）
+      if (registration.institutionName === reviewer.institutionName) {
+        console.log(`  ❌ 同机构冲突！`)
+        conflicts.push({
+          project: registration.projectName,
+          reviewer: reviewer.name,
+          reason: '同机构回避',
+          detail: registration.institutionName
+        })
+      }
+      // 检查是否已分配
+      else {
+        const assignedReviewers = assignedTasks.value[registration.registrationId] || []
+        console.log(`  已分配评委IDs:`, assignedReviewers)
+        if (assignedReviewers.includes(reviewer.id)) {
+          console.log(`  ❌ 重复分配冲突！`)
+          conflicts.push({
+            project: registration.projectName,
+            reviewer: reviewer.name,
+            reason: '已分配过',
+            detail: '该评委已评审此项目'
+          })
+        } else {
+          console.log(`  ✅ 无冲突`)
+        }
+      }
+    })
+  })
+  
+  console.log(`冲突总数: ${conflicts.length}`, conflicts)
+
+  // 如果有任何冲突，直接阻止并提示
+  if (conflicts.length > 0) {
+    const conflictMessages = conflicts.slice(0, 10).map(c => 
+      `• ${c.project} ← ${c.reviewer} (${c.reason})`
+    ).join('\n')
+    
+    ElMessageBox.alert(
+      `检测到分配冲突，无法分配：\n\n${conflictMessages}${conflicts.length > 10 ? `\n... 还有 ${conflicts.length - 10} 个冲突` : ''}\n\n请重新选择其他评委。`,
+      '分配冲突',
+      {
+        confirmButtonText: '知道了',
+        type: 'warning'
+      }
+    )
+    return
+  }
+
+  // 没有冲突，弹确认框
+  const totalTasks = selectedRegistrations.value.length * selectedReviewers.value.length
+
+  try {
+    await ElMessageBox.confirm(
+      `确认为 ${selectedRegistrations.value.length} 个项目分配 ${selectedReviewers.value.length} 位评委？\n（共 ${totalTasks} 个评审任务）`,
+      '确认分配',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    // 用户确认后，开始分配
+    // 生成所有任务
+    const tasks = []
+    selectedRegistrations.value.forEach(registration => {
+      selectedReviewers.value.forEach(reviewer => {
+        tasks.push({
+          registrationId: registration.registrationId,
+          reviewerId: reviewer.id,
+          stage: 'BOOK',
+          projectName: registration.projectName,
+          reviewerName: reviewer.name
+        })
+      })
+    })
+
+    let successCount = 0
+    let failedList = []
+
+    // 逐个提交任务
+    for (const task of tasks) {
+      try {
+        const res = await createReviewTask({
+          registrationId: task.registrationId,
+          reviewerId: task.reviewerId,
+          stage: task.stage
+        })
+        if (res.success) {
+          successCount++
+        } else {
+          failedList.push(`${task.projectName} → ${task.reviewerName}: ${res.message}`)
+        }
+      } catch (error) {
+        failedList.push(`${task.projectName} → ${task.reviewerName}: ${error.message || '网络错误'}`)
+      }
+    }
+
+    if (successCount > 0) {
+      ElMessage.success(`成功分配 ${successCount} 个评审任务`)
+      loadReviewers() // 刷新评委负荷
+    }
+
+    if (failedList.length > 0) {
+      ElMessageBox.alert(
+        failedList.slice(0, 10).join('\n') + (failedList.length > 10 ? `\n... 还有 ${failedList.length - 10} 条错误` : ''),
+        '部分分配失败',
+        {
+          confirmButtonText: '确定',
+          type: 'warning'
+        }
+      )
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('❌ 手动分配失败:', error)
+      ElMessage.error('分配失败')
+    }
+  }
+}
+
+// 显示自动分配对话框
+const showAutoAssignDialog = () => {
+  autoAssignDialogVisible.value = true
+}
+
+// 自动分配
+const handleAutoAssign = async () => {
+  autoAssigning.value = true
+  try {
+    const res = await autoAssignReviewers({
+      competitionId: competitionId.value,
+      stage: 'BOOK',
+      reviewersPerRegistration: autoAssignForm.value.reviewersPerRegistration
+    })
+
+    if (res.success) {
+      ElMessage.success('自动分配成功')
+      autoAssignDialogVisible.value = false
+      loadReviewers() // 刷新评委负荷
+      loadRegistrations() // 刷新报名列表
+    } else {
+      ElMessage.error(res.message || '自动分配失败')
+    }
+  } catch (error) {
+    console.error('❌ 自动分配失败:', error)
+    ElMessage.error('自动分配失败，请检查网络')
+  } finally {
+    autoAssigning.value = false
+  }
+}
+
+// 负荷标签类型
+const getLoadTagType = (load) => {
+  if (!load || load === 0) return 'info'
+  if (load < 5) return 'success'
+  if (load < 10) return 'warning'
+  return 'danger'
+}
+
+onMounted(() => {
+  loadRegistrations()
+  loadReviewers()
+})
+</script>
+
+<style scoped>
+.reviewer-assignment-page {
+  padding: 20px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #303133;
+}
+
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.left-panel,
+.right-panel {
+  height: 750px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+:deep(.el-card__body) {
+  padding: 15px;
+  height: calc(100% - 60px);
+  overflow: auto;
+}
+
+:deep(.disabled-row) {
+  background-color: #f5f5f5;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+:deep(.disabled-row:hover > td) {
+  background-color: #f5f5f5 !important;
+}
+</style>

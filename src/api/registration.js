@@ -1,0 +1,172 @@
+import request from '@/utils/request'
+
+/**
+ * 获取我的报名列表 (从token获取申请人ID)
+ */
+export function getMyRegistrations() {
+  return request({
+    url: '/registrations/my',
+    method: 'get'
+  })
+}
+
+/**
+ * 创建报名
+ */
+export function createRegistration(data) {
+  return request({
+    url: '/registrations',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 更新报名基本信息
+ */
+export function updateRegistration(id, data) {
+  return request({
+    url: `/registrations/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 更新报名成员信息
+ */
+export function updateRegistrationMembers(id, data) {
+  return request({
+    url: `/registrations/${id}/members`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 更新活动说明
+ */
+export function updateRegistrationActivity(id, data) {
+  return request({
+    url: `/registrations/${id}/activity`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 更新项目摘要
+ */
+export function updateRegistrationSummary(id, data) {
+  return request({
+    url: `/registrations/${id}/summary`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 上传材料
+ */
+export function uploadRegistrationMaterial(id, file, type) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request({
+    url: `/registrations/${id}/materials?type=${type}`,
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+/**
+ * 提交报名
+ */
+export function submitRegistration(id) {
+  return request({
+    url: `/registrations/${id}/submit`,
+    method: 'post'
+  })
+}
+
+/**
+ * 退回报名
+ */
+export function returnRegistration(id, data) {
+  return request({
+    url: `/registrations/${id}/return`,
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 批准报名
+ */
+export function approveRegistration(id) {
+  return request({
+    url: `/registrations/${id}/approve`,
+    method: 'post'
+  })
+}
+
+/**
+ * 根据申请人查询报名
+ */
+export function getRegistrationsByApplicant(applicantId) {
+  return request({
+    url: '/registrations/by-applicant',
+    method: 'get',
+    params: { applicantId }
+  })
+}
+
+/**
+ * 获取报名详情
+ */
+export function getRegistration(id) {
+  return request({
+    url: `/registrations/${id}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 获取报名详情 (别名)
+ */
+export function getRegistrationDetail(id) {
+  return getRegistration(id)
+}
+
+/**
+ * 获取报名评审结果
+ */
+export function getRegistrationReviewResults(id) {
+  return request({
+    url: `/registrations/${id}/review-results`,
+    method: 'get'
+  })
+}
+
+/**
+ * 获取报名评审详情
+ */
+export function getRegistrationReviewDetails(id) {
+  return request({
+    url: `/registrations/${id}/review-details`,
+    method: 'get'
+  })
+}
+
+/**
+ * 获取报名列表（支持筛选）
+ */
+export function getRegistrations(params) {
+  return request({
+    url: '/registrations',
+    method: 'get',
+    params
+  })
+}
