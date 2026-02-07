@@ -287,7 +287,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MagicStick, User, Refresh, List } from '@element-plus/icons-vue'
-import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers } from '@/api/admin'
+import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers, getReviewTasksByStage } from '@/api/admin'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
