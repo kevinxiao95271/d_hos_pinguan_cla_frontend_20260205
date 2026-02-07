@@ -52,12 +52,12 @@
         </el-form-item>
         
         <el-form-item label="品管工具">
-          <el-select v-model="filters.methodCode" placeholder="全部" clearable style="width: 180px">
+          <el-select v-model="filters.methodLabel" placeholder="全部" clearable style="width: 180px">
             <el-option
               v-for="item in dictionaries.methods"
               :key="item.code"
               :label="item.label"
-              :value="item.code"
+              :value="item.label"
             />
           </el-select>
         </el-form-item>
@@ -116,13 +116,13 @@
           项目名称：{{ filters.projectName }}
         </el-tag>
         <el-tag
-          v-if="filters.methodCode"
+          v-if="filters.methodLabel"
           closable
-          @close="filters.methodCode = ''; loadRegistrations()"
+          @close="filters.methodLabel = ''; loadRegistrations()"
           type="info"
           style="margin-right: 8px"
         >
-          品管工具：{{ getMethodLabel(filters.methodCode) }}
+          品管工具：{{ filters.methodLabel }}
         </el-tag>
       </div>
       
@@ -363,7 +363,7 @@ const filters = reactive({
   groupType: '',
   groupCode: '',
   projectName: '',
-  methodCode: ''
+  methodLabel: ''  // 修复：改为 methodLabel（后端期望中文标签）
 })
 
 const changeGroupDialogVisible = ref(false)
@@ -409,7 +409,7 @@ const hasActiveFilters = computed(() => {
     filters.groupType ||
     filters.groupCode ||
     filters.projectName ||
-    filters.methodCode
+    filters.methodLabel
   )
 })
 
@@ -566,12 +566,20 @@ const confirmChangeGroup = async () => {
 
 const autoGroup = async () => {
   try {
-    await ElMessageBox.confirm('确定要自动分配分组吗？', '提示', {
-      type: 'warning'
-    })
+    await ElMessageBox.confirm(
+      '确定要自动分配分组吗？将按每组10人自动分配到A组系列（A1、A2、A3...）',
+      '提示',
+      {
+        type: 'warning',
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }
+    )
     
     const res = await autoGroupRegistrations({
-      competitionId: filters.competitionId
+      competitionId: filters.competitionId,
+      groupPrefix: 'A',  // 分组前缀
+      groupSize: 10      // 每组人数
     })
     
     if (res.success) {

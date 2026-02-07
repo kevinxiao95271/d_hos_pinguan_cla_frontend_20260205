@@ -95,14 +95,9 @@ const testAccounts = [
   { phone: '13966000013', name: '参赛者13', label: '参赛者13⭐', role: 'CONTESTANT', institutionId: null },
   { phone: '13966000014', name: '参赛者14', label: '参赛者14⭐', role: 'CONTESTANT', institutionId: null },
   { phone: '13966000015', name: '参赛者15', label: '参赛者15⭐', role: 'CONTESTANT', institutionId: null },
-  // 测试参赛者账号
-  { phone: '13800000011', name: 'Contestant A', label: '参赛者A', role: 'CONTESTANT', institutionId: 1 },
-  { phone: '13800000012', name: 'Contestant B', label: '参赛者B', role: 'CONTESTANT', institutionId: 2 },
   // 推荐评审专家账号（有任务数据）⭐
   { phone: '13800000021', name: '李明华', label: '李明华⭐', role: 'REVIEWER', institutionId: null },
   { phone: '13800002004', name: '孙丽娟', label: '孙丽娟⭐', role: 'REVIEWER', institutionId: null },
-  // 测试评审专家账号
-  { phone: '13800000022', name: 'Reviewer B', label: '评审专家B', role: 'REVIEWER', institutionId: 1 },
   // 组委会账号
   { phone: '13800000041', name: 'CommitteeAdmin A', label: '组委会A', role: 'COMMITTEE_ADMIN', institutionId: null },
   { phone: '13800000042', name: 'CommitteeAdmin B', label: '组委会B', role: 'COMMITTEE_ADMIN', institutionId: null },

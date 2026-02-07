@@ -23,29 +23,29 @@
           shadow="hover"
         >
           <div class="card-content">
-            <div class="competition-info">
-              <h3>{{ item.name }}</h3>
-              <el-tag :type="getStageType(item.currentStage)">
-                {{ getStageText(item.currentStage) }}
-              </el-tag>
+          <div class="competition-info">
+            <h3>{{ item.name }}</h3>
+            <el-tag :type="getStageType(item.stage)">
+              {{ getStageText(item.stage) }}
+            </el-tag>
+          </div>
+          
+          <div class="meta-info">
+            <div class="meta-item">
+              <span class="label">报名时间：</span>
+              <span>{{ formatDateRange(item.registerStart, item.registerEnd) }}</span>
             </div>
-            
-            <div class="meta-info">
-              <div class="meta-item">
-                <span class="label">报名时间：</span>
-                <span>{{ formatDateRange(item.registrationStartTime, item.registrationEndTime) }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="label">当前阶段：</span>
-                <span>{{ getStageText(item.currentStage) }}</span>
-              </div>
+            <div class="meta-item">
+              <span class="label">当前阶段：</span>
+              <span>{{ getStageText(item.stage) }}</span>
             </div>
+          </div>
             
             <div class="actions">
               <el-button
-                type="primary"
-                :disabled="!canRegister(item)"
-                @click="register(item.id)"
+                :type="isRegistered(item.id) ? 'default' : 'primary'"
+                :disabled="!canRegister(item) && !isRegistered(item.id)"
+                @click="handleButtonClick(item)"
               >
                 {{ getButtonText(item) }}
               </el-button>
@@ -61,22 +61,34 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCompetitions } from '@/api/competition'
+import { getMyRegistrations } from '@/api/registration'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 
 const loading = ref(false)
 const competitions = ref([])
+const myRegistrations = ref([])  // 我的报名列表
 
 const loadData = async () => {
   try {
     loading.value = true
-    const res = await getCompetitions()
-    if (res.success) {
-      competitions.value = res.data || []
+    
+    // 并行加载赛事列表和我的报名
+    const [competitionsRes, myRegsRes] = await Promise.all([
+      getCompetitions(),
+      getMyRegistrations()
+    ])
+    
+    if (competitionsRes.success) {
+      competitions.value = competitionsRes.data || []
+    }
+    
+    if (myRegsRes.success) {
+      myRegistrations.value = myRegsRes.data || []
     }
   } catch (error) {
-    console.error('加载赛事列表失败:', error)
+    console.error('加载数据失败:', error)
   } finally {
     loading.value = false
   }
@@ -84,7 +96,7 @@ const loadData = async () => {
 
 const getStageType = (stage) => {
   const map = {
-    'REGISTRATION': 'success',
+    'REGISTER': 'success',  // 修复：后端返回 REGISTER 而不是 REGISTRATION
     'BOOK': 'warning',
     'INTERVIEW': 'warning',
     'FINAL': 'danger'
@@ -94,7 +106,7 @@ const getStageType = (stage) => {
 
 const getStageText = (stage) => {
   const map = {
-    'REGISTRATION': '报名中',
+    'REGISTER': '报名中',  // 修复：后端返回 REGISTER 而不是 REGISTRATION
     'BOOK': '书审中',
     'INTERVIEW': '面谈中',
     'FINAL': '决赛中'
@@ -107,16 +119,43 @@ const formatDateRange = (start, end) => {
   return `${dayjs(start).format('YYYY-MM-DD')} 至 ${dayjs(end).format('YYYY-MM-DD')}`
 }
 
+// 判断是否已报名该赛事
+const isRegistered = (competitionId) => {
+  return myRegistrations.value.some(
+    reg => reg.competitionId === competitionId
+  )
+}
+
+// 获取已报名的记录
+const getMyRegistration = (competitionId) => {
+  return myRegistrations.value.find(
+    reg => reg.competitionId === competitionId
+  )
+}
+
 const canRegister = (item) => {
-  return item.currentStage === 'REGISTRATION'
+  // 只有报名阶段且未报名的才能报名
+  return item.stage === 'REGISTER' && !isRegistered(item.id)
 }
 
 const getButtonText = (item) => {
+  if (isRegistered(item.id)) {
+    return '查看报名'
+  }
   return canRegister(item) ? '立即报名' : '报名已结束'
 }
 
-const register = (competitionId) => {
-  router.push(`/contestant/register/${competitionId}`)
+const handleButtonClick = (item) => {
+  if (isRegistered(item.id)) {
+    // 跳转到报名详情
+    const myReg = getMyRegistration(item.id)
+    if (myReg) {
+      router.push(`/contestant/registration/${myReg.id}`)
+    }
+  } else {
+    // 跳转到报名页面
+    router.push(`/contestant/register/${item.id}`)
+  }
 }
 
 onMounted(() => {

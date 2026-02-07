@@ -156,15 +156,19 @@
             />
           </el-form-item>
           
-          <el-form-item>
-            <el-button v-if="!isViewMode" type="primary" :loading="submitting" @click="submitReview">
+          <el-form-item v-if="!isViewMode">
+            <el-button type="primary" :loading="submitting" @click="submitReview">
               提交评分
-            </el-button>
-            <el-button @click="goBack">
-              返回
             </el-button>
           </el-form-item>
         </el-form>
+        
+        <!-- 返回按钮移到表单外，避免被表单的 disabled 影响 -->
+        <div style="margin-top: 20px; text-align: left; padding-left: 200px;">
+          <el-button @click="goBack">
+            返回
+          </el-button>
+        </div>
       </div>
     </el-card>
   </div>
