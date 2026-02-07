@@ -5,10 +5,16 @@
 
     <div class="page-header">
       <h2>面谈评委分配</h2>
-      <el-button type="primary" @click="showAutoAssignDialog">
-        <el-icon><MagicStick /></el-icon>
-        自动分配
-      </el-button>
+      <div class="header-actions">
+        <el-button type="success" @click="showAssignedTasksDialog">
+          <el-icon><List /></el-icon>
+          查看已分配任务
+        </el-button>
+        <el-button type="primary" @click="showAutoAssignDialog">
+          <el-icon><MagicStick /></el-icon>
+          自动分配
+        </el-button>
+      </div>
     </div>
 
     <el-alert type="warning" :closable="false" style="margin-bottom: 20px;">
@@ -62,6 +68,14 @@
           <el-table-column prop="registrationId" label="编号" width="80" />
           <el-table-column prop="projectName" label="项目名称" show-overflow-tooltip min-width="150" />
           <el-table-column prop="institutionName" label="机构" show-overflow-tooltip width="180" />
+          <el-table-column prop="institutionLevel" label="机构等级" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.institutionLevel" type="success" size="small">
+                {{ row.institutionLevel }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="groupCode" label="分组" width="90">
             <template #default="{ row }">
               <el-tag v-if="row.groupCode" type="success" size="small">{{ row.groupCode }}</el-tag>
@@ -70,6 +84,19 @@
           </el-table-column>
           <el-table-column prop="methodLabel" label="品管工具" show-overflow-tooltip width="120" />
         </el-table>
+
+        <!-- 报名列表分页器 -->
+        <div v-if="regShowPagination" class="pagination-container">
+          <el-pagination
+            v-model:current-page="regCurrentPage"
+            v-model:page-size="regPageSize"
+            :total="regTotalCount"
+            :page-sizes="regPageSizes"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="loadRegistrations"
+            @current-change="loadRegistrations"
+          />
+        </div>
       </el-card>
 
       <!-- 右侧：评委列表 -->
@@ -115,6 +142,14 @@
           <el-table-column prop="name" label="姓名" width="100" />
           <el-table-column prop="title" label="职称" width="100" />
           <el-table-column prop="institutionName" label="机构" show-overflow-tooltip min-width="120" />
+          <el-table-column prop="institutionLevel" label="机构等级" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.institutionLevel" type="success" size="small">
+                {{ row.institutionLevel }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="90">
             <template #default="{ row }">
               <el-tag v-if="isSameInstitution(row)" type="danger" size="small">同机构</el-tag>
@@ -138,6 +173,19 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 评委列表分页器 -->
+        <div v-if="revShowPagination" class="pagination-container">
+          <el-pagination
+            v-model:current-page="revCurrentPage"
+            v-model:page-size="revPageSize"
+            :total="revTotalCount"
+            :page-sizes="revPageSizes"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="loadReviewers"
+            @current-change="loadReviewers"
+          />
+        </div>
       </el-card>
     </div>
 
@@ -174,20 +222,103 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 查看已分配任务对话框 -->
+    <el-dialog 
+      v-model="assignedTasksDialogVisible" 
+      title="面谈阶段 - 已分配任务" 
+      width="1200px"
+      :close-on-click-modal="false"
+    >
+      <div v-loading="loadingAssignedTasks">
+        <el-alert 
+          v-if="allAssignedTasks.length === 0" 
+          type="info" 
+          :closable="false"
+          style="margin-bottom: 15px"
+        >
+          暂无已分配的评审任务
+        </el-alert>
+
+        <el-table 
+          v-else
+          :data="allAssignedTasks" 
+          border 
+          stripe
+          max-height="500"
+          style="width: 100%"
+        >
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="institutionName" label="医疗机构" width="160" show-overflow-tooltip />
+          <el-table-column prop="groupType" label="组别" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.groupType === 'BASIC'" type="success" size="small">基层组</el-tag>
+              <el-tag v-else-if="row.groupType === 'COMPREHENSIVE'" type="primary" size="small">综合组</el-tag>
+              <el-tag v-else-if="row.groupType === 'ADVANCED'" type="warning" size="small">进阶组</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="groupCode" label="分组" width="80" align="center" />
+          <el-table-column prop="reviewerName" label="评委姓名" width="100" />
+          <el-table-column prop="reviewerTitle" label="职称" width="120" show-overflow-tooltip />
+          <el-table-column prop="reviewerInstitutionName" label="评委机构" width="160" show-overflow-tooltip />
+          <el-table-column prop="status" label="状态" width="100" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.status === 'PENDING'" type="info" size="small">待评审</el-tag>
+              <el-tag v-else-if="row.status === 'CONFIRMED'" type="primary" size="small">已确认</el-tag>
+              <el-tag v-else-if="row.status === 'SCORED'" type="success" size="small">已评分</el-tag>
+              <el-tag v-else type="warning" size="small">{{ row.status }}</el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div style="margin-top: 15px; text-align: right; color: #606266;">
+          共 {{ allAssignedTasks.length }} 条任务记录
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="assignedTasksDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MagicStick, User, Refresh } from '@element-plus/icons-vue'
+import { MagicStick, User, Refresh, List } from '@element-plus/icons-vue'
 import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers } from '@/api/admin'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
+import { usePagination } from '@/composables/usePagination'
 
 const { stagesList } = useCompetitionStages()
 
 const competitionId = ref(localStorage.getItem('currentCompetitionId') || '21')
+
+// 报名列表分页
+const {
+  currentPage: regCurrentPage,
+  pageSize: regPageSize,
+  totalCount: regTotalCount,
+  pageSizes: regPageSizes,
+  showPagination: regShowPagination,
+  extractDataList: regExtractDataList,
+  resetPagination: regResetPagination,
+  getPaginationParams: regGetPaginationParams
+} = usePagination({ defaultPageSize: 50 })
+
+// 评委列表分页
+const {
+  currentPage: revCurrentPage,
+  pageSize: revPageSize,
+  totalCount: revTotalCount,
+  pageSizes: revPageSizes,
+  showPagination: revShowPagination,
+  extractDataList: revExtractDataList,
+  resetPagination: revResetPagination,
+  getPaginationParams: revGetPaginationParams
+} = usePagination({ defaultPageSize: 50 })
 
 // 报名列表（仅进阶组）
 const registrations = ref([])
@@ -212,6 +343,11 @@ const autoAssignForm = ref({
   reviewersPerRegistration: 2
 })
 
+// 查看已分配任务
+const assignedTasksDialogVisible = ref(false)
+const loadingAssignedTasks = ref(false)
+const allAssignedTasks = ref([])
+
 // 进阶组分组代码（C1-C10）
 const advancedGroupCodes = computed(() => {
   return Array.from({ length: 10 }, (_, i) => `C${i + 1}`)
@@ -221,9 +357,12 @@ const advancedGroupCodes = computed(() => {
 const loadRegistrations = async () => {
   loadingRegistrations.value = true
   try {
-    const res = await filterRegistrations(registrationFilter.value)
+    const res = await filterRegistrations({
+      ...registrationFilter.value,
+      ...regGetPaginationParams()
+    })
     if (res.success) {
-      registrations.value = res.data || []
+      registrations.value = regExtractDataList(res.data)
       console.log(`✅ 加载进阶组报名列表成功：${registrations.value.length} 条`)
     } else {
       ElMessage.error(res.message || '加载报名列表失败')
@@ -243,10 +382,11 @@ const loadReviewers = async () => {
   loadingReviewers.value = true
   try {
     const res = await getReviewers({
-      competitionId: competitionId.value
+      competitionId: competitionId.value,
+      ...revGetPaginationParams()
     })
     if (res.success) {
-      reviewers.value = res.data || []
+      reviewers.value = revExtractDataList(res.data)
       console.log(`✅ 加载评委列表成功：${reviewers.value.length} 位`)
     } else {
       ElMessage.error(res.message || '加载评委列表失败')
@@ -263,6 +403,7 @@ const loadReviewers = async () => {
 
 // 重置筛选
 const resetRegistrationFilter = () => {
+  regResetPagination()
   registrationFilter.value = {
     competitionId: competitionId.value,
     groupType: 'ADVANCED',
@@ -454,6 +595,37 @@ const handleAutoAssign = async () => {
   }
 }
 
+// 显示已分配任务对话框
+const showAssignedTasksDialog = async () => {
+  assignedTasksDialogVisible.value = true
+  await loadAllAssignedTasks()
+}
+
+// 加载所有已分配的任务
+const loadAllAssignedTasks = async () => {
+  loadingAssignedTasks.value = true
+  try {
+    const res = await getReviewTasksByStage({
+      competitionId: competitionId.value,
+      stage: 'INTERVIEW'
+    })
+    
+    if (res.success) {
+      allAssignedTasks.value = res.data || []
+      console.log('✅ 加载所有已分配任务:', allAssignedTasks.value.length, '条')
+    } else {
+      ElMessage.error(res.message || '加载失败')
+      allAssignedTasks.value = []
+    }
+  } catch (error) {
+    console.error('❌ 加载已分配任务失败:', error)
+    ElMessage.error('加载失败，请检查网络')
+    allAssignedTasks.value = []
+  } finally {
+    loadingAssignedTasks.value = false
+  }
+}
+
 // 负荷标签类型
 const getLoadTagType = (load) => {
   if (!load || load === 0) return 'info'
@@ -484,6 +656,11 @@ onMounted(() => {
   margin: 0;
   font-size: 20px;
   color: #303133;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .content-wrapper {
@@ -517,5 +694,11 @@ onMounted(() => {
 
 :deep(.disabled-row:hover > td) {
   background-color: #f5f5f5 !important;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

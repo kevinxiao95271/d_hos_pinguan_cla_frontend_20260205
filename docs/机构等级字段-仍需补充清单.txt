@@ -1,0 +1,107 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    机构等级字段 - 仍需后端补充的API清单
+═══════════════════════════════════════════════════════════════════════════════
+
+【说明】
+- 以下API仍缺少机构等级相关字段
+- 用户提供的10个API已由后端添加，但前端测试未检测到（可能需要重启后端服务）
+- 请后端补充以下API的字段
+
+───────────────────────────────────────────────────────────────────────────────
+
+API                                          字段路径                            字段名
+───────────────────────────────────────────────────────────────────────────────
+GET /api/registrations/my                   data[i].institutionLevel            institutionLevel
+GET /api/registrations/my                   data[i].institutionName             institutionName
+GET /api/registrations/{id}/review-results  data[i].institutionLevel            institutionLevel
+GET /api/reviews/tasks/stage                data[i].registrationId              registrationId
+GET /api/reviews/tasks/stage                data[i].projectName                 projectName
+GET /api/reviews/tasks/stage                data[i].institutionName             institutionName
+GET /api/reviews/tasks/stage                data[i].institutionLevel            institutionLevel
+───────────────────────────────────────────────────────────────────────────────
+
+【详细说明】
+
+1. GET /api/registrations/my - 我的报名列表
+   影响: 参赛者「我的报名」页面
+   说明: 如果列表需要显示机构名称和等级，需要添加这两个字段
+   当前: 只有 institutionId，缺少 institutionName 和 institutionLevel
+   
+2. GET /api/registrations/{id}/review-results - 评审结果查看
+   影响: 参赛者「评审结果」页面
+   说明: 查看评审结果时，可能需要显示评审专家所属机构等级
+   
+3. GET /api/reviews/tasks/stage - 按阶段获取评审任务列表
+   影响: 组委会「评审任务管理」页面
+   说明: 该API当前只返回 id, stage, status, createdAt
+         缺少完整的项目和机构信息
+         建议添加: registrationId, projectName, institutionName, institutionLevel
+   当前返回:
+   {
+     "data": [
+       {
+         "id": 115,
+         "stage": "BOOK",
+         "status": "SCORED",
+         "createdAt": "2026-02-06T18:12:37.447"
+       }
+     ]
+   }
+   
+   期望返回:
+   {
+     "data": [
+       {
+         "id": 115,
+         "registrationId": 106,                         ← 需要添加
+         "projectName": "护理交接班规范化-1",              ← 需要添加
+         "institutionName": "浙江大学医学院附属第二医院",  ← 需要添加
+         "institutionLevel": "三级甲等",                  ← 需要添加
+         "stage": "BOOK",
+         "status": "SCORED",
+         "createdAt": "2026-02-06T18:12:37.447"
+       }
+     ]
+   }
+
+───────────────────────────────────────────────────────────────────────────────
+
+【优先级】
+
+高优先级:
+  - GET /api/reviews/tasks/stage (缺少4个字段，信息不完整)
+
+中优先级:
+  - GET /api/registrations/my (如果列表需要显示机构信息)
+
+低优先级:
+  - GET /api/registrations/{id}/review-results (可选)
+
+───────────────────────────────────────────────────────────────────────────────
+
+【用户已提供的已添加API（待重启后端服务验证）】
+
+API                                          字段路径                            字段名
+───────────────────────────────────────────────────────────────────────────────
+POST /api/auth/login                        data.institutionRegion              institutionRegion
+POST /api/auth/login                        data.institutionLevel               institutionLevel
+GET /api/registrations/{id}                 data.institution.level              level
+GET /api/institutions                       data[i].level                       level
+GET /api/institutions/{id}                  data.level                          level
+GET /api/admin/institutions/export          data[i].level                       level
+GET /api/reviews/my-tasks                   data[i].institutionLevel            institutionLevel
+GET /api/admin/registrations/filter         data[i].institutionLevel            institutionLevel
+GET /api/admin/reviews/rankings             data[i].institutionLevel            institutionLevel
+GET /api/admin/reviews/reviewers            data[i].institutionLevel            institutionLevel
+───────────────────────────────────────────────────────────────────────────────
+
+【测试命令】
+
+后端重启服务后，运行以下命令验证:
+  python scripts/scan_institution_level_api.py
+
+期望结果: 所有API的 level 字段检测状态应为 [OK]
+
+═══════════════════════════════════════════════════════════════════════════════
+报告时间: 2026-02-07
+═══════════════════════════════════════════════════════════════════════════════

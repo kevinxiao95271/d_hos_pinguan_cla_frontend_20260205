@@ -31,6 +31,12 @@
               <el-descriptions-item label="医疗机构名称">
                 {{ registration.institutionName }}
               </el-descriptions-item>
+              <el-descriptions-item label="机构等级">
+                <el-tag v-if="institutionInfo.level" type="success">
+                  {{ institutionInfo.level }}
+                </el-tag>
+                <span v-else>-</span>
+              </el-descriptions-item>
               <el-descriptions-item label="机构编号">
                 {{ institutionInfo.code }}
               </el-descriptions-item>
@@ -172,7 +178,8 @@ const competition = ref({})
 const institutionInfo = reactive({
   code: '',
   uscc: '',
-  region: ''  // 地区信息
+  region: '',  // 地区信息
+  level: ''    // 机构等级
 })
 
 const participants = computed(() => {
@@ -241,6 +248,7 @@ const loadData = async () => {
         institutionInfo.code = data.institution.code
         institutionInfo.uscc = data.institution.uscc
         institutionInfo.region = data.institution.region  // 地区信息
+        institutionInfo.level = data.institution.level    // 机构等级
       }
     }
     

@@ -146,6 +146,14 @@
         <el-table-column prop="registrationId" label="项目编号" width="100" />
         <el-table-column prop="projectName" label="项目名称" min-width="180" />
         <el-table-column prop="institutionName" label="医疗机构名称" min-width="160" />
+        <el-table-column prop="institutionLevel" label="机构等级" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.institutionLevel" type="success" size="small">
+              {{ row.institutionLevel }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="groupType" label="竞赛组别" width="100">
           <template #default="{ row }">
             {{ getGroupTypeText(row.groupType) }}
@@ -170,6 +178,19 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页器 -->
+      <div v-if="showPagination" class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="totalCount"
+          :page-sizes="pageSizes"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadRegistrations"
+          @current-change="loadRegistrations"
+        />
+      </div>
     </el-card>
     
     <!-- 变更分组对话框 -->
@@ -335,10 +356,23 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
+import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations, autoGroupRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
 import dayjs from 'dayjs'
+
+//分页
+const {
+  currentPage,
+  pageSize,
+  totalCount,
+  pageSizes,
+  showPagination,
+  extractDataList,
+  resetPagination,
+  getPaginationParams
+} = usePagination({ defaultPageSize: 50 })
 
 const registrations = ref([])
 const selectedRegistrations = ref([])
@@ -461,10 +495,13 @@ const loadDictionaries = async () => {
 const loadRegistrations = async () => {
   loading.value = true
   try {
-    const res = await filterRegistrations(filters)
+    const res = await filterRegistrations({
+      ...filters,
+      ...getPaginationParams()
+    })
     
     if (res.success) {
-      registrations.value = res.data || []
+      registrations.value = extractDataList(res.data)
       console.log(`✅ 加载到 ${registrations.value.length} 条报名数据`)
     } else {
       ElMessage.error(res.message || '加载报名数据失败')
@@ -485,6 +522,7 @@ const resetFilters = () => {
   filters.groupCode = ''
   filters.projectName = ''
   filters.methodCode = ''
+  resetPagination()
   loadRegistrations()
 }
 
@@ -497,7 +535,7 @@ const viewDetail = async (row) => {
   detailLoading.value = true
   
   try {
-    const res = await getRegistration(row.id)
+    const res = await getRegistration(row.registrationId)
     if (res.success) {
       currentDetail.value = res.data
     } else {
@@ -513,7 +551,7 @@ const viewDetail = async (row) => {
 
 const changeGroup = (row) => {
   changeGroupDialogVisible.value = true
-  changeGroupForm.registrationIds = [row.id]
+  changeGroupForm.registrationIds = [row.registrationId]
   changeGroupForm.groupType = row.groupType
   changeGroupForm.currentGroupCode = row.groupCode || ''
   changeGroupForm.groupCode = ''
@@ -535,7 +573,7 @@ const batchClassify = () => {
   }
   
   changeGroupDialogVisible.value = true
-  changeGroupForm.registrationIds = selectedRegistrations.value.map(r => r.id)
+  changeGroupForm.registrationIds = selectedRegistrations.value.map(r => r.registrationId)
   changeGroupForm.groupType = firstGroupType
   
   // 显示所有选中项目的当前分组
@@ -633,6 +671,12 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .pagination-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>

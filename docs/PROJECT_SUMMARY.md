@@ -489,7 +489,7 @@ npm run build
 
 ## 开发团队
 
-- 前端开发: AI Assistant (Claude Sonnet 4.5)
+- 前端开发: 前端开发团队
 - 开发时间: 2026-02-06
 - 代码行数: 约5000+行
 

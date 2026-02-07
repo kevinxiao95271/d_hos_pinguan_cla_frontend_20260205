@@ -151,12 +151,27 @@ export function getRegistrationReviewResults(id) {
 }
 
 /**
- * 获取报名评审详情
+ * 获取报名评审详情（汇总平均分）
  */
 export function getRegistrationReviewDetails(id) {
   return request({
     url: `/registrations/${id}/review-details`,
     method: 'get'
+  })
+}
+
+/**
+ * 获取报名的评委评分详情（每个评委的详细评分）
+ * @param {Number} id 报名ID
+ * @param {String} stage 评审阶段 (可选: BOOK|INTERVIEW|FINAL)
+ * @returns Promise
+ */
+export function getReviewerScores(id, stage = null) {
+  const params = stage ? { stage } : {}
+  return request({
+    url: `/registrations/${id}/reviewer-scores`,
+    method: 'get',
+    params
   })
 }
 

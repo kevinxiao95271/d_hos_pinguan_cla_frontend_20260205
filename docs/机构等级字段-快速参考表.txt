@@ -1,0 +1,198 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                      机构等级字段需求 - 快速参考表                              ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 一、已确认缺失的API                                                            │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+✗ GET /api/institutions
+  角色: OPS (系统运维)
+  缺失: data[i].level
+  影响: src/views/ops/Institutions.vue
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 二、待确认的API（因后端超时未能测试）                                         │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+? POST /api/auth/login
+  角色: ALL (所有角色)
+  期望: data.institutionLevel
+  
+? GET /api/registrations/{id}
+  角色: CONTESTANT (参赛者)、REVIEWER (评审专家)
+  期望: data.institution.level
+  影响: 
+    - src/views/contestant/MyCompetition.vue
+    - src/views/reviewer/Review.vue
+
+? GET /api/reviews/my-tasks
+  角色: REVIEWER (评审专家)
+  期望: data[i].institutionLevel
+  影响:
+    - src/views/reviewer/Tasks.vue
+    - src/views/reviewer/Dashboard.vue
+
+? GET /api/admin/registrations/filter
+  角色: COMMITTEE_ADMIN (组委会)
+  期望: data[i].institutionLevel
+  影响:
+    - src/views/committee/book/Registration.vue (项目分组)
+    - src/views/committee/interview/Group.vue (面谈分组)
+    - src/views/committee/book/Reviewer.vue (书审评委分配)
+    - src/views/committee/interview/Reviewer.vue (面谈评委分配)
+    - src/views/committee/final/Reviewer.vue (决赛评委分配)
+
+? GET /api/admin/reviews/rankings
+  角色: COMMITTEE_ADMIN (组委会)
+  期望: data[i].institutionLevel
+  影响:
+    - src/views/committee/interview/Shortlist.vue (入围管理)
+
+? GET /api/admin/reviewers
+  角色: COMMITTEE_ADMIN (组委会)
+  期望: data[i].institutionLevel
+  说明: 评委所属机构等级，用于同机构回避UI展示
+  影响:
+    - src/views/committee/book/Reviewer.vue
+    - src/views/committee/interview/Reviewer.vue
+    - src/views/committee/final/Reviewer.vue
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 三、统计汇总                                                                   │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+需要后端添加字段的API数量:
+  ✗ 已确认缺失: 1个
+  ? 待确认:     6个
+  ─────────────────
+  总计:         7个
+
+受影响的前端页面数量:
+  参赛者 (CONTESTANT):      2个页面
+  评审专家 (REVIEWER):      3个页面
+  组委会 (COMMITTEE_ADMIN): 8个页面
+  系统运维 (OPS):           1个页面
+  ───────────────────────────
+  总计:                    14个页面
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 四、API数据示例                                                                │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+[示例1] 登录接口
+POST /api/auth/login
+Response:
+{
+  "data": {
+    "token": "...",
+    "institutionLevel": "三级甲等",  ← 需要添加
+    "institutionRegion": "杭州"
+  }
+}
+
+[示例2] 报名详情
+GET /api/registrations/140
+Response:
+{
+  "data": {
+    "institution": {
+      "name": "浙江大学医学院附属第二医院",
+      "code": "INS-0001",
+      "level": "三级甲等"  ← 需要添加
+    }
+  }
+}
+
+[示例3] 报名筛选列表
+GET /api/admin/registrations/filter?competitionId=21
+Response:
+{
+  "data": [
+    {
+      "registrationId": 106,
+      "institutionName": "浙江大学医学院附属第一医院",
+      "institutionLevel": "三级甲等",  ← 需要添加
+      "projectName": "护理交接班规范化-1"
+    }
+  ]
+}
+
+[示例4] 评审任务列表
+GET /api/reviews/my-tasks
+Response:
+{
+  "data": [
+    {
+      "id": 115,
+      "institutionName": "浙江大学医学院附属第一医院",
+      "institutionLevel": "三级甲等",  ← 需要添加
+      "projectName": "护理交接班规范化-1"
+    }
+  ]
+}
+
+[示例5] 评审人列表
+GET /api/admin/reviewers
+Response:
+{
+  "data": [
+    {
+      "id": 14,
+      "name": "李明华",
+      "institutionName": "浙江大学医学院附属第二医院",
+      "institutionLevel": "三级甲等",  ← 需要添加
+      "background": "MEDICAL"
+    }
+  ]
+}
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 五、机构等级可能值                                                             │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+根据中国医院分级标准:
+  - 三级甲等、三级乙等、三级丙等
+  - 二级甲等、二级乙等、二级丙等
+  - 一级甲等、一级乙等、一级丙等
+  - 未定级 / null (允许为空)
+
+建议:
+  - 后端存储: 字符串类型，允许null
+  - 前端显示: 直接显示，null时显示"未填写"或"-"
+  - 筛选支持: 支持按等级筛选
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 六、后续步骤                                                                   │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+□ Step 1: 后端确认并添加缺失的 level / institutionLevel 字段
+□ Step 2: 前端运行测试脚本验证: python scripts/scan_institution_level_api.py
+□ Step 3: 前端修改14个页面文件
+□ Step 4: 完整测试验证
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 七、测试脚本                                                                   │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+运行命令:
+  python scripts/scan_institution_level_api.py
+
+该脚本将:
+  1. 测试所有4个角色的登录接口
+  2. 测试7个数据API接口
+  3. 检查所有API的 level 字段
+  4. 生成完整报告
+
+┌────────────────────────────────────────────────────────────────────────────────┐
+│ 八、详细文档                                                                   │
+└────────────────────────────────────────────────────────────────────────────────┘
+
+完整扫描报告: docs/机构等级字段需求扫描报告.md
+API缺失清单:   docs/机构等级字段-缺失API清单.md
+快速参考表:     docs/机构等级字段-快速参考表.txt (本文件)
+
+════════════════════════════════════════════════════════════════════════════════
+报告生成时间: 2026-02-07
+最后更新:     2026-02-07
+════════════════════════════════════════════════════════════════════════════════

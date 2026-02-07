@@ -24,6 +24,14 @@
       <el-table :data="institutions" border>
         <el-table-column prop="name" label="机构名称" />
         <el-table-column prop="code" label="机构编号" />
+        <el-table-column prop="level" label="机构等级" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.level" type="success" size="small">
+              {{ row.level }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="uscc" label="统一社会信用代码" />
         <el-table-column prop="createdAt" label="创建时间">
           <template #default="{ row }">
@@ -41,6 +49,19 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页器 -->
+      <div v-if="showPagination" class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="totalCount"
+          :page-sizes="pageSizes"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadData"
+          @current-change="loadData"
+        />
+      </div>
     </el-card>
     
     <!-- 新建/编辑对话框 -->
@@ -66,6 +87,18 @@
         <el-form-item label="统一社会信用代码" prop="uscc">
           <el-input v-model="form.uscc" placeholder="请输入统一社会信用代码" />
         </el-form-item>
+        
+        <el-form-item label="机构等级" prop="level">
+          <el-select v-model="form.level" placeholder="请选择机构等级" clearable>
+            <el-option label="三级甲等" value="三级甲等" />
+            <el-option label="三级乙等" value="三级乙等" />
+            <el-option label="二级甲等" value="二级甲等" />
+            <el-option label="二级乙等" value="二级乙等" />
+            <el-option label="一级甲等" value="一级甲等" />
+            <el-option label="一级乙等" value="一级乙等" />
+            <el-option label="未定级" value="未定级" />
+          </el-select>
+        </el-form-item>
       </el-form>
       
       <template #footer>
@@ -88,10 +121,23 @@ import {
   updateInstitution,
   deleteInstitution as deleteInstitutionApi
 } from '@/api/institution'
+import { usePagination } from '@/composables/usePagination'
 import dayjs from 'dayjs'
 
 const userStore = useUserStore()
 const token = computed(() => userStore.token)
+
+// 分页
+const {
+  currentPage,
+  pageSize,
+  totalCount,
+  pageSizes,
+  showPagination,
+  extractDataList,
+  resetPagination,
+  getPaginationParams
+} = usePagination({ defaultPageSize: 50 })
 
 const institutions = ref([])
 const dialogVisible = ref(false)
@@ -103,7 +149,8 @@ const editingId = ref(null)
 const form = reactive({
   name: '',
   code: '',
-  uscc: ''
+  uscc: '',
+  level: ''
 })
 
 const rules = {
@@ -114,9 +161,9 @@ const rules = {
 
 const loadData = async () => {
   try {
-    const res = await getInstitutions()
+    const res = await getInstitutions(getPaginationParams())
     if (res.success) {
-      institutions.value = res.data || []
+      institutions.value = extractDataList(res.data)
     }
   } catch (error) {
     console.error('加载机构列表失败:', error)
@@ -203,6 +250,12 @@ onMounted(() => {
     align-items: center;
     font-size: 18px;
     font-weight: 600;
+  }
+
+  .pagination-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>

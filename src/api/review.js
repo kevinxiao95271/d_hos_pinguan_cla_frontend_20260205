@@ -3,10 +3,11 @@ import request from '@/utils/request'
 /**
  * 获取我的评审任务列表 (从token获取评委ID)
  */
-export function getMyReviewTasks() {
+export function getMyReviewTasks(params = {}) {
   return request({
     url: '/reviews/my-tasks',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 

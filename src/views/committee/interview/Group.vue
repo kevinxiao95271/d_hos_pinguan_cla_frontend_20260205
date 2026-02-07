@@ -81,6 +81,14 @@
           <el-table-column prop="registrationId" label="项目编号" width="100" />
           <el-table-column prop="projectName" label="项目名称" min-width="180" />
           <el-table-column prop="institutionName" label="医疗机构名称" min-width="160" />
+          <el-table-column prop="institutionLevel" label="机构等级" width="120">
+            <template #default="{ row }">
+              <el-tag v-if="row.institutionLevel" type="success" size="small">
+                {{ row.institutionLevel }}
+              </el-tag>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="groupCode" label="分组" width="100">
             <template #default="{ row }">
               <el-tag v-if="row.groupCode" type="success">{{ row.groupCode }}</el-tag>
@@ -100,6 +108,19 @@
             </template>
           </el-table-column>
         </el-table>
+
+        <!-- 分页器 -->
+        <div v-if="showPagination" class="pagination-container">
+          <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="totalCount"
+            :page-sizes="pageSizes"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="loadPoolData"
+            @current-change="loadPoolData"
+          />
+        </div>
       </div>
     </el-card>
     
@@ -218,11 +239,24 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
+import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
 
 const { stagesList } = useCompetitionStages()
+
+// 分页
+const {
+  currentPage,
+  pageSize,
+  totalCount,
+  pageSizes,
+  showPagination,
+  extractDataList,
+  resetPagination,
+  getPaginationParams
+} = usePagination({ defaultPageSize: 50 })
 
 const loading = ref(false)
 const poolData = ref([])
@@ -275,10 +309,13 @@ const getGroupTypeText = (type) => {
 const loadPoolData = async () => {
   loading.value = true
   try {
-    const res = await filterRegistrations(filters)
+    const res = await filterRegistrations({
+      ...filters,
+      ...getPaginationParams()
+    })
     
     if (res.success) {
-      poolData.value = res.data || []
+      poolData.value = extractDataList(res.data)
       console.log(`✅ 加载进阶组数据 ${poolData.value.length} 条`)
     } else {
       ElMessage.error(res.message || '加载数据失败')
@@ -298,6 +335,7 @@ const resetFilters = () => {
   filters.groupCode = null
   filters.methodCode = ''
   filters.projectName = ''
+  resetPagination()
   loadPoolData()
 }
 
@@ -321,7 +359,7 @@ const viewDetail = async (row) => {
   detailLoading.value = true
   
   try {
-    const res = await getRegistration(row.id)
+    const res = await getRegistration(row.registrationId)
     if (res.success) {
       currentDetail.value = res.data
     } else {
@@ -337,7 +375,7 @@ const viewDetail = async (row) => {
 
 const changeInterviewGroup = (row) => {
   groupDialogVisible.value = true
-  groupForm.registrationIds = [row.id]
+  groupForm.registrationIds = [row.registrationId]
   groupForm.currentGroupCode = row.groupCode || ''
   groupForm.groupCode = ''
 }
@@ -349,7 +387,7 @@ const batchGroupInterview = () => {
   }
   
   groupDialogVisible.value = true
-  groupForm.registrationIds = selectedItems.value.map(r => r.id)
+  groupForm.registrationIds = selectedItems.value.map(r => r.registrationId)
   
   // 显示所有选中项目的当前分组
   const currentCodes = [...new Set(selectedItems.value.map(r => r.groupCode || '未分组'))]
@@ -444,6 +482,12 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+
+  .pagination-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>

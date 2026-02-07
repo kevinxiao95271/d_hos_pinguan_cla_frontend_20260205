@@ -272,6 +272,21 @@
           show-overflow-tooltip
         />
 
+        <!-- 机构等级 -->
+        <el-table-column
+          prop="institutionLevel"
+          label="机构等级"
+          width="120"
+          align="center"
+        >
+          <template #default="{ row }">
+            <el-tag v-if="row.institutionLevel" type="success" size="small">
+              {{ row.institutionLevel }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+
         <!-- 组别 -->
         <el-table-column prop="groupType" label="组别" width="100" align="center">
           <template #default="{ row }">
@@ -450,8 +465,8 @@
                 </el-table-column>
               </el-table>
 
-              <h4 style="margin-bottom: 15px">评委意见</h4>
-              <el-row :gutter="20">
+              <h4 style="margin-bottom: 15px">评委意见汇总</h4>
+              <el-row :gutter="20" style="margin-bottom: 30px">
                 <el-col :span="12">
                   <el-card header="✨ 亮点" shadow="never">
                     <ul v-if="bookDetail.highlights && bookDetail.highlights.length > 0" class="opinion-list">
@@ -469,6 +484,63 @@
                   </el-card>
                 </el-col>
               </el-row>
+
+              <!-- 评委详细评分 -->
+              <h4 style="margin-bottom: 15px">评委详细评分（共 {{ bookReviewers.length }} 位评委）</h4>
+              <div v-if="bookReviewers.length > 0">
+                <el-card 
+                  v-for="(reviewer, index) in bookReviewers" 
+                  :key="reviewer.reviewerId"
+                  shadow="hover" 
+                  style="margin-bottom: 20px"
+                >
+                  <template #header>
+                    <div style="display: flex; justify-content: space-between; align-items: center">
+                      <span style="font-weight: 600; font-size: 16px">
+                        评委 {{ index + 1 }}: {{ reviewer.reviewerName }}
+                      </span>
+                      <div>
+                        <el-tag size="small" type="info">{{ reviewer.reviewerTitle }}</el-tag>
+                        <el-tag size="small" type="success" style="margin-left: 8px">{{ reviewer.reviewerInstitutionLevel }}</el-tag>
+                      </div>
+                    </div>
+                    <div style="color: #909399; font-size: 13px; margin-top: 5px">
+                      {{ reviewer.reviewerInstitutionName }} | 评审时间: {{ reviewer.submittedAt ? new Date(reviewer.submittedAt).toLocaleString('zh-CN') : '-' }}
+                    </div>
+                  </template>
+                  
+                  <!-- 分项评分 -->
+                  <el-descriptions :column="4" border size="small" style="margin-bottom: 15px">
+                    <el-descriptions-item label="计划">{{ reviewer.scores.plan }}分</el-descriptions-item>
+                    <el-descriptions-item label="问题">{{ reviewer.scores.problem }}分</el-descriptions-item>
+                    <el-descriptions-item label="行动">{{ reviewer.scores.action }}分</el-descriptions-item>
+                    <el-descriptions-item label="成效">{{ reviewer.scores.success }}分</el-descriptions-item>
+                    <el-descriptions-item label="回顾">{{ reviewer.scores.review }}分</el-descriptions-item>
+                    <el-descriptions-item label="运作">{{ reviewer.scores.operation }}分</el-descriptions-item>
+                    <el-descriptions-item label="展示">{{ reviewer.scores.presentation }}分</el-descriptions-item>
+                    <el-descriptions-item label="总分">
+                      <strong style="color: #409eff; font-size: 16px">{{ reviewer.scores.total }}分</strong>
+                    </el-descriptions-item>
+                  </el-descriptions>
+                  
+                  <!-- 评语 -->
+                  <el-row :gutter="15">
+                    <el-col :span="12">
+                      <div style="background: #e8f5e9; padding: 12px; border-radius: 4px">
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #2e7d32">✨ 亮点</div>
+                        <div style="color: #2e7d32; line-height: 1.6">{{ reviewer.highlight || '暂无' }}</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="12">
+                      <div style="background: #fff3e0; padding: 12px; border-radius: 4px">
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #f57c00">💡 改进建议</div>
+                        <div style="color: #f57c00; line-height: 1.6">{{ reviewer.weakness || '暂无' }}</div>
+                      </div>
+                    </el-col>
+                  </el-row>
+                </el-card>
+              </div>
+              <el-empty v-else description="暂无评委评分记录" :image-size="100" />
             </div>
             <el-empty v-else :description="getBookReviewEmptyText()" :image-size="120" />
           </el-tab-pane>
@@ -522,8 +594,8 @@
                 </el-table-column>
               </el-table>
 
-              <h4 style="margin-bottom: 15px">评委意见</h4>
-              <el-row :gutter="20">
+              <h4 style="margin-bottom: 15px">评委意见汇总</h4>
+              <el-row :gutter="20" style="margin-bottom: 30px">
                 <el-col :span="12">
                   <el-card header="✨ 亮点" shadow="never">
                     <ul v-if="interviewDetail.highlights && interviewDetail.highlights.length > 0" class="opinion-list">
@@ -541,6 +613,63 @@
                   </el-card>
                 </el-col>
               </el-row>
+
+              <!-- 评委详细评分 -->
+              <h4 style="margin-bottom: 15px">评委详细评分（共 {{ interviewReviewers.length }} 位评委）</h4>
+              <div v-if="interviewReviewers.length > 0">
+                <el-card 
+                  v-for="(reviewer, index) in interviewReviewers" 
+                  :key="reviewer.reviewerId"
+                  shadow="hover" 
+                  style="margin-bottom: 20px"
+                >
+                  <template #header>
+                    <div style="display: flex; justify-content: space-between; align-items: center">
+                      <span style="font-weight: 600; font-size: 16px">
+                        评委 {{ index + 1 }}: {{ reviewer.reviewerName }}
+                      </span>
+                      <div>
+                        <el-tag size="small" type="info">{{ reviewer.reviewerTitle }}</el-tag>
+                        <el-tag size="small" type="success" style="margin-left: 8px">{{ reviewer.reviewerInstitutionLevel }}</el-tag>
+                      </div>
+                    </div>
+                    <div style="color: #909399; font-size: 13px; margin-top: 5px">
+                      {{ reviewer.reviewerInstitutionName }} | 评审时间: {{ reviewer.submittedAt ? new Date(reviewer.submittedAt).toLocaleString('zh-CN') : '-' }}
+                    </div>
+                  </template>
+                  
+                  <!-- 分项评分 -->
+                  <el-descriptions :column="4" border size="small" style="margin-bottom: 15px">
+                    <el-descriptions-item label="计划">{{ reviewer.scores.plan }}分</el-descriptions-item>
+                    <el-descriptions-item label="问题">{{ reviewer.scores.problem }}分</el-descriptions-item>
+                    <el-descriptions-item label="行动">{{ reviewer.scores.action }}分</el-descriptions-item>
+                    <el-descriptions-item label="成效">{{ reviewer.scores.success }}分</el-descriptions-item>
+                    <el-descriptions-item label="回顾">{{ reviewer.scores.review }}分</el-descriptions-item>
+                    <el-descriptions-item label="运作">{{ reviewer.scores.operation }}分</el-descriptions-item>
+                    <el-descriptions-item label="展示">{{ reviewer.scores.presentation }}分</el-descriptions-item>
+                    <el-descriptions-item label="总分">
+                      <strong style="color: #409eff; font-size: 16px">{{ reviewer.scores.total }}分</strong>
+                    </el-descriptions-item>
+                  </el-descriptions>
+                  
+                  <!-- 评语 -->
+                  <el-row :gutter="15">
+                    <el-col :span="12">
+                      <div style="background: #e8f5e9; padding: 12px; border-radius: 4px">
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #2e7d32">✨ 亮点</div>
+                        <div style="color: #2e7d32; line-height: 1.6">{{ reviewer.highlight || '暂无' }}</div>
+                      </div>
+                    </el-col>
+                    <el-col :span="12">
+                      <div style="background: #fff3e0; padding: 12px; border-radius: 4px">
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #f57c00">💡 改进建议</div>
+                        <div style="color: #f57c00; line-height: 1.6">{{ reviewer.weakness || '暂无' }}</div>
+                      </div>
+                    </el-col>
+                  </el-row>
+                </el-card>
+              </div>
+              <el-empty v-else description="暂无评委评分记录" :image-size="100" />
             </div>
             <el-empty v-else :description="getInterviewEmptyText()" :image-size="120" />
           </el-tab-pane>
@@ -557,7 +686,7 @@ import { Search } from '@element-plus/icons-vue'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getRankings } from '@/api/shortlist'
-import { getRegistrationReviewDetails } from '@/api/registration'
+import { getRegistrationReviewDetails, getReviewerScores } from '@/api/registration'
 
 // 赛事ID
 const getCurrentCompetitionId = () => {
@@ -593,6 +722,8 @@ const detailDialogVisible = ref(false)
 const selectedProject = ref(null)
 const bookDetail = ref(null)
 const interviewDetail = ref(null)
+const bookReviewers = ref([])  // 书审评委详细评分
+const interviewReviewers = ref([])  // 面谈评委详细评分
 const detailLoading = ref(false)
 const activeTab = ref('BOOK')
 
@@ -909,11 +1040,16 @@ async function viewDetail(project) {
   activeTab.value = 'BOOK'
 
   try {
-    // 调用评审详情API
-    const response = await getRegistrationReviewDetails(project.registrationId)
+    // 并行调用评审详情API和评委评分API
+    const [detailsResponse, bookReviewersResponse, interviewReviewersResponse] = await Promise.all([
+      getRegistrationReviewDetails(project.registrationId),
+      getReviewerScores(project.registrationId, 'BOOK'),
+      getReviewerScores(project.registrationId, 'INTERVIEW')
+    ])
 
-    if (response.success && response.data) {
-      const details = response.data // data是一个数组
+    // 处理汇总平均分
+    if (detailsResponse.success && detailsResponse.data) {
+      const details = detailsResponse.data // data是一个数组
       
       // 查找书审和面谈的详情
       bookDetail.value = details.find(d => d.stage === 'BOOK') || {
@@ -944,6 +1080,21 @@ async function viewDetail(project) {
         weaknesses: []
       }
     }
+
+    // 处理书审评委详细评分
+    if (bookReviewersResponse.success && bookReviewersResponse.data) {
+      bookReviewers.value = bookReviewersResponse.data
+    } else {
+      bookReviewers.value = []
+    }
+
+    // 处理面谈评委详细评分
+    if (interviewReviewersResponse.success && interviewReviewersResponse.data) {
+      interviewReviewers.value = interviewReviewersResponse.data
+    } else {
+      interviewReviewers.value = []
+    }
+
   } catch (error) {
     console.error('加载详情失败:', error)
     ElMessage.error('加载详情失败')

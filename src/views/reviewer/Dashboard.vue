@@ -36,6 +36,14 @@
       <el-table :data="recentTasks" border>
         <el-table-column prop="projectName" label="项目名称" />
         <el-table-column prop="institutionName" label="医疗机构" />
+        <el-table-column prop="institutionLevel" label="机构等级" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.institutionLevel" type="success" size="small">
+              {{ row.institutionLevel }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="stage" label="评审阶段">
           <template #default="{ row }">
             {{ getStageText(row.stage) }}
@@ -148,6 +156,7 @@ const goToReview = (row) => {
       registrationId: row.registrationId,
       projectName: row.projectName,
       institutionName: row.institutionName,
+      institutionLevel: row.institutionLevel,
       stage: row.stage
     }
   })
@@ -161,6 +170,7 @@ const viewReview = (row) => {
       registrationId: row.registrationId,
       projectName: row.projectName,
       institutionName: row.institutionName,
+      institutionLevel: row.institutionLevel,
       stage: row.stage,
       isViewMode: 'true'  // 查看模式
     }

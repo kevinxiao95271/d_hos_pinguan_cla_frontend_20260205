@@ -28,6 +28,13 @@
             <span>{{ taskInfo.institutionName || '-' }}</span>
           </el-form-item>
           
+          <el-form-item label="机构等级">
+            <el-tag v-if="taskInfo.institutionLevel" type="success">
+              {{ taskInfo.institutionLevel }}
+            </el-tag>
+            <span v-else>-</span>
+          </el-form-item>
+          
           <el-form-item label="评审阶段">
             <span>{{ getStageText(taskInfo.stage) }}</span>
           </el-form-item>
@@ -194,6 +201,7 @@ const loading = ref(false)
 const taskInfo = reactive({
   projectName: '',
   institutionName: '',
+  institutionLevel: '',
   stage: '',
   groupType: ''
 })
@@ -247,6 +255,7 @@ const loadData = async () => {
     // 先从 query 中获取基本信息
     taskInfo.projectName = route.query.projectName || ''
     taskInfo.institutionName = route.query.institutionName || ''
+    taskInfo.institutionLevel = route.query.institutionLevel || ''
     taskInfo.stage = route.query.stage || 'BOOK'
     
     // 加载项目详情

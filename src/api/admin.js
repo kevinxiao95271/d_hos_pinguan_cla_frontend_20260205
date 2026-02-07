@@ -134,6 +134,9 @@ export function getShortlist(params) {
 
 /**
  * 获取专家反馈
+ * @deprecated 已废弃，请使用 getReviewerScores (from '@/api/registration')
+ * 新API: GET /api/registrations/{id}/reviewer-scores?stage={BOOK|INTERVIEW|FINAL}
+ * 优势: 包含分项评分、评委完整信息、评审时间等详细数据
  */
 export function getReviewFeedback(params) {
   return request({

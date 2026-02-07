@@ -37,6 +37,14 @@
       <el-table :data="filteredTasks" v-loading="loading" border>
         <el-table-column prop="projectName" label="项目名称" min-width="200" />
         <el-table-column prop="institutionName" label="医疗机构" min-width="150" />
+        <el-table-column prop="institutionLevel" label="机构等级" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.institutionLevel" type="success" size="small">
+              {{ row.institutionLevel }}
+            </el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="stage" label="评审阶段" width="100">
           <template #default="{ row }">
             {{ getStageText(row.stage) }}
@@ -81,6 +89,19 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <!-- 分页器 -->
+      <div v-if="showPagination" class="pagination-container">
+        <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :total="totalCount"
+          :page-sizes="pageSizes"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="loadData"
+          @current-change="loadData"
+        />
+      </div>
     </el-card>
   </div>
 </template>
@@ -91,9 +112,22 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getMyReviewTasks } from '@/api/review'
 import { getRegistrationDetail } from '@/api/registration'
+import { usePagination } from '@/composables/usePagination'
 import dayjs from 'dayjs'
 
 const router = useRouter()
+
+// 分页
+const {
+  currentPage,
+  pageSize,
+  totalCount,
+  pageSizes,
+  showPagination,
+  extractDataList,
+  resetPagination,
+  getPaginationParams
+} = usePagination({ defaultPageSize: 50 })
 
 const tasks = ref([])
 const loading = ref(false)
@@ -119,9 +153,9 @@ const filteredTasks = computed(() => {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getMyReviewTasks()
+    const res = await getMyReviewTasks(getPaginationParams())
     if (res.success) {
-      tasks.value = res.data || []
+      tasks.value = extractDataList(res.data)
       if (tasks.value.length === 0) {
         ElMessage.info('暂无评审任务')
       }
@@ -139,6 +173,8 @@ const loadData = async () => {
 const resetFilters = () => {
   filters.stage = ''
   filters.status = ''
+  resetPagination()
+  loadData()
 }
 
 const getStageText = (stage) => {
@@ -182,6 +218,7 @@ const viewDetail = (row) => {
       registrationId: row.registrationId,
       projectName: row.projectName,
       institutionName: row.institutionName,
+      institutionLevel: row.institutionLevel,
       stage: row.stage,
       isViewMode: 'true'  // 标记为查看模式，不允许编辑
     }
@@ -195,6 +232,7 @@ const goToReview = (row) => {
       registrationId: row.registrationId,
       projectName: row.projectName,
       institutionName: row.institutionName,  // 传递医疗机构名称
+      institutionLevel: row.institutionLevel,  // 传递机构等级
       stage: row.stage  // 传递评审阶段
     }
   })
@@ -229,6 +267,12 @@ onMounted(() => {
   
   .filter-form {
     margin-bottom: 20px;
+  }
+
+  .pagination-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
   }
 }
 </style>
