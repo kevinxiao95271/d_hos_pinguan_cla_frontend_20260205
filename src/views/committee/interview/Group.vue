@@ -258,6 +258,47 @@
             </el-tag>
           </el-descriptions-item>
         </el-descriptions>
+        
+        <!-- 项目摘要 -->
+        <el-card v-if="currentDetail?.projectSummary" class="summary-card" style="margin-top: 20px">
+          <template #header>
+            <h3>项目摘要</h3>
+          </template>
+          <div class="summary-content">
+            <div class="summary-item" v-if="currentDetail.projectSummary.theme">
+              <h4>主题</h4>
+              <p>{{ currentDetail.projectSummary.theme }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.plan">
+              <h4>计划</h4>
+              <p>{{ currentDetail.projectSummary.plan }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.problem">
+              <h4>问题结构与对策措施探讨</h4>
+              <p>{{ currentDetail.projectSummary.problem }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.action">
+              <h4>对策行动过程</h4>
+              <p>{{ currentDetail.projectSummary.action }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.success">
+              <h4>成果表现</h4>
+              <p>{{ currentDetail.projectSummary.success }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.discussion">
+              <h4>讨论总结</h4>
+              <p>{{ currentDetail.projectSummary.discussion }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.operation">
+              <h4>运作</h4>
+              <p>{{ currentDetail.projectSummary.operation }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.presentation">
+              <h4>展示</h4>
+              <p>{{ currentDetail.projectSummary.presentation }}</p>
+            </div>
+          </div>
+        </el-card>
 
         <el-divider content-position="left">项目参与人员</el-divider>
         <el-table 
@@ -728,6 +769,29 @@ watch(poolData, () => {
     margin-top: 20px;
     display: flex;
     justify-content: flex-end;
+  }
+  
+  .summary-card {
+    .summary-content {
+      padding: 10px;
+      
+      .summary-item {
+        margin-bottom: 20px;
+        
+        h4 {
+          color: #409EFF;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
+        
+        p {
+          white-space: pre-wrap;
+          word-break: break-word;
+          line-height: 1.8;
+          color: #606266;
+        }
+      }
+    }
   }
 }
 </style>

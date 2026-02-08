@@ -3,7 +3,8 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ registration.projectName || '我的赛事' }}</span>
+          <el-button type="primary" :icon="ArrowLeft" @click="goBack">返回</el-button>
+          <span style="margin-left: 20px;">{{ registration.projectName || '我的赛事' }}</span>
         </div>
       </template>
       
@@ -276,14 +277,16 @@
 
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { getRegistration, getRegistrationReviewDetails } from '@/api/registration'
 import { getCompetition } from '@/api/competition'
 import StageProgress from '@/components/StageProgress.vue'
 import dayjs from 'dayjs'
 
 const route = useRoute()
+const router = useRouter()
 const registrationId = ref(route.params.id)  // ✅ 修复：路由参数名是 'id'，不是 'registrationId'
 const activeTab = ref('registration')
 
@@ -454,6 +457,10 @@ const handleTabChange = (key) => {
   activeTab.value = key
 }
 
+const goBack = () => {
+  router.push('/contestant/registrations')
+}
+
 onMounted(() => {
   loadData()
 })
@@ -464,8 +471,13 @@ onMounted(() => {
   padding: 20px;
   
   .card-header {
-    font-size: 18px;
-    font-weight: 600;
+    display: flex;
+    align-items: center;
+    
+    span {
+      font-size: 18px;
+      font-weight: 600;
+    }
   }
   
   .content-container {

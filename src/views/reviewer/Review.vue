@@ -86,24 +86,33 @@
                 </el-descriptions>
               </div>
               
-              <!-- 项目总结 -->
+              <!-- 项目摘要 -->
               <div v-if="projectDetail.summary" style="margin-bottom: 20px;">
-                <h4>项目总结</h4>
+                <h4>项目摘要</h4>
                 <el-descriptions :column="1" border>
+                  <el-descriptions-item label="主题" v-if="projectDetail.summary.theme">
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.theme }}</div>
+                  </el-descriptions-item>
                   <el-descriptions-item label="计划">
                     <div style="white-space: pre-wrap;">{{ projectDetail.summary.plan || '-' }}</div>
                   </el-descriptions-item>
-                  <el-descriptions-item label="问题分析">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.problemAnalysis || '-' }}</div>
+                  <el-descriptions-item label="问题结构与对策措施探讨">
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.problem || '-' }}</div>
                   </el-descriptions-item>
-                  <el-descriptions-item label="实施过程">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.implementation || '-' }}</div>
+                  <el-descriptions-item label="对策行动过程">
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.action || '-' }}</div>
                   </el-descriptions-item>
                   <el-descriptions-item label="成果表现">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.result || '-' }}</div>
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.success || '-' }}</div>
                   </el-descriptions-item>
                   <el-descriptions-item label="讨论总结">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.review || '-' }}</div>
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.discussion || '-' }}</div>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="运作" v-if="projectDetail.summary.operation">
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.operation }}</div>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="展示" v-if="projectDetail.summary.presentation">
+                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.presentation }}</div>
                   </el-descriptions-item>
                 </el-descriptions>
               </div>

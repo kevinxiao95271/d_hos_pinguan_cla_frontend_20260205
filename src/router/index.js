@@ -186,7 +186,7 @@ const routes = [
         path: 'historical-data',
         name: 'HistoricalData',
         component: () => import('@/views/committee/HistoricalData.vue'),
-        meta: { title: '历史数据查看' }
+        meta: { title: '历史数据' }
       }
     ]
   },

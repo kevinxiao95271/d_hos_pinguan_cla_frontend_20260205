@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>历史数据查看</span>
+          <span>历史数据</span>
         </div>
       </template>
 
