@@ -65,12 +65,24 @@
               <div v-if="projectDetail.activityInfo" style="margin-bottom: 20px;">
                 <h4>活动说明</h4>
                 <el-descriptions :column="2" border>
-                  <el-descriptions-item label="活动主题">{{ projectDetail.activityInfo.theme }}</el-descriptions-item>
-                  <el-descriptions-item label="关键词">{{ projectDetail.activityInfo.keywords }}</el-descriptions-item>
-                  <el-descriptions-item label="主题类型">{{ projectDetail.activityInfo.subjectTypeLabel }}</el-descriptions-item>
-                  <el-descriptions-item label="运用手法">{{ projectDetail.activityInfo.methodLabel }}</el-descriptions-item>
-                  <el-descriptions-item label="平均工作年限">{{ projectDetail.activityInfo.avgWorkYears }} 年</el-descriptions-item>
-                  <el-descriptions-item label="平均年龄">{{ projectDetail.activityInfo.avgAge }} 岁</el-descriptions-item>
+                  <el-descriptions-item label="活动主题" :span="2">{{ projectDetail.activityInfo.theme }}</el-descriptions-item>
+                  <el-descriptions-item label="关键词" :span="2">{{ projectDetail.activityInfo.keywords }}</el-descriptions-item>
+                  <el-descriptions-item label="主题类型">{{ projectDetail.activityInfo.subjectTypeLabel || projectDetail.activityInfo.subjectTypeCode || '未填写' }}</el-descriptions-item>
+                  <el-descriptions-item label="运用手法">{{ projectDetail.activityInfo.methodLabel || projectDetail.activityInfo.methodCode || '未填写' }}</el-descriptions-item>
+                  <el-descriptions-item label="改善就医环境">{{ getExperienceImproveDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
+                  <el-descriptions-item label="医疗质量相关主题">{{ getQualityTopicDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
+                  <el-descriptions-item label="平均工作年限">{{ projectDetail.activityInfo.avgWorkYears || '-' }} 年</el-descriptions-item>
+                  <el-descriptions-item label="平均年龄">{{ projectDetail.activityInfo.avgAge || '-' }} 岁</el-descriptions-item>
+                  <el-descriptions-item label="是否跨部门">
+                    <el-tag :type="projectDetail.activityInfo.crossDepartment ? 'success' : 'info'">
+                      {{ projectDetail.activityInfo.crossDepartment ? '是' : '否' }}
+                    </el-tag>
+                  </el-descriptions-item>
+                  <el-descriptions-item label="是否与数字化/AI相关">
+                    <el-tag :type="projectDetail.activityInfo.relatedToDigitalAi ? 'success' : 'info'">
+                      {{ projectDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}
+                    </el-tag>
+                  </el-descriptions-item>
                 </el-descriptions>
               </div>
               
@@ -339,6 +351,36 @@ const getGroupTypeText = (type) => {
     'ADVANCED': '进阶组'
   }
   return map[type] || type || '-'
+}
+
+// 处理"其他"选项 - 改善就医环境
+const getExperienceImproveDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.experienceImproveCode === 'other') {
+    return activityInfo.experienceImproveOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.experienceImproveLabel || '未填写'
+}
+
+// 处理"其他"选项 - 医疗质量相关主题
+const getQualityTopicDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.qualityTopicCode === 'other') {
+    return activityInfo.qualityTopicOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.qualityTopicLabel || '未填写'
 }
 
 const submitReview = async () => {

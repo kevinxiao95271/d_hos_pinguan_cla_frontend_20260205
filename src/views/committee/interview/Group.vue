@@ -176,7 +176,27 @@
       :close-on-click-modal="false"
     >
       <div v-loading="detailLoading">
-        <el-descriptions v-if="currentDetail && currentDetail.registration" :column="2" border>
+        <!-- 机构信息 -->
+        <el-descriptions v-if="currentDetail?.institution" title="机构信息" :column="2" border>
+          <el-descriptions-item label="医疗机构名称">
+            {{ currentDetail.institution.name }}
+          </el-descriptions-item>
+          <el-descriptions-item label="机构等级">
+            <el-tag v-if="currentDetail.institution.level" type="success">
+              {{ currentDetail.institution.level }}
+            </el-tag>
+            <span v-else>-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="机构编号">
+            {{ currentDetail.institution.code || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="所在地区">
+            {{ currentDetail.institution.region || '-' }}
+          </el-descriptions-item>
+        </el-descriptions>
+        
+        <!-- 项目基本信息 -->
+        <el-descriptions v-if="currentDetail?.registration" title="项目信息" :column="2" border style="margin-top: 20px">
           <el-descriptions-item label="项目名称" :span="2">
             {{ currentDetail.registration.projectName }}
           </el-descriptions-item>
@@ -189,14 +209,46 @@
             </el-tag>
             <span v-else>未分组</span>
           </el-descriptions-item>
-          <el-descriptions-item label="品管工具" :span="2">
-            <el-tag v-if="currentDetail.activityInfo?.methodLabel" type="success">
+        </el-descriptions>
+        
+        <!-- 活动信息 -->
+        <el-descriptions v-if="currentDetail?.activityInfo" title="活动信息" :column="2" border style="margin-top: 20px">
+          <el-descriptions-item label="活动主题" :span="2">
+            {{ currentDetail.activityInfo.theme || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="关键词" :span="2">
+            {{ currentDetail.activityInfo.keywords || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="主题类型">
+            {{ currentDetail.activityInfo.subjectTypeLabel || '未填写' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="品管工具">
+            <el-tag v-if="currentDetail.activityInfo.methodLabel" type="success">
               {{ currentDetail.activityInfo.methodLabel }}
             </el-tag>
-            <span v-else>-</span>
+            <span v-else>未填写</span>
           </el-descriptions-item>
-          <el-descriptions-item label="主题类型" :span="2">
-            {{ currentDetail.activityInfo?.subjectTypeLabel || '-' }}
+          <el-descriptions-item label="改善就医环境">
+            {{ getExperienceImproveDisplay(currentDetail.activityInfo) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="医疗质量相关主题">
+            {{ getQualityTopicDisplay(currentDetail.activityInfo) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平均工作年限">
+            {{ currentDetail.activityInfo.avgWorkYears || '-' }} 年
+          </el-descriptions-item>
+          <el-descriptions-item label="平均年龄">
+            {{ currentDetail.activityInfo.avgAge || '-' }} 岁
+          </el-descriptions-item>
+          <el-descriptions-item label="是否跨部门">
+            <el-tag :type="currentDetail.activityInfo.crossDepartment ? 'success' : 'info'">
+              {{ currentDetail.activityInfo.crossDepartment ? '是' : '否' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="是否与数字化/AI相关">
+            <el-tag :type="currentDetail.activityInfo.relatedToDigitalAi ? 'success' : 'info'">
+              {{ currentDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}
+            </el-tag>
           </el-descriptions-item>
         </el-descriptions>
 
@@ -303,6 +355,36 @@ const getGroupTypeText = (type) => {
     'ADVANCED': '进阶组'
   }
   return map[type] || type
+}
+
+// 处理"其他"选项 - 改善就医环境
+const getExperienceImproveDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.experienceImproveCode === 'other') {
+    return activityInfo.experienceImproveOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.experienceImproveLabel || '未填写'
+}
+
+// 处理"其他"选项 - 医疗质量相关主题
+const getQualityTopicDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.qualityTopicCode === 'other') {
+    return activityInfo.qualityTopicOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.qualityTopicLabel || '未填写'
 }
 
 // 加载面谈池数据（仅进阶组）

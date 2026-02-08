@@ -45,18 +45,116 @@
               </el-descriptions-item>
             </el-descriptions>
             
-            <el-descriptions title="项目信息" :column="1" border style="margin-top: 20px">
-              <el-descriptions-item label="参赛项目名称">
+            <el-descriptions title="项目信息" :column="2" border style="margin-top: 20px">
+              <el-descriptions-item label="参赛项目名称" :span="2">
                 {{ registration.projectName }}
               </el-descriptions-item>
               <el-descriptions-item label="竞赛组别">
                 {{ getGroupTypeText(registration.groupType) }}
               </el-descriptions-item>
+              <el-descriptions-item label="分组">
+                {{ registration.groupCode || '未分组' }}
+              </el-descriptions-item>
             </el-descriptions>
+            
+            <el-descriptions 
+              v-if="registration.activityInfo" 
+              title="活动信息" 
+              :column="2" 
+              border 
+              style="margin-top: 20px"
+            >
+              <el-descriptions-item label="活动主题" :span="2">
+                {{ registration.activityInfo.theme || '-' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="关键词" :span="2">
+                {{ registration.activityInfo.keywords || '-' }}
+              </el-descriptions-item>
+              
+              <!-- 4个Label字段 -->
+              <el-descriptions-item label="主题类型">
+                {{ registration.activityInfo.subjectTypeLabel || registration.activityInfo.subjectTypeCode || '未填写' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="运用手法">
+                {{ registration.activityInfo.methodLabel || registration.activityInfo.methodCode || '未填写' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="改善就医环境">
+                {{ getExperienceImproveDisplay(registration.activityInfo) }}
+              </el-descriptions-item>
+              <el-descriptions-item label="医疗质量相关主题">
+                {{ getQualityTopicDisplay(registration.activityInfo) }}
+              </el-descriptions-item>
+              
+              <el-descriptions-item label="平均工作年限">
+                {{ registration.activityInfo.avgWorkYears || '-' }} 年
+              </el-descriptions-item>
+              <el-descriptions-item label="平均年龄">
+                {{ registration.activityInfo.avgAge || '-' }} 岁
+              </el-descriptions-item>
+              <el-descriptions-item label="是否跨部门">
+                <el-tag :type="registration.activityInfo.crossDepartment ? 'success' : 'info'">
+                  {{ registration.activityInfo.crossDepartment ? '是' : '否' }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="是否与数字化/AI相关">
+                <el-tag :type="registration.activityInfo.relatedToDigitalAi ? 'success' : 'info'">
+                  {{ registration.activityInfo.relatedToDigitalAi ? '是' : '否' }}
+                </el-tag>
+              </el-descriptions-item>
+            </el-descriptions>
+            
+            <el-card 
+              v-if="registration.summary" 
+              class="section" 
+              style="margin-top: 20px"
+            >
+              <template #header>
+                <h3>项目摘要</h3>
+              </template>
+              <div class="summary-content">
+                <div class="summary-item" v-if="registration.summary.theme">
+                  <h4>主题</h4>
+                  <p>{{ registration.summary.theme }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.plan">
+                  <h4>计划</h4>
+                  <p>{{ registration.summary.plan }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.problem">
+                  <h4>问题结构与对策措施探讨</h4>
+                  <p>{{ registration.summary.problem }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.action">
+                  <h4>对策行动过程</h4>
+                  <p>{{ registration.summary.action }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.success">
+                  <h4>成果表现</h4>
+                  <p>{{ registration.summary.success }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.discussion">
+                  <h4>讨论总结</h4>
+                  <p>{{ registration.summary.discussion }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.operation">
+                  <h4>运作</h4>
+                  <p>{{ registration.summary.operation }}</p>
+                </div>
+                <div class="summary-item" v-if="registration.summary.presentation">
+                  <h4>展示</h4>
+                  <p>{{ registration.summary.presentation }}</p>
+                </div>
+              </div>
+            </el-card>
             
             <el-divider content-position="left">项目参与人员</el-divider>
             <el-table :data="participants" border>
               <el-table-column prop="name" label="姓名" />
+              <el-table-column prop="role" label="角色">
+                <template #default="{ row }">
+                  {{ getMemberRoleLabel(row.role) }}
+                </template>
+              </el-table-column>
               <el-table-column prop="title" label="职称" />
               <el-table-column prop="department" label="科室" />
             </el-table>
@@ -66,6 +164,21 @@
               <el-table-column prop="name" label="姓名" />
               <el-table-column prop="title" label="职称" />
             </el-table>
+            
+            <div v-if="registration.materials && registration.materials.length > 0" style="margin-top: 20px">
+              <el-divider content-position="left">材料文件</el-divider>
+              <el-table :data="registration.materials" border>
+                <el-table-column prop="fileName" label="文件名" />
+                <el-table-column prop="fileType" label="类型" width="100" />
+                <el-table-column label="操作" width="120">
+                  <template #default="{ row }">
+                    <el-button type="primary" size="small" @click="downloadFile(row)">
+                      下载
+                    </el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
           </div>
           
           <!-- 书审结果 -->
@@ -164,6 +277,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { getRegistration, getRegistrationReviewDetails } from '@/api/registration'
 import { getCompetition } from '@/api/competition'
 import StageProgress from '@/components/StageProgress.vue'
@@ -223,8 +337,17 @@ const loadData = async () => {
   try {
     // 加载报名详情
     const regRes = await getRegistration(registrationId.value)
+    console.log('📊 报名详情API返回:', regRes)
+    
     if (regRes.success && regRes.data) {
       const data = regRes.data
+      console.log('📦 完整数据结构:', data)
+      console.log('📝 registration 对象:', data.registration)
+      console.log('🔍 关键字段检查:')
+      console.log('  - subjectType:', data.registration?.subjectType)
+      console.log('  - qualityTools:', data.registration?.qualityTools)
+      console.log('  - activityInfo:', data.activityInfo)
+      console.log('  - projectSummary:', data.projectSummary)
       
       // ✅ 处理嵌套数据结构
       registration.value = {
@@ -273,6 +396,55 @@ const getGroupTypeText = (type) => {
   return map[type] || type
 }
 
+// 处理"其他"选项 - 改善就医环境
+const getExperienceImproveDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.experienceImproveCode === 'other') {
+    return activityInfo.experienceImproveOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.experienceImproveLabel || '未填写'
+}
+
+// 处理"其他"选项 - 医疗质量相关主题
+const getQualityTopicDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.qualityTopicCode === 'other') {
+    return activityInfo.qualityTopicOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.qualityTopicLabel || '未填写'
+}
+
+// 成员角色标签
+const getMemberRoleLabel = (role) => {
+  const labels = {
+    'LEADER': '圈长',
+    'PARTICIPANT': '圈员',
+    'MENTOR': '辅导员'
+  }
+  return labels[role] || role
+}
+
+// 下载文件
+const downloadFile = (file) => {
+  if (file.fileUrl) {
+    window.open(file.fileUrl, '_blank')
+  } else {
+    ElMessage.warning('文件链接不存在')
+  }
+}
+
 const formatDateRange = (start, end) => {
   if (!start || !end) return ''
   return `${dayjs(start).format('MM-DD')} ~ ${dayjs(end).format('MM-DD')}`
@@ -311,6 +483,31 @@ onMounted(() => {
           border-radius: 4px;
           line-height: 1.8;
           white-space: pre-wrap;
+        }
+        
+        .section {
+          margin-bottom: 20px;
+        }
+        
+        .summary-content {
+          padding: 10px;
+          
+          .summary-item {
+            margin-bottom: 20px;
+            
+            h4 {
+              color: #409EFF;
+              margin-bottom: 10px;
+              font-size: 16px;
+            }
+            
+            p {
+              white-space: pre-wrap;
+              word-break: break-word;
+              line-height: 1.8;
+              color: #606266;
+            }
+          }
         }
       }
     }

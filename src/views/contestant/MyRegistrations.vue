@@ -43,46 +43,48 @@
             {{ formatDate(row.submittedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="250" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <template v-if="row.status === 'DRAFT'">
+            <el-space :size="4" wrap>
+              <template v-if="row.status === 'DRAFT'">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="editRegistration(row.id)"
+                >
+                  编辑
+                </el-button>
+                <el-button
+                  type="success"
+                  size="small"
+                  @click="submitRegistration(row.id)"
+                >
+                  提交
+                </el-button>
+              </template>
+              <template v-else-if="row.status === 'SUBMITTED'">
+                <el-button
+                  size="small"
+                  disabled
+                  style="cursor: not-allowed; opacity: 0.6;"
+                >
+                  已提交
+                </el-button>
+              </template>
               <el-button
-                type="primary"
                 size="small"
-                @click="editRegistration(row.id)"
+                @click="viewDetail(row.id)"
               >
-                编辑
+                查看详情
               </el-button>
               <el-button
-                type="success"
+                v-if="row.status === 'SUBMITTED'"
                 size="small"
-                @click="submitRegistration(row.id)"
+                @click="viewResults(row.id)"
               >
-                提交
+                查看评审结果
               </el-button>
-            </template>
-            <template v-else-if="row.status === 'SUBMITTED'">
-              <el-button
-                size="small"
-                disabled
-                style="cursor: not-allowed; opacity: 0.6;"
-              >
-                已提交
-              </el-button>
-            </template>
-            <el-button
-              size="small"
-              @click="viewDetail(row.id)"
-            >
-              查看详情
-            </el-button>
-            <el-button
-              v-if="row.status === 'SUBMITTED'"
-              size="small"
-              @click="viewResults(row.id)"
-            >
-              查看评审结果
-            </el-button>
+            </el-space>
           </template>
         </el-table-column>
       </el-table>
@@ -106,8 +108,24 @@ const loadData = async () => {
   loading.value = true
   try {
     const res = await getMyRegistrations()
+    console.log('📊 我的报名接口返回:', res)
+    
     if (res.success) {
-      registrations.value = res.data || []
+      const rawData = res.data || []
+      console.log('📝 原始数据:', rawData)
+      
+      if (rawData.length > 0) {
+        console.log('🔍 第一条数据字段检查:')
+        console.log('  - institutionId:', rawData[0].institutionId)
+        console.log('  - institutionName:', rawData[0].institutionName)
+        console.log('  - institutionLevel:', rawData[0].institutionLevel)
+        console.log('  - competitionId:', rawData[0].competitionId)
+        console.log('  - competitionName:', rawData[0].competitionName)
+      }
+      
+      // 后端已返回平铺字段，直接使用
+      registrations.value = rawData
+      
       if (registrations.value.length === 0) {
         ElMessage.info('暂无报名记录')
       }

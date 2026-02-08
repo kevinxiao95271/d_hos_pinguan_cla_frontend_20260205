@@ -275,7 +275,27 @@
       :close-on-click-modal="false"
     >
       <div v-loading="detailLoading">
-        <el-descriptions v-if="currentDetail && currentDetail.registration" :column="2" border>
+        <!-- 机构信息 -->
+        <el-descriptions v-if="currentDetail?.institution" title="机构信息" :column="2" border>
+          <el-descriptions-item label="医疗机构名称">
+            {{ currentDetail.institution.name }}
+          </el-descriptions-item>
+          <el-descriptions-item label="机构等级">
+            <el-tag v-if="currentDetail.institution.level" type="success">
+              {{ currentDetail.institution.level }}
+            </el-tag>
+            <span v-else>-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="机构编号">
+            {{ currentDetail.institution.code || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="所在地区">
+            {{ currentDetail.institution.region || '-' }}
+          </el-descriptions-item>
+        </el-descriptions>
+        
+        <!-- 项目基本信息 -->
+        <el-descriptions v-if="currentDetail?.registration" title="项目信息" :column="2" border style="margin-top: 20px">
           <el-descriptions-item label="项目名称" :span="2">
             {{ currentDetail.registration.projectName }}
           </el-descriptions-item>
@@ -285,28 +305,7 @@
           <el-descriptions-item label="分组">
             {{ currentDetail.registration.groupCode || '-' }}
           </el-descriptions-item>
-          <el-descriptions-item label="品管工具" :span="2">
-            <el-tag v-if="currentDetail.activityInfo?.methodLabel" type="success">
-              {{ currentDetail.activityInfo.methodLabel }}
-            </el-tag>
-            <span v-else>-</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="主题类型" :span="2">
-            {{ currentDetail.activityInfo?.subjectTypeLabel || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="活动主题" :span="2">
-            {{ currentDetail.activityInfo?.theme || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="关键词" :span="2">
-            {{ currentDetail.activityInfo?.keywords || '-' }}
-          </el-descriptions-item>
-          <el-descriptions-item label="平均工作年限">
-            {{ currentDetail.activityInfo?.avgWorkYears || '-' }} 年
-          </el-descriptions-item>
-          <el-descriptions-item label="平均年龄">
-            {{ currentDetail.activityInfo?.avgAge || '-' }} 岁
-          </el-descriptions-item>
-          <el-descriptions-item label="报名时间" :span="2">
+          <el-descriptions-item label="报名时间">
             {{ formatDate(currentDetail.registration.submittedAt) }}
           </el-descriptions-item>
           <el-descriptions-item label="状态">
@@ -316,6 +315,88 @@
             <el-tag v-else>{{ currentDetail.registration.status }}</el-tag>
           </el-descriptions-item>
         </el-descriptions>
+        
+        <!-- 活动信息 -->
+        <el-descriptions v-if="currentDetail?.activityInfo" title="活动信息" :column="2" border style="margin-top: 20px">
+          <el-descriptions-item label="活动主题" :span="2">
+            {{ currentDetail.activityInfo.theme || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="关键词" :span="2">
+            {{ currentDetail.activityInfo.keywords || '-' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="主题类型">
+            {{ currentDetail.activityInfo.subjectTypeLabel || currentDetail.activityInfo.subjectTypeCode || '未填写' }}
+          </el-descriptions-item>
+          <el-descriptions-item label="品管工具">
+            <el-tag v-if="currentDetail.activityInfo.methodLabel" type="success">
+              {{ currentDetail.activityInfo.methodLabel }}
+            </el-tag>
+            <span v-else>{{ currentDetail.activityInfo.methodCode || '未填写' }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="改善就医环境">
+            {{ getExperienceImproveDisplay(currentDetail.activityInfo) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="医疗质量相关主题">
+            {{ getQualityTopicDisplay(currentDetail.activityInfo) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="平均工作年限">
+            {{ currentDetail.activityInfo.avgWorkYears || '-' }} 年
+          </el-descriptions-item>
+          <el-descriptions-item label="平均年龄">
+            {{ currentDetail.activityInfo.avgAge || '-' }} 岁
+          </el-descriptions-item>
+          <el-descriptions-item label="是否跨部门">
+            <el-tag :type="currentDetail.activityInfo.crossDepartment ? 'success' : 'info'">
+              {{ currentDetail.activityInfo.crossDepartment ? '是' : '否' }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="是否与数字化/AI相关">
+            <el-tag :type="currentDetail.activityInfo.relatedToDigitalAi ? 'success' : 'info'">
+              {{ currentDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}
+            </el-tag>
+          </el-descriptions-item>
+        </el-descriptions>
+        
+        <!-- 项目摘要 -->
+        <el-card v-if="currentDetail?.projectSummary" class="summary-card" style="margin-top: 20px">
+          <template #header>
+            <h3>项目摘要</h3>
+          </template>
+          <div class="summary-content">
+            <div class="summary-item" v-if="currentDetail.projectSummary.theme">
+              <h4>主题</h4>
+              <p>{{ currentDetail.projectSummary.theme }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.plan">
+              <h4>计划</h4>
+              <p>{{ currentDetail.projectSummary.plan }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.problem">
+              <h4>问题结构与对策措施探讨</h4>
+              <p>{{ currentDetail.projectSummary.problem }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.action">
+              <h4>对策行动过程</h4>
+              <p>{{ currentDetail.projectSummary.action }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.success">
+              <h4>成果表现</h4>
+              <p>{{ currentDetail.projectSummary.success }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.discussion">
+              <h4>讨论总结</h4>
+              <p>{{ currentDetail.projectSummary.discussion }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.operation">
+              <h4>运作</h4>
+              <p>{{ currentDetail.projectSummary.operation }}</p>
+            </div>
+            <div class="summary-item" v-if="currentDetail.projectSummary.presentation">
+              <h4>展示</h4>
+              <p>{{ currentDetail.projectSummary.presentation }}</p>
+            </div>
+          </div>
+        </el-card>
 
         <el-divider content-position="left">项目参与人员</el-divider>
         <el-table 
@@ -342,6 +423,22 @@
           <el-table-column prop="department" label="科室" />
         </el-table>
         <el-empty v-else description="暂无辅导员" :image-size="80" />
+        
+        <!-- 材料文件 -->
+        <div v-if="currentDetail?.materials && currentDetail.materials.length > 0">
+          <el-divider content-position="left">材料文件</el-divider>
+          <el-table :data="currentDetail.materials" border>
+            <el-table-column prop="fileName" label="文件名" />
+            <el-table-column prop="fileType" label="类型" width="100" />
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="downloadFile(row)">
+                  下载
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
       
       <template #footer>
@@ -472,6 +569,45 @@ const formatDate = (date) => {
 const getMethodLabel = (code) => {
   const method = dictionaries.methods.find(m => m.code === code)
   return method ? method.label : code
+}
+
+// 处理"其他"选项 - 改善就医环境
+const getExperienceImproveDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.experienceImproveCode === 'other') {
+    return activityInfo.experienceImproveOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.experienceImproveLabel || '未填写'
+}
+
+// 处理"其他"选项 - 医疗质量相关主题
+const getQualityTopicDisplay = (activityInfo) => {
+  if (!activityInfo) {
+    return '未填写'
+  }
+  
+  // 如果选择了"其他"，显示自定义内容
+  if (activityInfo.qualityTopicCode === 'other') {
+    return activityInfo.qualityTopicOther || '其他'
+  }
+  
+  // 直接显示Label，不回退到Code
+  return activityInfo.qualityTopicLabel || '未填写'
+}
+
+// 下载文件
+const downloadFile = (file) => {
+  if (file.fileUrl) {
+    window.open(file.fileUrl, '_blank')
+  } else {
+    ElMessage.warning('文件链接不存在')
+  }
 }
 
 const loadDictionaries = async () => {
@@ -677,6 +813,29 @@ onMounted(() => {
     margin-top: 20px;
     display: flex;
     justify-content: flex-end;
+  }
+  
+  .summary-card {
+    .summary-content {
+      padding: 10px;
+      
+      .summary-item {
+        margin-bottom: 20px;
+        
+        h4 {
+          color: #409EFF;
+          margin-bottom: 10px;
+          font-size: 16px;
+        }
+        
+        p {
+          white-space: pre-wrap;
+          word-break: break-word;
+          line-height: 1.8;
+          color: #606266;
+        }
+      }
+    }
   }
 }
 </style>
