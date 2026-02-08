@@ -181,6 +181,12 @@ const routes = [
         name: 'SwitchCompetition',
         component: () => import('@/views/committee/SwitchCompetition.vue'),
         meta: { title: '切换赛事' }
+      },
+      {
+        path: 'historical-data',
+        name: 'HistoricalData',
+        component: () => import('@/views/committee/HistoricalData.vue'),
+        meta: { title: '历史数据查看' }
       }
     ]
   },

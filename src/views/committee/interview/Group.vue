@@ -71,12 +71,18 @@
           暂无进阶组待分组数据
         </el-alert>
         
-        <el-table
-          v-loading="loading"
-          :data="poolData"
-          border
-          @selection-change="handleSelectionChange"
-        >
+        <!-- 顶部横向滚动条 -->
+        <div class="top-scrollbar-wrapper" ref="topScrollbar" @scroll="syncScroll('top')">
+          <div class="top-scrollbar-content"></div>
+        </div>
+        
+        <div class="table-container" ref="tableContainer" @scroll="syncScroll('table')">
+          <el-table
+            v-loading="loading"
+            :data="poolData"
+            border
+            @selection-change="handleSelectionChange"
+          >
           <el-table-column type="selection" width="55" />
           <el-table-column prop="registrationId" label="项目编号" width="100" />
           <el-table-column prop="projectName" label="项目名称" min-width="180" />
@@ -107,7 +113,8 @@
               </el-button>
             </template>
           </el-table-column>
-        </el-table>
+          </el-table>
+        </div>
 
         <!-- 分页器 -->
         <div v-if="showPagination" class="pagination-container">
@@ -287,7 +294,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
@@ -313,6 +320,11 @@ const {
 const loading = ref(false)
 const poolData = ref([])
 const selectedItems = ref([])
+
+// 顶部滚动条相关
+const topScrollbar = ref(null)
+const tableContainer = ref(null)
+let isScrolling = false
 
 const dictionaries = reactive({
   methods: []
@@ -548,9 +560,83 @@ const autoGroupInterview = async () => {
   }
 }
 
+// 同步滚动函数
+const syncScroll = (source) => {
+  if (isScrolling) return
+  isScrolling = true
+  
+  console.log('滚动事件触发:', source, '滚动位置:', source === 'top' ? topScrollbar.value?.scrollLeft : tableContainer.value?.scrollLeft)
+  
+  if (source === 'top' && topScrollbar.value && tableContainer.value) {
+    const targetScroll = topScrollbar.value.scrollLeft
+    const tableBody = tableContainer.value.querySelector('.el-table__body-wrapper')
+    if (tableBody) {
+      tableBody.scrollLeft = targetScroll
+      console.log('同步到表格:', targetScroll)
+    }
+  } else if (source === 'table' && topScrollbar.value && tableContainer.value) {
+    const tableBody = tableContainer.value.querySelector('.el-table__body-wrapper')
+    if (tableBody) {
+      topScrollbar.value.scrollLeft = tableBody.scrollLeft
+      console.log('同步到顶部:', tableBody.scrollLeft)
+    }
+  }
+  
+  setTimeout(() => {
+    isScrolling = false
+  }, 10)
+}
+
+// 更新顶部滚动条宽度
+const updateTopScrollbarWidth = () => {
+  console.log('updateTopScrollbarWidth 被调用')
+  if (topScrollbar.value && tableContainer.value) {
+    const tableBody = tableContainer.value.querySelector('.el-table__body-wrapper')
+    console.log('找到的元素:', tableBody)
+    if (tableBody) {
+      const scrollContent = topScrollbar.value.querySelector('.top-scrollbar-content')
+      if (scrollContent) {
+        const tableWidth = tableBody.scrollWidth
+        scrollContent.style.width = `${tableWidth}px`
+        console.log('✅ 更新顶部滚动条宽度:', tableWidth, 'px')
+      }
+    }
+  } else {
+    console.log('❌ 找不到 ref 元素:', { topScrollbar: topScrollbar.value, tableContainer: tableContainer.value })
+  }
+}
+
 onMounted(() => {
   loadDictionaries()
   loadPoolData()
+  
+  // 初始化顶部滚动条 - 延迟确保表格渲染完成
+  setTimeout(() => {
+    updateTopScrollbarWidth()
+    
+    // 给表格内部的滚动容器添加滚动监听
+    if (tableContainer.value) {
+      const tableBody = tableContainer.value.querySelector('.el-table__body-wrapper')
+      if (tableBody) {
+        tableBody.addEventListener('scroll', () => {
+          if (!isScrolling) {
+            syncScroll('table')
+          }
+        })
+        console.log('✅ 表格滚动监听已添加')
+      }
+    }
+  }, 1000)
+  
+  // 监听窗口大小变化
+  window.addEventListener('resize', updateTopScrollbarWidth)
+})
+
+// 监听数据变化，更新顶部滚动条
+watch(poolData, () => {
+  setTimeout(() => {
+    updateTopScrollbarWidth()
+  }, 300)
 })
 </script>
 
@@ -564,6 +650,78 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+  }
+  
+  // 顶部横向滚动条
+  .top-scrollbar-wrapper {
+    width: 100%;
+    height: 20px;
+    overflow-x: scroll !important; // 强制显示横向滚动条
+    overflow-y: hidden;
+    margin-bottom: 5px;
+    background: #fafafa;
+    border: 1px solid #e4e7ed;
+    border-radius: 4px;
+    
+    &::-webkit-scrollbar {
+      width: 16px;
+      height: 16px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f5f7fa;
+      border-radius: 8px;
+      border: 1px solid #dcdfe6;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #409eff;
+      border-radius: 8px;
+      border: 2px solid #f5f7fa;
+      
+      &:hover {
+        background: #337ecc;
+      }
+    }
+    
+    .top-scrollbar-content {
+      height: 1px;
+      width: 100%; // 宽度会通过JS动态设置
+    }
+  }
+  
+  .table-container {
+    width: 100%;
+    max-height: 600px;
+    overflow-x: auto;
+    overflow-y: auto;
+    
+    // 自定义滚动条样式 - 更宽更明显
+    &::-webkit-scrollbar {
+      width: 16px;
+      height: 16px;
+    }
+    
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 8px;
+      border: 1px solid #dcdfe6;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+      background: #409eff;
+      border-radius: 8px;
+      border: 2px solid #f1f1f1;
+      
+      &:hover {
+        background: #337ecc;
+      }
+    }
+    
+    // 滚动条角落
+    &::-webkit-scrollbar-corner {
+      background: #f1f1f1;
+    }
   }
 
   .pagination-container {

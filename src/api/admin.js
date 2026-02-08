@@ -276,3 +276,15 @@ export function getStatsSummary(params) {
     params
   })
 }
+
+/**
+ * 查询历史数据
+ * @param {Object} params - { region, competitionGroup, circleName, institutionName, projectName, year, page, size }
+ */
+export function getHistoricalData(params) {
+  return request({
+    url: '/historical-data',
+    method: 'get',
+    params
+  })
+}

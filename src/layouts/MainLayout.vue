@@ -142,7 +142,8 @@ const menuItems = computed(() => {
         ]
       },
       { path: '/committee/create-competition', title: '创建赛事', icon: 'Plus' },
-      { path: '/committee/switch-competition', title: '切换赛事', icon: 'Switch' }
+      { path: '/committee/switch-competition', title: '切换赛事', icon: 'Switch' },
+      { path: '/committee/historical-data', title: '历史数据查看', icon: 'FolderOpened' }
     ]
     
     if (role === 'OPS') {
