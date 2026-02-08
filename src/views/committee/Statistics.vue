@@ -3,58 +3,41 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>报名统计</span>
+          <span>报名统计 - {{ stats.competitionName }}</span>
         </div>
       </template>
       
       <el-row :gutter="20" style="margin-bottom: 20px">
-        <el-col :span="6">
+        <el-col :span="24">
           <el-card shadow="hover">
-            <el-statistic title="总报名数" :value="stats.totalRegistrations" />
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <el-statistic title="基层组" :value="stats.basicGroup" />
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <el-statistic title="综合组" :value="stats.comprehensiveGroup" />
-          </el-card>
-        </el-col>
-        <el-col :span="6">
-          <el-card shadow="hover">
-            <el-statistic title="进阶组" :value="stats.advancedGroup" />
+            <el-statistic 
+              title="总报名数" 
+              :value="stats.totalRegistrations" 
+              style="text-align: center"
+            />
           </el-card>
         </el-col>
       </el-row>
       
+      <!-- 第一行：地区分布 + 主题类型分布 -->
       <el-row :gutter="20">
         <el-col :span="12">
           <el-card>
-            <div ref="groupChart" style="height: 350px"></div>
+            <div ref="regionChart" style="height: 400px"></div>
           </el-card>
         </el-col>
         <el-col :span="12">
           <el-card>
-            <div ref="regionChart" style="height: 350px"></div>
-          </el-card>
-        </el-col>
-      </el-row>
-      
-      <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="24">
-          <el-card>
-            <div ref="methodChart" style="height: 400px"></div>
-          </el-card>
-        </el-col>
-      </el-row>
-      
-      <el-row :gutter="20" style="margin-top: 20px">
-        <el-col :span="24">
-          <el-card>
             <div ref="subjectChart" style="height: 400px"></div>
+          </el-card>
+        </el-col>
+      </el-row>
+      
+      <!-- 第二行：评分雷达图 -->
+      <el-row :gutter="20" style="margin-top: 20px">
+        <el-col :span="24">
+          <el-card>
+            <div ref="radarChart" style="height: 450px"></div>
           </el-card>
         </el-col>
       </el-row>
@@ -66,50 +49,40 @@
 import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
-import { filterRegistrations } from '@/api/admin'
+import { getStatsSummary } from '@/api/admin'
 
-const groupChart = ref(null)
-const methodChart = ref(null)
 const subjectChart = ref(null)
 const regionChart = ref(null)
+const radarChart = ref(null)
 
 const stats = reactive({
   totalRegistrations: 0,
-  basicGroup: 0,
-  comprehensiveGroup: 0,
-  advancedGroup: 0
+  competitionName: ''
 })
 
 const loadData = async () => {
   try {
     console.log('📊 正在加载统计数据...')
     
-    // 获取当前赛事ID，默认使用 21
+    // 获取当前赛事ID，默认为21（2026浙江品管大赛）
     const competitionId = localStorage.getItem('currentCompetitionId') || 21
+    console.log('   当前赛事ID:', competitionId)
     
-    // 使用优化后的 admin 接口
-    const res = await filterRegistrations({ competitionId })
+    // 调用后端统计接口，传递 competitionId 参数
+    const res = await getStatsSummary({ competitionId })
     
     if (res.success && res.data) {
-      const registrations = res.data
-      console.log('✅ 获取到报名数据:', registrations.length, '条')
+      const summaryData = res.data
+      console.log('✅ 后端返回的原始数据:', summaryData)
       
-      // 计算统计数据
-      stats.totalRegistrations = registrations.length
-      stats.basicGroup = registrations.filter(r => r.groupType === 'BASIC').length
-      stats.comprehensiveGroup = registrations.filter(r => r.groupType === 'COMPREHENSIVE').length
-      stats.advancedGroup = registrations.filter(r => r.groupType === 'ADVANCED').length
-      
-      console.log('📊 统计结果:', stats)
+      // 直接使用后端数据，不做任何前端处理
+      stats.competitionName = summaryData.competitionName || ''
+      stats.totalRegistrations = summaryData.registrationCount || 0
       
       await nextTick()
-      initCharts(registrations)
+      initCharts(summaryData)
       
-      if (registrations.length > 0) {
-        ElMessage.success(`统计数据加载成功，共 ${registrations.length} 条报名`)
-      } else {
-        ElMessage.info('暂无报名数据')
-      }
+      ElMessage.success(`${summaryData.competitionName} 统计数据加载成功`)
     } else {
       console.error('❌ 加载统计数据失败:', res.message)
       ElMessage.warning('加载统计数据失败: ' + (res.message || '未知错误'))
@@ -124,224 +97,15 @@ const loadData = async () => {
   }
 }
 
-const initCharts = (registrations = []) => {
-  // 竞赛组别分布
-  if (groupChart.value) {
-    const chart = echarts.init(groupChart.value)
-    chart.setOption({
-      title: {
-        text: '竞赛组别分布',
-        left: 'center',
-        top: '5%'
-      },
-      tooltip: {
-        trigger: 'item'
-      },
-      legend: {
-        bottom: '8%',
-        left: 'center'
-      },
-      series: [
-        {
-          name: '竞赛组别',
-          type: 'pie',
-          radius: ['30%', '55%'],
-          center: ['50%', '45%'],
-          avoidLabelOverlap: true,
-          itemStyle: {
-            borderRadius: 10,
-            borderColor: '#fff',
-            borderWidth: 2
-          },
-          label: {
-            show: true,
-            formatter: '{b}: {c}\n({d}%)',
-            fontSize: 12
-          },
-          emphasis: {
-            label: {
-              show: true,
-              fontSize: 14,
-              fontWeight: 'bold'
-            }
-          },
-          data: [
-            { value: stats.basicGroup, name: '基层组' },
-            { value: stats.comprehensiveGroup, name: '综合组' },
-            { value: stats.advancedGroup, name: '进阶组' }
-          ]
-        }
-      ]
-    })
-  }
-  
-  // 品管工具分布（从实际数据计算）
-  if (methodChart.value && registrations.length > 0) {
-    const chart = echarts.init(methodChart.value)
-    
-    // 统计各品管工具的使用次数
-    const methodStats = {}
-    registrations.forEach(r => {
-      const method = r.methodLabel || '未知'
-      methodStats[method] = (methodStats[method] || 0) + 1
-    })
-    
-    // 按数量排序
-    const sortedMethods = Object.entries(methodStats)
-      .sort((a, b) => b[1] - a[1])
-    
-    const methodNames = sortedMethods.map(item => item[0])
-    const methodCounts = sortedMethods.map(item => item[1])
-    
-    chart.setOption({
-      title: {
-        text: '品管工具分布',
-        left: 'center'
-      },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-          type: 'shadow'
-        },
-        formatter: '{b}: {c} 个项目'
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '15%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: methodNames,
-        axisLabel: {
-          rotate: 45,
-          interval: 0,
-          fontSize: 11
-        }
-      },
-      yAxis: {
-        type: 'value',
-        name: '项目数量'
-      },
-      series: [
-        {
-          data: methodCounts,
-          type: 'bar',
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#83bff6' },
-              { offset: 0.5, color: '#188df0' },
-              { offset: 1, color: '#188df0' }
-            ])
-          },
-          emphasis: {
-            itemStyle: {
-              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: '#2378f7' },
-                { offset: 0.7, color: '#2378f7' },
-                { offset: 1, color: '#83bff6' }
-              ])
-            }
-          }
-        }
-      ]
-    })
-  }
-  
-  // 主题类型分布（从实际数据计算）
-  if (subjectChart.value && registrations.length > 0) {
-    const chart = echarts.init(subjectChart.value)
-    
-    // 统计各主题类型的使用次数
-    const subjectStats = {}
-    registrations.forEach(r => {
-      const subject = r.subjectTypeLabel || '未知'
-      subjectStats[subject] = (subjectStats[subject] || 0) + 1
-    })
-    
-    // 按数量排序
-    const sortedSubjects = Object.entries(subjectStats)
-      .sort((a, b) => b[1] - a[1])
-    
-    const subjectNames = sortedSubjects.map(item => item[0])
-    const subjectCounts = sortedSubjects.map(item => item[1])
-    
-    chart.setOption({
-      title: {
-        text: '主题类型分布',
-        left: 'center'
-      },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-          type: 'shadow'
-        },
-        formatter: '{b}: {c} 个项目'
-      },
-      grid: {
-        left: '20%',
-        right: '4%',
-        bottom: '3%',
-        top: '15%',
-        containLabel: true
-      },
-      xAxis: {
-        type: 'value',
-        name: '项目数量'
-      },
-      yAxis: {
-        type: 'category',
-        data: subjectNames,
-        axisLabel: {
-          fontSize: 11
-        }
-      },
-      series: [
-        {
-          name: '项目数',
-          type: 'bar',
-          data: subjectCounts,
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-              { offset: 0, color: '#73c0de' },
-              { offset: 0.5, color: '#5470c6' },
-              { offset: 1, color: '#5470c6' }
-            ])
-          }
-        }
-      ]
-    })
-  }
-  
-  // 地区分布（从机构名称提取）
-  if (regionChart.value && registrations.length > 0) {
+const initCharts = (summaryData = {}) => {
+  // 1. 地区分布饼图（统一从 regionCounts 读取）
+  if (regionChart.value) {
     const chart = echarts.init(regionChart.value)
     
-    // 从机构名称中提取地区
-    const regionStats = {}
-    const cityKeywords = ['杭州', '宁波', '温州', '绍兴', '嘉兴', '湖州', 
-                         '金华', '衢州', '台州', '丽水', '舟山']
+    const regionCounts = summaryData.regionCounts || {}
     
-    registrations.forEach(r => {
-      const institutionName = r.institutionName || ''
-      let cityFound = false
-      
-      for (const city of cityKeywords) {
-        if (institutionName.includes(city)) {
-          regionStats[city] = (regionStats[city] || 0) + 1
-          cityFound = true
-          break
-        }
-      }
-      
-      if (!cityFound && institutionName) {
-        regionStats['其他'] = (regionStats['其他'] || 0) + 1
-      }
-    })
-    
-    // 转换为数组并排序
-    const regionData = Object.entries(regionStats)
+    // 转换为数组并按数量排序
+    const regionData = Object.entries(regionCounts)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
     
@@ -390,6 +154,136 @@ const initCharts = (registrations = []) => {
             '#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de',
             '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc', '#d14a61',
             '#5ab1ef', '#ffb980'
+          ]
+        }
+      ]
+    })
+  }
+  
+  // 2. 主题类型分布饼图（统一从 subjectTypeCounts 读取）
+  if (subjectChart.value) {
+    const chart = echarts.init(subjectChart.value)
+    
+    const subjectTypeCounts = summaryData.subjectTypeCounts || {}
+    
+    // 转换为数组并按数量排序
+    const subjectData = Object.entries(subjectTypeCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+    
+    chart.setOption({
+      title: {
+        text: '主题类型分布',
+        left: 'center',
+        top: '5%'
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} 个项目 ({d}%)'
+      },
+      legend: {
+        bottom: '8%',
+        left: 'center',
+        orient: 'horizontal',
+        type: 'scroll'
+      },
+      series: [
+        {
+          name: '主题类型',
+          type: 'pie',
+          radius: ['30%', '55%'],
+          center: ['50%', '45%'],
+          avoidLabelOverlap: true,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: '#fff',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            formatter: '{b}\n{d}%',
+            fontSize: 11
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 13,
+              fontWeight: 'bold'
+            }
+          },
+          data: subjectData,
+          color: [
+            '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272',
+            '#fc8452', '#9a60b4', '#ea7ccc', '#5470c6', '#d14a61'
+          ]
+        }
+      ]
+    })
+  }
+  
+  // 3. 评分雷达图（7个维度的平均分）
+  if (radarChart.value) {
+    const chart = echarts.init(radarChart.value)
+    
+    const avgScores = [
+      summaryData.avgPlan || 0,
+      summaryData.avgProblem || 0,
+      summaryData.avgAction || 0,
+      summaryData.avgSuccess || 0,
+      summaryData.avgReview || 0,
+      summaryData.avgOperation || 0,
+      summaryData.avgPresentation || 0
+    ]
+    
+    chart.setOption({
+      title: {
+        text: '平均评分',
+        left: 'center',
+        top: '5%'
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: (params) => {
+          const names = ['计划', '问题', '行动', '成功', '回顾', '运作', '展示']
+          let html = '<div><strong>平均评分</strong></div>'
+          params.value.forEach((val, idx) => {
+            html += `<div>${names[idx]}: ${val.toFixed(1)} 分</div>`
+          })
+          return html
+        }
+      },
+      radar: {
+        indicator: [
+          { name: '计划', max: 20 },
+          { name: '问题', max: 20 },
+          { name: '行动', max: 20 },
+          { name: '成功', max: 20 },
+          { name: '回顾', max: 20 },
+          { name: '运作', max: 20 },
+          { name: '展示', max: 20 }
+        ],
+        center: ['50%', '50%'],
+        radius: '60%'
+      },
+      series: [
+        {
+          name: '平均评分',
+          type: 'radar',
+          data: [
+            {
+              value: avgScores,
+              name: '平均分',
+              areaStyle: {
+                color: 'rgba(91, 143, 249, 0.3)'
+              },
+              lineStyle: {
+                color: '#5b8ff9',
+                width: 2
+              },
+              itemStyle: {
+                color: '#5b8ff9'
+              }
+            }
           ]
         }
       ]

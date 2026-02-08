@@ -686,7 +686,9 @@ import { Search } from '@element-plus/icons-vue'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getRankings } from '@/api/shortlist'
-import { getRegistrationReviewDetails, getReviewerScores } from '@/api/registration'
+import { getRegistrationReviewDetails } from '@/api/registration'
+import { getAdminReviewTasks } from '@/api/admin'
+import { getReviewScore } from '@/api/review'
 
 // 赛事ID
 const getCurrentCompetitionId = () => {
@@ -1032,6 +1034,115 @@ function toggleShortlist(project, isAdd) {
   }
 }
 
+// 加载评委详细评分（通过任务列表+评分接口）
+async function loadReviewerScores(registrationId) {
+  try {
+    // 1. 获取书审任务列表
+    const bookTasksRes = await getAdminReviewTasks({
+      competitionId: competitionId.value,
+      stage: 'BOOK'
+    })
+    
+    if (bookTasksRes.success && bookTasksRes.data) {
+      const allBookTasks = bookTasksRes.data
+      // 筛选出当前项目的任务
+      const projectBookTasks = allBookTasks.filter(t => t.registrationId === registrationId)
+      
+      // 2. 对每个已评分的任务，获取详细评分
+      const bookScoresPromises = projectBookTasks
+        .filter(task => task.status === 'SCORED')
+        .map(async (task) => {
+          try {
+            const scoreRes = await getReviewScore(task.id)
+            if (scoreRes.success && scoreRes.data) {
+              return {
+                reviewerId: task.reviewerId,
+                reviewerName: task.reviewerName,
+                reviewerTitle: task.reviewerTitle,
+                reviewerInstitutionName: task.reviewerInstitutionName,
+                reviewerInstitutionLevel: task.institutionLevel || '-',
+                scores: {
+                  plan: scoreRes.data.plan,
+                  problem: scoreRes.data.problem,
+                  action: scoreRes.data.action,
+                  success: scoreRes.data.success,
+                  review: scoreRes.data.review,
+                  operation: scoreRes.data.operation,
+                  presentation: scoreRes.data.presentation,
+                  total: scoreRes.data.total
+                },
+                highlight: scoreRes.data.highlight,
+                weakness: scoreRes.data.weakness,
+                submittedAt: scoreRes.data.submittedAt
+              }
+            }
+          } catch (err) {
+            console.warn(`获取任务${task.id}的评分失败:`, err)
+          }
+          return null
+        })
+      
+      const bookScores = await Promise.all(bookScoresPromises)
+      bookReviewers.value = bookScores.filter(s => s !== null)
+      console.log('✅ 加载书审评委详细评分:', bookReviewers.value.length, '位')
+    }
+    
+    // 3. 获取面谈任务列表
+    const interviewTasksRes = await getAdminReviewTasks({
+      competitionId: competitionId.value,
+      stage: 'INTERVIEW'
+    })
+    
+    if (interviewTasksRes.success && interviewTasksRes.data) {
+      const allInterviewTasks = interviewTasksRes.data
+      const projectInterviewTasks = allInterviewTasks.filter(t => t.registrationId === registrationId)
+      
+      // 4. 对每个已评分的任务，获取详细评分
+      const interviewScoresPromises = projectInterviewTasks
+        .filter(task => task.status === 'SCORED')
+        .map(async (task) => {
+          try {
+            const scoreRes = await getReviewScore(task.id)
+            if (scoreRes.success && scoreRes.data) {
+              return {
+                reviewerId: task.reviewerId,
+                reviewerName: task.reviewerName,
+                reviewerTitle: task.reviewerTitle,
+                reviewerInstitutionName: task.reviewerInstitutionName,
+                reviewerInstitutionLevel: task.institutionLevel || '-',
+                scores: {
+                  plan: scoreRes.data.plan,
+                  problem: scoreRes.data.problem,
+                  action: scoreRes.data.action,
+                  success: scoreRes.data.success,
+                  review: scoreRes.data.review,
+                  operation: scoreRes.data.operation,
+                  presentation: scoreRes.data.presentation,
+                  total: scoreRes.data.total
+                },
+                highlight: scoreRes.data.highlight,
+                weakness: scoreRes.data.weakness,
+                submittedAt: scoreRes.data.submittedAt
+              }
+            }
+          } catch (err) {
+            console.warn(`获取任务${task.id}的评分失败:`, err)
+          }
+          return null
+        })
+      
+      const interviewScores = await Promise.all(interviewScoresPromises)
+      interviewReviewers.value = interviewScores.filter(s => s !== null)
+      console.log('✅ 加载面谈评委详细评分:', interviewReviewers.value.length, '位')
+    }
+    
+  } catch (error) {
+    console.error('❌ 加载评委详细评分失败:', error)
+    bookReviewers.value = []
+    interviewReviewers.value = []
+  }
+}
+
 // 查看项目详情
 async function viewDetail(project) {
   selectedProject.value = project
@@ -1040,12 +1151,8 @@ async function viewDetail(project) {
   activeTab.value = 'BOOK'
 
   try {
-    // 并行调用评审详情API和评委评分API
-    const [detailsResponse, bookReviewersResponse, interviewReviewersResponse] = await Promise.all([
-      getRegistrationReviewDetails(project.registrationId),
-      getReviewerScores(project.registrationId, 'BOOK'),
-      getReviewerScores(project.registrationId, 'INTERVIEW')
-    ])
+    // 调用评审详情API获取汇总平均分
+    const detailsResponse = await getRegistrationReviewDetails(project.registrationId)
 
     // 处理汇总平均分
     if (detailsResponse.success && detailsResponse.data) {
@@ -1081,19 +1188,8 @@ async function viewDetail(project) {
       }
     }
 
-    // 处理书审评委详细评分
-    if (bookReviewersResponse.success && bookReviewersResponse.data) {
-      bookReviewers.value = bookReviewersResponse.data
-    } else {
-      bookReviewers.value = []
-    }
-
-    // 处理面谈评委详细评分
-    if (interviewReviewersResponse.success && interviewReviewersResponse.data) {
-      interviewReviewers.value = interviewReviewersResponse.data
-    } else {
-      interviewReviewers.value = []
-    }
+    // 获取评委详细评分（通过任务列表）
+    await loadReviewerScores(project.registrationId)
 
   } catch (error) {
     console.error('加载详情失败:', error)

@@ -285,7 +285,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MagicStick, User, Refresh, List } from '@element-plus/icons-vue'
-import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers, getReviewTasksByStage } from '@/api/admin'
+import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers, getAdminReviewTasks } from '@/api/admin'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
@@ -433,7 +433,7 @@ const loadAssignedTasks = async () => {
   }
 
   try {
-    const res = await getReviewTasksByStage({
+    const res = await getAdminReviewTasks({
       competitionId: competitionId.value,
       stage: 'BOOK'
     })
@@ -696,7 +696,7 @@ const showAssignedTasksDialog = async () => {
 const loadAllAssignedTasks = async () => {
   loadingAssignedTasks.value = true
   try {
-    const res = await getReviewTasksByStage({
+    const res = await getAdminReviewTasks({
       competitionId: competitionId.value,
       stage: 'BOOK'
     })

@@ -155,7 +155,13 @@ const loadData = async () => {
   try {
     const res = await getMyReviewTasks(getPaginationParams())
     if (res.success) {
-      tasks.value = extractDataList(res.data)
+      const dataList = extractDataList(res.data)
+      // ✅ 字段映射：将 reviewTaskId 映射为 id，确保路由跳转正确
+      tasks.value = dataList.map(task => ({
+        ...task,
+        id: task.reviewTaskId || task.id  // 兼容两种字段名
+      }))
+      console.log('✅ 加载任务成功:', tasks.value.length, '条', tasks.value[0])
       if (tasks.value.length === 0) {
         ElMessage.info('暂无评审任务')
       }
@@ -163,7 +169,7 @@ const loadData = async () => {
       ElMessage.error(res.message || '加载失败')
     }
   } catch (error) {
-    console.error('加载评审任务失败:', error)
+    console.error('❌ 加载评审任务失败:', error)
     ElMessage.error('加载评审任务失败')
   } finally {
     loading.value = false

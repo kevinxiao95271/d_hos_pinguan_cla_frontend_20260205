@@ -89,6 +89,19 @@ export function getReviewTasksByStage(params) {
 }
 
 /**
+ * 管理端：查询已分配的评审任务（新接口）
+ * @param {Object} params - { competitionId, stage, status }
+ * @returns {Promise} 返回完整的任务列表，包含项目信息、评委信息等
+ */
+export function getAdminReviewTasks(params) {
+  return request({
+    url: '/admin/reviews/tasks',
+    method: 'get',
+    params
+  })
+}
+
+/**
  * 筛选评审任务
  */
 export function filterReviewTasks(params) {

@@ -109,11 +109,16 @@ const loadData = async () => {
   try {
     const res = await getMyReviewTasks()  // ✅ 使用新API，自动从token获取评委ID
     if (res.success) {
-      tasks.value = res.data || []
-      console.log('Dashboard加载任务成功:', tasks.value.length)
+      const dataList = res.data || []
+      // ✅ 字段映射：将 reviewTaskId 映射为 id，确保路由跳转正确
+      tasks.value = dataList.map(task => ({
+        ...task,
+        id: task.reviewTaskId || task.id  // 兼容两种字段名
+      }))
+      console.log('✅ Dashboard加载任务成功:', tasks.value.length, '条')
     }
   } catch (error) {
-    console.error('加载评审任务失败:', error)
+    console.error('❌ 加载评审任务失败:', error)
   }
 }
 
