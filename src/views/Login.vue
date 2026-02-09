@@ -62,13 +62,22 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+// 页面加载时检查token是否过期
+onMounted(() => {
+  if (userStore.isLoggedIn && userStore.isTokenExpired()) {
+    console.warn('⚠️ 检测到token已过期，清除登录状态')
+    userStore.logout()
+    ElMessage.warning('登录已过期，请重新登录')
+  }
+})
 
 const formRef = ref(null)
 const loading = ref(false)

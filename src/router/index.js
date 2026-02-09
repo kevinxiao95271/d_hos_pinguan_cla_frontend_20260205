@@ -254,6 +254,18 @@ router.beforeEach((to, from, next) => {
   // 设置页面标题
   document.title = to.meta.title || '浙江省品管大赛'
   
+  // 检查token是否过期
+  if (userStore.isLoggedIn && userStore.isTokenExpired()) {
+    console.warn('⚠️ Token已过期，清除登录状态')
+    userStore.logout()
+    
+    // 如果当前要访问需要登录的页面，跳转到登录页
+    if (to.meta.requiresAuth) {
+      next('/login')
+      return
+    }
+  }
+  
   // 如果需要登录
   if (to.meta.requiresAuth) {
     if (!userStore.isLoggedIn) {

@@ -26,11 +26,29 @@ export const useUserStore = defineStore('user', {
       if (res.success && res.data) {
         this.token = res.data.token
         this.userInfo = res.data
+        
+        // 存储token和登录时间戳（用于检查过期）
+        const loginTimestamp = Date.now()
         localStorage.setItem('token', res.data.token)
         localStorage.setItem('userInfo', JSON.stringify(res.data))
         localStorage.setItem('loginTime', new Date().toLocaleString('zh-CN'))
+        localStorage.setItem('loginTimestamp', loginTimestamp.toString())
       }
       return res
+    },
+    
+    // 检查token是否过期（假设token有效期为2小时）
+    isTokenExpired() {
+      const loginTimestamp = localStorage.getItem('loginTimestamp')
+      if (!loginTimestamp || !this.token) {
+        return true
+      }
+      
+      const now = Date.now()
+      const elapsed = now - parseInt(loginTimestamp)
+      const TWO_HOURS = 2 * 60 * 60 * 1000 // 2小时的毫秒数
+      
+      return elapsed > TWO_HOURS
     },
     
     logout() {
@@ -39,6 +57,7 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem('token')
       localStorage.removeItem('userInfo')
       localStorage.removeItem('loginTime')
+      localStorage.removeItem('loginTimestamp')
       localStorage.removeItem('currentCompetitionId')
     }
   }
