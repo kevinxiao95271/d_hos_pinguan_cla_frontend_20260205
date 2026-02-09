@@ -1,0 +1,70 @@
+========================================
+请在MobaXterm终端中依次执行以下命令
+========================================
+
+# ============ 第1步：检查文件上传 ============
+echo "检查文件上传情况..."
+ls -lh /data/pinguan_frontend/ | head -20
+echo ""
+echo "文件总数: $(ls -1 /data/pinguan_frontend/ | wc -l)"
+echo "index.html 存在: $([ -f /data/pinguan_frontend/index.html ] && echo '✅ 是' || echo '❌ 否')"
+echo "assets 目录存在: $([ -d /data/pinguan_frontend/assets ] && echo '✅ 是' || echo '❌ 否')"
+echo ""
+
+# ============ 第2步：配置nginx ============
+cat > /etc/nginx/conf.d/pinguan.conf << 'EOF'
+server {
+    listen 6039;
+    server_name _;
+
+    root /data/pinguan_frontend;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript 
+               application/x-javascript application/xml+rss 
+               application/javascript application/json;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:6031/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOF
+
+# ============ 第3步：重启nginx ============
+nginx -t && systemctl restart nginx
+
+# ============ 第4步：检查状态 ============
+echo ""
+echo "=========================================="
+echo "部署状态检查"
+echo "=========================================="
+echo "nginx状态: $(systemctl is-active nginx)"
+echo ""
+echo "前端端口 6039:"
+netstat -tuln | grep 6039
+echo ""
+echo "后端端口 6031:"
+netstat -tuln | grep 6031
+echo ""
+echo "测试本地访问:"
+curl -I http://localhost:6039 2>&1 | head -3
+echo ""
+echo "=========================================="
+echo "✅ 部署完成！"
+echo "浏览器访问: http://81.71.44.180:6039"
+echo "=========================================="

@@ -1,0 +1,78 @@
+==================================================
+WinSCP 部署步骤
+==================================================
+
+【第一步】下载安装
+- 访问: https://winscp.net/eng/download.php
+- 下载并安装WinSCP
+
+【第二步】连接服务器
+打开WinSCP，填入以下信息：
+- 文件协议: SCP
+- 主机名: 81.71.44.180
+- 端口号: 22
+- 用户名: root
+- 密码: Yiguo9527_
+
+点击"登录"
+
+【第三步】上传文件
+1. 左侧是本地电脑，找到项目的 dist 文件夹
+   路径: D:\AiCode\cursor\d_hos_pinguan_cla_frontend_20260205\dist
+2. 右侧是服务器，进入 /data 目录
+3. 如果没有 pinguan_frontend 文件夹，右键创建新文件夹
+4. 进入 pinguan_frontend 文件夹
+5. 将左侧 dist 文件夹内的 所有文件 拖到右侧
+   （注意：是拖 dist 里面的文件，不是 dist 文件夹本身）
+
+【第四步】配置nginx
+点击顶部菜单"命令 > 打开终端"，然后复制以下命令执行：
+
+cat > /etc/nginx/conf.d/pinguan.conf << 'EOF'
+server {
+    listen 6039;
+    server_name _;
+
+    root /data/pinguan_frontend;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript 
+               application/x-javascript application/xml+rss 
+               application/javascript application/json;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:6031/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOF
+
+然后执行：
+
+nginx -t && systemctl restart nginx
+
+【第五步】验证部署
+浏览器访问: http://81.71.44.180:6039
+
+==================================================
+如果有问题，检查以下几点：
+1. 服务器上 /data/pinguan_frontend 目录下是否有 index.html
+2. nginx配置是否正确: cat /etc/nginx/conf.d/pinguan.conf
+3. nginx是否运行: systemctl status nginx
+4. 端口是否监听: netstat -tuln | grep 6039
+5. 后端是否运行: netstat -tuln | grep 6031
+==================================================

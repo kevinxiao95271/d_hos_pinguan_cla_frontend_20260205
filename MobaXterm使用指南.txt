@@ -1,0 +1,87 @@
+==================================================
+MobaXterm 部署步骤（推荐）
+==================================================
+
+【优势】
+- 集成SSH终端和文件传输
+- 无需单独的FTP/SCP工具
+- 操作更直观
+
+【第一步】下载安装
+- 访问: https://mobaxterm.mobatek.net/download.html
+- 下载 Home Edition (Installer edition)
+- 安装并打开
+
+【第二步】创建SSH会话
+1. 点击 "Session" 按钮
+2. 选择 "SSH"
+3. 填入信息：
+   - Remote host: 81.71.44.180
+   - Username: root
+   - Port: 22
+4. 点击 "OK"
+5. 输入密码: Yiguo9527_
+
+【第三步】上传文件
+连接成功后，左侧会自动显示服务器文件浏览器：
+
+1. 在左侧文件浏览器中，进入 /data 目录
+2. 如果没有 pinguan_frontend，右键创建文件夹
+3. 进入 pinguan_frontend 文件夹
+4. 点击工具栏的 "Upload" 按钮
+5. 选择本地的 dist 文件夹内的所有文件上传
+
+或者直接在终端执行：
+cd /data
+mkdir -p pinguan_frontend
+
+然后使用左侧面板上传文件
+
+【第四步】配置nginx
+在右侧终端窗口执行：
+
+cat > /etc/nginx/conf.d/pinguan.conf << 'EOF'
+server {
+    listen 6039;
+    server_name _;
+
+    root /data/pinguan_frontend;
+    index index.html;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript 
+               application/x-javascript application/xml+rss 
+               application/javascript application/json;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:6031/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+EOF
+
+nginx -t && systemctl restart nginx
+
+【第五步】验证
+浏览器访问: http://81.71.44.180:6039
+
+==================================================
+常用MobaXterm快捷操作：
+- 拖拽文件到左侧面板 = 上传
+- 从左侧面板拖出文件 = 下载
+- 右键文件 > Edit = 直接编辑服务器文件
+- 保存会话，下次一键连接
+==================================================

@@ -1,0 +1,83 @@
+# 浙江省品管大赛前端 - 一键部署命令
+# 服务器: 81.71.44.180  密码: Yiguo9527_
+# 前端端口: 6039  后端端口: 6031
+
+==========================================
+步骤1: 上传文件到服务器
+==========================================
+在Windows PowerShell或CMD中，在项目根目录执行：
+
+scp -r dist/* root@81.71.44.180:/data/pinguan_frontend/
+
+# 提示输入密码时，输入: Yiguo9527_
+
+
+==========================================
+步骤2: 登录服务器
+==========================================
+
+ssh root@81.71.44.180
+
+# 提示输入密码时，输入: Yiguo9527_
+
+
+==========================================
+步骤3: 配置nginx（在服务器上执行）
+==========================================
+
+cat > /etc/nginx/conf.d/pinguan.conf << 'EOF'
+server {
+    listen 6039;
+    server_name _;
+    root /data/pinguan_frontend;
+    index index.html;
+    
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    
+    location /api/ {
+        proxy_pass http://localhost:6031/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+
+==========================================
+步骤4: 重启nginx（在服务器上执行）
+==========================================
+
+nginx -t && systemctl restart nginx
+
+
+==========================================
+步骤5: 验证部署
+==========================================
+
+浏览器访问: http://81.71.44.180:6039
+
+应该能看到登录页面
+
+
+==========================================
+常用命令（在服务器上）
+==========================================
+
+# 查看nginx状态
+systemctl status nginx
+
+# 查看nginx错误日志
+tail -f /var/log/nginx/error.log
+
+# 查看已部署的文件
+ls -lh /data/pinguan_frontend/
+
+# 检查端口
+netstat -tlnp | grep 6039    # 前端
+netstat -tlnp | grep 6031    # 后端
