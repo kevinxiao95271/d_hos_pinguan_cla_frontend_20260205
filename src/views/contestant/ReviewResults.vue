@@ -20,31 +20,31 @@
                   <span style="font-weight: 600;">
                     {{ getStageText(result.stage) }} - 评委：{{ result.reviewerName || '匿名' }}
                   </span>
-                  <el-tag type="success">总分: {{ result.totalScore || 0 }}</el-tag>
+                  <el-tag type="success">总分: {{ (result.totalScore || 0).toFixed(1) }}</el-tag>
                 </div>
               </template>
               
               <el-descriptions :column="2" border>
                 <el-descriptions-item label="计划">
-                  {{ result.planScore || 0 }} 分
+                  {{ (result.planScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="问题结构与对策措施探讨">
-                  {{ result.problemAnalysisScore || 0 }} 分
+                  {{ (result.problemAnalysisScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="对策实施">
-                  {{ result.implementationScore || 0 }} 分
+                  {{ (result.implementationScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="成功表现">
-                  {{ result.resultScore || 0 }} 分
+                  {{ (result.resultScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="检讨">
-                  {{ result.reviewScore || 0 }} 分
+                  {{ (result.reviewScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="整体运作">
-                  {{ result.operationScore || 0 }} 分
+                  {{ (result.operationScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="资料呈现" :span="2">
-                  {{ result.presentationScore || 0 }} 分
+                  {{ (result.presentationScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
               </el-descriptions>
               

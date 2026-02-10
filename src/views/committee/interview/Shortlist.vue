@@ -511,15 +511,15 @@
                   
                   <!-- 分项评分 -->
                   <el-descriptions :column="4" border size="small" style="margin-bottom: 15px">
-                    <el-descriptions-item label="计划">{{ reviewer.scores.plan }}分</el-descriptions-item>
-                    <el-descriptions-item label="问题">{{ reviewer.scores.problem }}分</el-descriptions-item>
-                    <el-descriptions-item label="行动">{{ reviewer.scores.action }}分</el-descriptions-item>
-                    <el-descriptions-item label="成效">{{ reviewer.scores.success }}分</el-descriptions-item>
-                    <el-descriptions-item label="回顾">{{ reviewer.scores.review }}分</el-descriptions-item>
-                    <el-descriptions-item label="运作">{{ reviewer.scores.operation }}分</el-descriptions-item>
-                    <el-descriptions-item label="展示">{{ reviewer.scores.presentation }}分</el-descriptions-item>
+                    <el-descriptions-item label="计划">{{ (reviewer.scores.plan || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="问题">{{ (reviewer.scores.problem || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="行动">{{ (reviewer.scores.action || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="成效">{{ (reviewer.scores.success || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="回顾">{{ (reviewer.scores.review || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="运作">{{ (reviewer.scores.operation || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="展示">{{ (reviewer.scores.presentation || 0).toFixed(1) }}分</el-descriptions-item>
                     <el-descriptions-item label="总分">
-                      <strong style="color: #409eff; font-size: 16px">{{ reviewer.scores.total }}分</strong>
+                      <strong style="color: #409eff; font-size: 16px">{{ (reviewer.scores.total || 0).toFixed(1) }}分</strong>
                     </el-descriptions-item>
                   </el-descriptions>
                   
@@ -640,15 +640,15 @@
                   
                   <!-- 分项评分 -->
                   <el-descriptions :column="4" border size="small" style="margin-bottom: 15px">
-                    <el-descriptions-item label="计划">{{ reviewer.scores.plan }}分</el-descriptions-item>
-                    <el-descriptions-item label="问题">{{ reviewer.scores.problem }}分</el-descriptions-item>
-                    <el-descriptions-item label="行动">{{ reviewer.scores.action }}分</el-descriptions-item>
-                    <el-descriptions-item label="成效">{{ reviewer.scores.success }}分</el-descriptions-item>
-                    <el-descriptions-item label="回顾">{{ reviewer.scores.review }}分</el-descriptions-item>
-                    <el-descriptions-item label="运作">{{ reviewer.scores.operation }}分</el-descriptions-item>
-                    <el-descriptions-item label="展示">{{ reviewer.scores.presentation }}分</el-descriptions-item>
+                    <el-descriptions-item label="计划">{{ (reviewer.scores.plan || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="问题">{{ (reviewer.scores.problem || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="行动">{{ (reviewer.scores.action || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="成效">{{ (reviewer.scores.success || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="回顾">{{ (reviewer.scores.review || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="运作">{{ (reviewer.scores.operation || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="展示">{{ (reviewer.scores.presentation || 0).toFixed(1) }}分</el-descriptions-item>
                     <el-descriptions-item label="总分">
-                      <strong style="color: #409eff; font-size: 16px">{{ reviewer.scores.total }}分</strong>
+                      <strong style="color: #409eff; font-size: 16px">{{ (reviewer.scores.total || 0).toFixed(1) }}分</strong>
                     </el-descriptions-item>
                   </el-descriptions>
                   

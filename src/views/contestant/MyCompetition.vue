@@ -193,29 +193,29 @@
             <div v-if="bookReview">
               <el-descriptions title="书审得分" :column="2" border>
                 <el-descriptions-item label="计划">
-                  {{ bookReview.planScore || '-' }}
+                  {{ typeof bookReview.planScore === 'number' ? bookReview.planScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="问题结构与对策措施探讨">
-                  {{ bookReview.problemScore || '-' }}
+                  {{ typeof bookReview.problemScore === 'number' ? bookReview.problemScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="对策实施">
-                  {{ bookReview.actionScore || '-' }}
+                  {{ typeof bookReview.actionScore === 'number' ? bookReview.actionScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="成功表现">
-                  {{ bookReview.successScore || '-' }}
+                  {{ typeof bookReview.successScore === 'number' ? bookReview.successScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="检讨">
-                  {{ bookReview.discussionScore || '-' }}
+                  {{ typeof bookReview.discussionScore === 'number' ? bookReview.discussionScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="整体运作">
-                  {{ bookReview.operationScore || '-' }}
+                  {{ typeof bookReview.operationScore === 'number' ? bookReview.operationScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="资料呈现">
-                  {{ bookReview.presentationScore || '-' }}
+                  {{ typeof bookReview.presentationScore === 'number' ? bookReview.presentationScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="总分">
                   <el-tag type="success" size="large">
-                    {{ bookReview.totalScore || '-' }}
+                    {{ typeof bookReview.totalScore === 'number' ? bookReview.totalScore.toFixed(1) : '-' }} 分
                   </el-tag>
                 </el-descriptions-item>
               </el-descriptions>
@@ -239,7 +239,7 @@
               <el-descriptions title="面谈得分" :column="1" border>
                 <el-descriptions-item label="总分">
                   <el-tag type="success" size="large">
-                    {{ interviewReview.totalScore || '-' }}
+                    {{ typeof interviewReview.totalScore === 'number' ? interviewReview.totalScore.toFixed(1) : '-' }} 分
                   </el-tag>
                 </el-descriptions-item>
               </el-descriptions>
@@ -263,7 +263,7 @@
               <el-descriptions title="决赛得分" :column="1" border>
                 <el-descriptions-item label="总分">
                   <el-tag type="success" size="large">
-                    {{ finalReview.totalScore || '-' }}
+                    {{ typeof finalReview.totalScore === 'number' ? finalReview.totalScore.toFixed(1) : '-' }} 分
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item label="最终排名">

@@ -126,42 +126,42 @@
           <el-divider content-position="left">评分</el-divider>
           
           <el-form-item label="计划" prop="planScore">
-            <el-input-number v-model="form.planScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.planScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="问题结构与对策措施探讨" prop="problemAnalysisScore">
-            <el-input-number v-model="form.problemAnalysisScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.problemAnalysisScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="对策实施" prop="implementationScore">
-            <el-input-number v-model="form.implementationScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.implementationScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="成功表现" prop="resultScore">
-            <el-input-number v-model="form.resultScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.resultScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="检讨" prop="reviewScore">
-            <el-input-number v-model="form.reviewScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.reviewScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="整体运作" prop="operationScore">
-            <el-input-number v-model="form.operationScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.operationScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="资料呈现" prop="presentationScore">
-            <el-input-number v-model="form.presentationScore" :min="0" :max="100" />
-            <span style="margin-left: 10px; color: #909399;">满分100分</span>
+            <el-input-number v-model="form.presentationScore" :min="0" :max="100" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
           </el-form-item>
           
           <el-form-item label="总分">
-            <el-tag type="success" size="large">{{ totalScore }}</el-tag>
+            <el-tag type="success" size="large">{{ totalScore.toFixed(1) }} 分</el-tag>
           </el-form-item>
           
           <el-divider content-position="left">评价</el-divider>
