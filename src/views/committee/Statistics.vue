@@ -33,7 +33,7 @@
         </el-col>
       </el-row>
       
-      <!-- 第二行：品管工具分布 + 评分雷达图 -->
+      <!-- 第二行：品管工具分布 + 职称分布 -->
       <el-row :gutter="20" style="margin-top: 20px">
         <el-col :span="12">
           <el-card>
@@ -42,10 +42,12 @@
         </el-col>
         <el-col :span="12">
           <el-card>
-            <div ref="radarChart" style="height: 400px"></div>
+            <div ref="titleChart" style="height: 400px"></div>
           </el-card>
         </el-col>
       </el-row>
+      
+      <!-- 第三行：评分雷达图 -->
       <el-row :gutter="20" style="margin-top: 20px">
         <el-col :span="24">
           <el-card>
@@ -66,6 +68,7 @@ import { getStatsSummary } from '@/api/admin'
 const subjectChart = ref(null)
 const regionChart = ref(null)
 const methodChart = ref(null)
+const titleChart = ref(null)
 const radarChart = ref(null)
 
 const stats = reactive({
@@ -295,7 +298,68 @@ const initCharts = (summaryData = {}) => {
     })
   }
   
-  // 4. 评分雷达图（7个维度的平均分）
+  // 4. 职称分布饼图
+  if (titleChart.value) {
+    const chart = echarts.init(titleChart.value)
+    
+    const leaderTitleCounts = summaryData.leaderTitleCounts || {}
+    
+    // 转换为数组并按数量排序
+    const titleData = Object.entries(leaderTitleCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+    
+    chart.setOption({
+      title: {
+        text: '圈长职称分布',
+        left: 'center',
+        top: '5%'
+      },
+      tooltip: {
+        trigger: 'item',
+        formatter: '{b}: {c} 人 ({d}%)'
+      },
+      legend: {
+        bottom: '8%',
+        left: 'center',
+        orient: 'horizontal',
+        type: 'scroll'
+      },
+      series: [
+        {
+          name: '圈长职称',
+          type: 'pie',
+          radius: ['30%', '55%'],
+          center: ['50%', '45%'],
+          avoidLabelOverlap: true,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: '#fff',
+            borderWidth: 2
+          },
+          label: {
+            show: true,
+            formatter: '{b}\n{d}%',
+            fontSize: 11
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: 13,
+              fontWeight: 'bold'
+            }
+          },
+          data: titleData,
+          color: [
+            '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc',
+            '#5470c6', '#91cc75', '#fac858', '#ee6666', '#d14a61'
+          ]
+        }
+      ]
+    })
+  }
+  
+  // 5. 评分雷达图（7个维度的平均分）
   if (radarChart.value) {
     const chart = echarts.init(radarChart.value)
     
