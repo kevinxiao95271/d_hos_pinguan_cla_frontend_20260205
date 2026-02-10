@@ -303,11 +303,14 @@
         
         <!-- 项目基本信息 -->
         <el-descriptions v-if="currentDetail?.registration" title="项目信息" :column="2" border style="margin-top: 20px">
-          <el-descriptions-item label="项目名称" :span="2">
-            {{ currentDetail.registration.projectName }}
+          <el-descriptions-item label="项目编号">
+            {{ currentDetail.registration.registrationId || currentDetail.registration.id || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="竞赛组别">
             {{ getGroupTypeText(currentDetail.registration.groupType) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="项目名称" :span="2">
+            {{ currentDetail.registration.projectName }}
           </el-descriptions-item>
           <el-descriptions-item label="分组">
             {{ currentDetail.registration.groupCode || '-' }}

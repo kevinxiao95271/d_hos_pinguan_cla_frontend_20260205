@@ -47,14 +47,20 @@
             </el-descriptions>
             
             <el-descriptions title="项目信息" :column="2" border style="margin-top: 20px">
-              <el-descriptions-item label="参赛项目名称" :span="2">
-                {{ registration.projectName }}
+              <el-descriptions-item label="项目编号">
+                {{ registration.registrationId || registration.id || '-' }}
               </el-descriptions-item>
               <el-descriptions-item label="竞赛组别">
                 {{ getGroupTypeText(registration.groupType) }}
               </el-descriptions-item>
+              <el-descriptions-item label="参赛项目名称" :span="2">
+                {{ registration.projectName }}
+              </el-descriptions-item>
               <el-descriptions-item label="分组">
                 {{ registration.groupCode || '未分组' }}
+              </el-descriptions-item>
+              <el-descriptions-item label="报名时间">
+                {{ formatDate(registration.submittedAt) }}
               </el-descriptions-item>
             </el-descriptions>
             

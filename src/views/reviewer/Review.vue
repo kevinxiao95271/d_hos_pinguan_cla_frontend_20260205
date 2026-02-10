@@ -20,6 +20,10 @@
         >
           <el-divider content-position="left">项目信息</el-divider>
           
+          <el-form-item label="项目编号">
+            <span>{{ registrationId || route.query.registrationId || '-' }}</span>
+          </el-form-item>
+          
           <el-form-item label="项目名称">
             <span>{{ taskInfo.projectName || route.query.projectName || '-' }}</span>
           </el-form-item>
