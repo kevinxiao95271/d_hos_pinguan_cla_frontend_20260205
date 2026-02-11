@@ -372,7 +372,28 @@ const loadData = async () => {
       try {
         const scoreRes = await getReviewScore(taskId.value)
         if (scoreRes.success && scoreRes.data) {
-          Object.assign(form, scoreRes.data)
+          const data = scoreRes.data
+          // ✅ 字段映射：后端字段 -> 前端表单字段
+          form.planScore = data.plan || 0
+          form.problemAnalysisScore = data.problem || 0
+          form.implementationScore = data.action || 0
+          form.resultScore = data.success || 0
+          form.reviewScore = data.review || 0
+          form.operationScore = data.operation || 0
+          form.presentationScore = data.presentation || 0
+          form.highlights = data.highlight || ''
+          form.shortcomings = data.weakness || ''
+          
+          console.log('✅ 评分数据加载成功:', {
+            plan: form.planScore,
+            problem: form.problemAnalysisScore,
+            action: form.implementationScore,
+            success: form.resultScore,
+            review: form.reviewScore,
+            operation: form.operationScore,
+            presentation: form.presentationScore,
+            totalScore: totalScore.value
+          })
         }
       } catch (error) {
         // 未评分，忽略错误
