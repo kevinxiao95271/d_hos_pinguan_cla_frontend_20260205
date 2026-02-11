@@ -125,43 +125,61 @@
           
           <el-divider content-position="left">评分</el-divider>
           
+          <el-alert
+            title="书审评分标准"
+            type="info"
+            :closable="false"
+            style="margin-bottom: 20px"
+          >
+            <div style="line-height: 1.8;">
+              1. 计划 (10分) &nbsp;&nbsp;
+              2. 问题结构与对策措施探讨 (20分) &nbsp;&nbsp;
+              3. 对策实施 (20分) &nbsp;&nbsp;
+              4. 成果表现 (15分)<br/>
+              5. 检讨 (10分) &nbsp;&nbsp;
+              6. 整体运作 (10分) &nbsp;&nbsp;
+              7. 资料呈现 (15分) &nbsp;&nbsp;
+              <strong>总分: 100分</strong>
+            </div>
+          </el-alert>
+          
           <el-form-item label="计划" prop="planScore">
-            <el-input-number v-model="form.planScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.planScore" :min="0" :max="10" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分10分</span>
           </el-form-item>
           
           <el-form-item label="问题结构与对策措施探讨" prop="problemAnalysisScore">
-            <el-input-number v-model="form.problemAnalysisScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.problemAnalysisScore" :min="0" :max="20" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分20分</span>
           </el-form-item>
           
           <el-form-item label="对策实施" prop="implementationScore">
-            <el-input-number v-model="form.implementationScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.implementationScore" :min="0" :max="20" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分20分</span>
           </el-form-item>
           
           <el-form-item label="成功表现" prop="resultScore">
-            <el-input-number v-model="form.resultScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.resultScore" :min="0" :max="15" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分15分</span>
           </el-form-item>
           
           <el-form-item label="检讨" prop="reviewScore">
-            <el-input-number v-model="form.reviewScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.reviewScore" :min="0" :max="10" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分10分</span>
           </el-form-item>
           
           <el-form-item label="整体运作" prop="operationScore">
-            <el-input-number v-model="form.operationScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.operationScore" :min="0" :max="10" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分10分</span>
           </el-form-item>
           
           <el-form-item label="资料呈现" prop="presentationScore">
-            <el-input-number v-model="form.presentationScore" :min="0" :max="100" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分100分（支持小数，如18.5）</span>
+            <el-input-number v-model="form.presentationScore" :min="0" :max="15" :step="0.1" :precision="1" />
+            <span style="margin-left: 10px; color: #909399;">满分15分</span>
           </el-form-item>
           
           <el-form-item label="总分">
-            <el-tag type="success" size="large">{{ totalScore.toFixed(1) }} 分</el-tag>
+            <el-tag type="success" size="large">{{ totalScore.toFixed(1) }} / 100 分</el-tag>
           </el-form-item>
           
           <el-divider content-position="left">评价</el-divider>
@@ -257,13 +275,34 @@ const totalScore = computed(() => {
 })
 
 const rules = {
-  planScore: [{ required: true, message: '请输入计划得分', trigger: 'blur' }],
-  problemAnalysisScore: [{ required: true, message: '请输入问题分析得分', trigger: 'blur' }],
-  implementationScore: [{ required: true, message: '请输入实施得分', trigger: 'blur' }],
-  resultScore: [{ required: true, message: '请输入成果得分', trigger: 'blur' }],
-  reviewScore: [{ required: true, message: '请输入检讨得分', trigger: 'blur' }],
-  operationScore: [{ required: true, message: '请输入整体运作得分', trigger: 'blur' }],
-  presentationScore: [{ required: true, message: '请输入资料呈现得分', trigger: 'blur' }],
+  planScore: [
+    { required: true, message: '请输入计划得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 10, message: '计划得分范围为0-10分', trigger: 'blur' }
+  ],
+  problemAnalysisScore: [
+    { required: true, message: '请输入问题分析得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 20, message: '问题分析得分范围为0-20分', trigger: 'blur' }
+  ],
+  implementationScore: [
+    { required: true, message: '请输入实施得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 20, message: '实施得分范围为0-20分', trigger: 'blur' }
+  ],
+  resultScore: [
+    { required: true, message: '请输入成果得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 15, message: '成果得分范围为0-15分', trigger: 'blur' }
+  ],
+  reviewScore: [
+    { required: true, message: '请输入检讨得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 10, message: '检讨得分范围为0-10分', trigger: 'blur' }
+  ],
+  operationScore: [
+    { required: true, message: '请输入整体运作得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 10, message: '整体运作得分范围为0-10分', trigger: 'blur' }
+  ],
+  presentationScore: [
+    { required: true, message: '请输入资料呈现得分', trigger: 'blur' },
+    { type: 'number', min: 0, max: 15, message: '资料呈现得分范围为0-15分', trigger: 'blur' }
+  ],
   highlights: [
     { required: true, message: '请输入亮点', trigger: 'blur' },
     { max: 500, message: '亮点不能超过500字', trigger: 'blur' }
