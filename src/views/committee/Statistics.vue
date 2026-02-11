@@ -7,14 +7,95 @@
         </div>
       </template>
       
+      <!-- 总览卡片 -->
       <el-row :gutter="20" style="margin-bottom: 20px">
-        <el-col :span="24">
+        <el-col :span="6">
           <el-card shadow="hover">
             <el-statistic 
-              title="总报名数" 
-              :value="stats.totalRegistrations" 
+              title="报名项目总数" 
+              :value="stats.registrationCount" 
               style="text-align: center"
             />
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic 
+              title="报名机构总数" 
+              :value="stats.institutionCount" 
+              style="text-align: center"
+            />
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic 
+              title="品管工具种类" 
+              :value="stats.toolTypeCount" 
+              suffix="种"
+              style="text-align: center"
+            />
+          </el-card>
+        </el-col>
+        <el-col :span="6">
+          <el-card shadow="hover">
+            <el-statistic 
+              title="评委总数" 
+              :value="stats.reviewerCount" 
+              suffix="人"
+              style="text-align: center"
+            />
+          </el-card>
+        </el-col>
+      </el-row>
+      
+      <!-- 组别统计表格 -->
+      <el-row :gutter="20" style="margin-bottom: 20px">
+        <el-col :span="24">
+          <el-card>
+            <template #header>
+              <span style="font-weight: 600">组别统计</span>
+            </template>
+            <el-table :data="stats.groupTypeStats" border stripe>
+              <el-table-column prop="groupTypeName" label="组别" width="120" align="center" />
+              <el-table-column prop="institutionCount" label="机构数" width="120" align="center">
+                <template #default="{ row }">
+                  {{ row.institutionCount }} 个
+                </template>
+              </el-table-column>
+              <el-table-column prop="projectCount" label="项目数" width="120" align="center">
+                <template #default="{ row }">
+                  {{ row.projectCount }} 个
+                </template>
+              </el-table-column>
+              <el-table-column prop="projectPercentage" label="项目占比" width="120" align="center">
+                <template #default="{ row }">
+                  <el-tag type="success">{{ row.projectPercentage.toFixed(1) }}%</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="avgProjectsPerInstitution" label="平均项目/机构" width="150" align="center">
+                <template #default="{ row }">
+                  {{ row.avgProjectsPerInstitution.toFixed(2) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="可视化" align="center">
+                <template #default="{ row }">
+                  <div style="display: flex; align-items: center; gap: 10px">
+                    <div style="flex: 1; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden">
+                      <div 
+                        :style="{ 
+                          width: row.projectPercentage + '%', 
+                          height: '100%', 
+                          background: getGroupColor(row.groupType),
+                          transition: 'width 0.3s'
+                        }"
+                      ></div>
+                    </div>
+                    <span style="color: #909399; font-size: 12px">{{ row.projectCount }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
           </el-card>
         </el-col>
       </el-row>
@@ -72,8 +153,15 @@ const titleChart = ref(null)
 const radarChart = ref(null)
 
 const stats = reactive({
-  totalRegistrations: 0,
-  competitionName: ''
+  competitionName: '',
+  registrationCount: 0,
+  institutionCount: 0,
+  toolTypeCount: 0,
+  reviewerCount: 0,
+  reviewerInstitutionCount: 0,
+  bookReviewTaskCount: 0,
+  bookReviewUnscoredCount: 0,
+  groupTypeStats: []
 })
 
 const loadData = async () => {
@@ -93,7 +181,14 @@ const loadData = async () => {
       
       // 直接使用后端数据，不做任何前端处理
       stats.competitionName = summaryData.competitionName || ''
-      stats.totalRegistrations = summaryData.registrationCount || 0
+      stats.registrationCount = summaryData.registrationCount || 0
+      stats.institutionCount = summaryData.institutionCount || 0
+      stats.toolTypeCount = summaryData.toolTypeCount || 0
+      stats.reviewerCount = summaryData.reviewerCount || 0
+      stats.reviewerInstitutionCount = summaryData.reviewerInstitutionCount || 0
+      stats.bookReviewTaskCount = summaryData.bookReviewTaskCount || 0
+      stats.bookReviewUnscoredCount = summaryData.bookReviewUnscoredCount || 0
+      stats.groupTypeStats = summaryData.groupTypeStats || []
       
       await nextTick()
       initCharts(summaryData)
@@ -427,6 +522,15 @@ const initCharts = (summaryData = {}) => {
       ]
     })
   }
+}
+
+const getGroupColor = (groupType) => {
+  const colorMap = {
+    'BASIC': '#67c23a',
+    'COMPREHENSIVE': '#409eff',
+    'ADVANCED': '#f56c6c'
+  }
+  return colorMap[groupType] || '#909399'
 }
 
 onMounted(() => {
