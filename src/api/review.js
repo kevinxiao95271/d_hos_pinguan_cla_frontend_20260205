@@ -75,3 +75,25 @@ export function getReviewRankings(params) {
     params
   })
 }
+
+/**
+ * 获取书审得分列表（组委会管理）
+ */
+export function getBookScores(params) {
+  return request({
+    url: '/admin/reviews/book-scores',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 驳回评分
+ */
+export function returnScore(data) {
+  return request({
+    url: '/admin/reviews/scores/return',
+    method: 'post',
+    data
+  })
+}
