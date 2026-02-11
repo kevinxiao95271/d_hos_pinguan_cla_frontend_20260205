@@ -78,23 +78,6 @@
                   {{ row.avgProjectsPerInstitution.toFixed(2) }}
                 </template>
               </el-table-column>
-              <el-table-column label="可视化" align="center">
-                <template #default="{ row }">
-                  <div style="display: flex; align-items: center; gap: 10px">
-                    <div style="flex: 1; height: 20px; background: #f0f0f0; border-radius: 10px; overflow: hidden">
-                      <div 
-                        :style="{ 
-                          width: row.projectPercentage + '%', 
-                          height: '100%', 
-                          background: getGroupColor(row.groupType),
-                          transition: 'width 0.3s'
-                        }"
-                      ></div>
-                    </div>
-                    <span style="color: #909399; font-size: 12px">{{ row.projectCount }}</span>
-                  </div>
-                </template>
-              </el-table-column>
             </el-table>
           </el-card>
         </el-col>
@@ -522,15 +505,6 @@ const initCharts = (summaryData = {}) => {
       ]
     })
   }
-}
-
-const getGroupColor = (groupType) => {
-  const colorMap = {
-    'BASIC': '#67c23a',
-    'COMPREHENSIVE': '#409eff',
-    'ADVANCED': '#f56c6c'
-  }
-  return colorMap[groupType] || '#909399'
 }
 
 onMounted(() => {

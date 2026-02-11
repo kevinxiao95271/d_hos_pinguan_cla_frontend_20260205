@@ -97,3 +97,56 @@ export function returnScore(data) {
     data
   })
 }
+
+/**
+ * 获取评委列表（支持筛选）
+ */
+export function getReviewers(params) {
+  return request({
+    url: '/admin/reviewers',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取评委详情
+ */
+export function getReviewerDetail(id) {
+  return request({
+    url: `/admin/reviewers/${id}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 新增评委
+ */
+export function createReviewer(data) {
+  return request({
+    url: '/admin/reviewers',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 更新评委
+ */
+export function updateReviewer(id, data) {
+  return request({
+    url: `/admin/reviewers/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 删除评委
+ */
+export function deleteReviewer(id) {
+  return request({
+    url: `/admin/reviewers/${id}`,
+    method: 'delete'
+  })
+}

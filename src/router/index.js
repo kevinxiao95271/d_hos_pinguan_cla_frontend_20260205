@@ -209,6 +209,12 @@ const routes = [
         meta: { title: '机构管理' }
       },
       {
+        path: 'reviewers',
+        name: 'Reviewers',
+        component: () => import('@/views/ops/Reviewers.vue'),
+        meta: { title: '评审专家管理' }
+      },
+      {
         path: 'dictionaries',
         name: 'Dictionaries',
         component: () => import('@/views/ops/Dictionaries.vue'),

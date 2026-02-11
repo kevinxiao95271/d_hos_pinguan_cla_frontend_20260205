@@ -4,13 +4,13 @@
       <template #header>
         <div class="card-header">
           <el-button type="primary" :icon="ArrowLeft" @click="goBack">返回</el-button>
-          <span style="margin-left: 20px;">{{ registration.projectName || '我的赛事' }}</span>
+          <span style="margin-left: 20px;">{{ registration.projectName || '项目详情' }}</span>
         </div>
       </template>
       
       <!-- 阶段进度 -->
       <stage-progress
-        :current-stage="competition.currentStage"
+        :current-stage="competition.stage"
         :stages="stagesList"
       />
       
@@ -30,7 +30,7 @@
           <div v-if="activeTab === 'registration'" class="tab-content">
             <el-descriptions title="机构基本信息" :column="2" border>
               <el-descriptions-item label="医疗机构名称">
-                {{ registration.institutionName }}
+                {{ institutionInfo.name || '-' }}
               </el-descriptions-item>
               <el-descriptions-item label="机构等级">
                 <el-tag v-if="institutionInfo.level" type="success">
@@ -39,10 +39,10 @@
                 <span v-else>-</span>
               </el-descriptions-item>
               <el-descriptions-item label="机构编号">
-                {{ institutionInfo.code }}
+                {{ institutionInfo.code || '-' }}
               </el-descriptions-item>
               <el-descriptions-item label="统一社会信用代码">
-                {{ institutionInfo.uscc }}
+                {{ institutionInfo.uscc || '-' }}
               </el-descriptions-item>
             </el-descriptions>
             
@@ -296,9 +296,21 @@ const router = useRouter()
 const registrationId = ref(route.params.id)  // ✅ 修复：路由参数名是 'id'，不是 'registrationId'
 const activeTab = ref('registration')
 
-const registration = ref({})
+const registration = reactive({
+  projectName: '',
+  institutionName: '',
+  groupType: '',
+  groupCode: '',
+  submittedAt: '',
+  registrationId: '',
+  id: '',
+  members: [],
+  activityInfo: null,
+  summary: null
+})
 const competition = ref({})
 const institutionInfo = reactive({
+  name: '',    // 机构名称
   code: '',
   uscc: '',
   region: '',  // 地区信息
@@ -306,11 +318,11 @@ const institutionInfo = reactive({
 })
 
 const participants = computed(() => {
-  return registration.value.members?.filter(m => m.role === 'PARTICIPANT') || []
+  return registration.members?.filter(m => m.role === 'PARTICIPANT') || []
 })
 
 const mentors = computed(() => {
-  return registration.value.members?.filter(m => m.role === 'MENTOR') || []
+  return registration.members?.filter(m => m.role === 'MENTOR') || []
 })
 
 const bookReview = ref(null)
@@ -322,22 +334,26 @@ const stagesList = computed(() => {
     {
       key: 'REGISTRATION',
       title: '报名',
-      description: formatDateRange(competition.value.registrationStartTime, competition.value.registrationEndTime)
+      startDate: competition.value.registerStart,
+      endDate: competition.value.registerEnd
     },
     {
       key: 'BOOK',
       title: '书审',
-      description: formatDateRange(competition.value.bookStartTime, competition.value.bookEndTime)
+      startDate: competition.value.bookReviewStart,
+      endDate: competition.value.bookReviewEnd
     },
     {
       key: 'INTERVIEW',
       title: '面谈',
-      description: formatDateRange(competition.value.interviewStartTime, competition.value.interviewEndTime)
+      startDate: competition.value.interviewStart,
+      endDate: competition.value.interviewEnd
     },
     {
       key: 'FINAL',
       title: '决赛',
-      description: formatDateRange(competition.value.finalStartTime, competition.value.finalEndTime)
+      startDate: competition.value.finalStart,
+      endDate: competition.value.finalEnd
     }
   ]
 })
@@ -346,42 +362,48 @@ const loadData = async () => {
   try {
     // 加载报名详情
     const regRes = await getRegistration(registrationId.value)
-    console.log('📊 报名详情API返回:', regRes)
     
     if (regRes.success && regRes.data) {
       const data = regRes.data
-      console.log('📦 完整数据结构:', data)
-      console.log('📝 registration 对象:', data.registration)
-      console.log('🔍 关键字段检查:')
-      console.log('  - subjectType:', data.registration?.subjectType)
-      console.log('  - qualityTools:', data.registration?.qualityTools)
-      console.log('  - activityInfo:', data.activityInfo)
-      console.log('  - projectSummary:', data.projectSummary)
       
-      // ✅ 处理嵌套数据结构
-      registration.value = {
-        ...data.registration,  // 基本信息在 registration 对象中
-        members: data.members || [],  // 成员列表
-        activityInfo: data.activityInfo,  // 活动说明
-        summary: data.projectSummary  // 项目总结
-      }
+      // 处理嵌套数据结构
+      Object.assign(registration, {
+        ...data.registration,
+        members: data.members || [],
+        activityInfo: data.activityInfo,
+        summary: data.projectSummary
+      })
       
-      // 加载赛事信息
-      if (data.registration?.competitionId) {
-        const compRes = await getCompetition(data.registration.competitionId)
+      // 加载赛事信息（优先使用API返回的competitionId，否则使用localStorage）
+      const competitionId = data.registration?.competitionId || localStorage.getItem('currentCompetitionId') || '21'
+      
+      try {
+        const compRes = await getCompetition(competitionId)
         if (compRes.success && compRes.data) {
           competition.value = compRes.data
+          console.log('✅ 赛事信息已加载:', {
+            registerStart: compRes.data.registerStart,
+            registerEnd: compRes.data.registerEnd,
+            bookReviewStart: compRes.data.bookReviewStart,
+            bookReviewEnd: compRes.data.bookReviewEnd
+          })
+        } else {
+          console.warn('⚠️ 赛事信息加载失败')
         }
+      } catch (err) {
+        console.error('❌ 加载赛事信息异常:', err)
       }
       
-      // ✅ 直接从响应中获取机构信息（后端已优化，不需要单独请求）
+      // 获取机构信息
       if (data.institution) {
-        registration.value.institutionName = data.institution.name
+        institutionInfo.name = data.institution.name
         institutionInfo.code = data.institution.code
         institutionInfo.uscc = data.institution.uscc
-        institutionInfo.region = data.institution.region  // 地区信息
-        institutionInfo.level = data.institution.level    // 机构等级
+        institutionInfo.region = data.institution.region
+        institutionInfo.level = data.institution.level
       }
+    } else {
+      ElMessage.error('加载报名详情失败: ' + (regRes.message || '未知错误'))
     }
     
     // 加载评审详情
@@ -393,6 +415,7 @@ const loadData = async () => {
     }
   } catch (error) {
     console.error('加载数据失败:', error)
+    ElMessage.error('加载数据失败: ' + (error.message || '未知错误'))
   }
 }
 
@@ -452,6 +475,11 @@ const downloadFile = (file) => {
   } else {
     ElMessage.warning('文件链接不存在')
   }
+}
+
+const formatDate = (date) => {
+  if (!date) return '-'
+  return dayjs(date).format('YYYY-MM-DD HH:mm:ss')
 }
 
 const formatDateRange = (start, end) => {
