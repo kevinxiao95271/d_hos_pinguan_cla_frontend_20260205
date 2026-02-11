@@ -98,21 +98,22 @@ const rules = {
 }
 
 const testAccounts = [
-  // 推荐参赛者账号（有报名数据）⭐
-  { phone: '13966000011', name: '参赛者11', label: '参赛者11⭐', role: 'CONTESTANT', institutionId: null },
-  { phone: '13966000012', name: '参赛者12', label: '参赛者12⭐', role: 'CONTESTANT', institutionId: null },
-  { phone: '13966000013', name: '参赛者13', label: '参赛者13⭐', role: 'CONTESTANT', institutionId: null },
-  { phone: '13966000014', name: '参赛者14', label: '参赛者14⭐', role: 'CONTESTANT', institutionId: null },
-  { phone: '13966000015', name: '参赛者15', label: '参赛者15⭐', role: 'CONTESTANT', institutionId: null },
-  // 推荐评审专家账号（有任务数据）⭐
-  { phone: '13800000021', name: '李明华', label: '李明华⭐', role: 'REVIEWER', institutionId: null },
-  { phone: '13800002004', name: '孙丽娟', label: '孙丽娟⭐', role: 'REVIEWER', institutionId: null },
-  // 组委会账号
-  { phone: '13800000041', name: 'CommitteeAdmin A', label: '组委会A', role: 'COMMITTEE_ADMIN', institutionId: null },
-  { phone: '13800000042', name: 'CommitteeAdmin B', label: '组委会B', role: 'COMMITTEE_ADMIN', institutionId: null },
-  // 运维账号
-  { phone: '13800000051', name: 'Ops A', label: '运维A', role: 'OPS', institutionId: null },
-  { phone: '13800000052', name: 'Ops B', label: '运维B', role: 'OPS', institutionId: null }
+  // 参赛者账号（5个）
+  { phone: '13799999112', name: '王建国', label: '参赛-王建国', role: 'CONTESTANT', institutionId: null },
+  { phone: '13966000890', name: '参赛者1', label: '参赛者1', role: 'CONTESTANT', institutionId: null },
+  { phone: '13965999231', name: '参赛者2', label: '参赛者2', role: 'CONTESTANT', institutionId: null },
+  { phone: '13966000430', name: '参赛者3', label: '参赛者3', role: 'CONTESTANT', institutionId: null },
+  { phone: '13965999424', name: '参赛者4', label: '参赛者4', role: 'CONTESTANT', institutionId: null },
+  // 评委账号（3个）
+  { phone: '13800002569', name: '孙丽娟', label: '评委-孙丽娟', role: 'REVIEWER', institutionId: null },
+  { phone: '13900000001', name: '王建国', label: '评委-王建国', role: 'REVIEWER', institutionId: null },
+  { phone: '13800000084', name: '李明华', label: '评委-李明华', role: 'REVIEWER', institutionId: null },
+  // 组委会管理员（2个）
+  { phone: '13800000127', name: 'CommitteeAdmin A', label: '组委会A', role: 'COMMITTEE_ADMIN', institutionId: null },
+  { phone: '13799999971', name: 'CommitteeAdmin B', label: '组委会B', role: 'COMMITTEE_ADMIN', institutionId: null },
+  // 系统维护员（2个）
+  { phone: '13800000005', name: 'OPS User 1', label: '运维1', role: 'OPS', institutionId: null },
+  { phone: '13800000027', name: 'OPS User 2', label: '运维2', role: 'OPS', institutionId: null }
 ]
 
 const fillAccount = (account) => {
