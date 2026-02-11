@@ -126,10 +126,10 @@ const menuItems = computed(() => {
         children: [
           { path: '/committee/interview-stage/group', title: '面谈分组' },
           { path: '/committee/interview-stage/reviewer', title: '评委分配' },
-          { path: '/committee/interview-stage/score', title: '面谈得分' },
-          { path: '/committee/interview-stage/shortlist', title: '入围管理' }
+          { path: '/committee/interview-stage/score', title: '面谈得分' }
         ]
       },
+      { path: '/committee/interview-stage/shortlist', title: '入围管理', icon: 'Select' },
       {
         path: '/committee/final',
         title: '决赛阶段',
