@@ -20,7 +20,9 @@
           <el-select v-model="filters.status" placeholder="全部" clearable>
             <el-option label="待评审" value="PENDING" />
             <el-option label="评审中" value="IN_PROGRESS" />
+            <el-option label="已评审" value="SCORED" />
             <el-option label="已完成" value="COMPLETED" />
+            <el-option label="已退回" value="RETURNED" />
           </el-select>
         </el-form-item>
         
@@ -197,7 +199,8 @@ const getStatusType = (status) => {
     'PENDING': 'warning',
     'IN_PROGRESS': 'primary',
     'COMPLETED': 'success',
-    'SCORED': 'success'  // ✅ 添加 SCORED 状态
+    'SCORED': 'success',
+    'RETURNED': 'danger'
   }
   return map[status] || 'info'
 }
@@ -207,7 +210,8 @@ const getStatusText = (status) => {
     'PENDING': '待评审',
     'IN_PROGRESS': '评审中',
     'COMPLETED': '已完成',
-    'SCORED': '已评分'  // ✅ 添加 SCORED 状态
+    'SCORED': '已评审',
+    'RETURNED': '已退回'
   }
   return map[status] || status
 }

@@ -389,7 +389,7 @@ const initCharts = (summaryData = {}) => {
     
     chart.setOption({
       title: {
-        text: '圈长职称分布',
+        text: '负责人职称分布',
         left: 'center',
         top: '5%'
       },
@@ -405,7 +405,7 @@ const initCharts = (summaryData = {}) => {
       },
       series: [
         {
-          name: '圈长职称',
+          name: '负责人职称',
           type: 'pie',
           radius: ['30%', '55%'],
           center: ['50%', '45%'],

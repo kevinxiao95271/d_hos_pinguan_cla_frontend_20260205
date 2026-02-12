@@ -461,8 +461,8 @@ const getQualityTopicDisplay = (activityInfo) => {
 // 成员角色标签
 const getMemberRoleLabel = (role) => {
   const labels = {
-    'LEADER': '圈长',
-    'PARTICIPANT': '圈员',
+    'LEADER': '负责人',
+    'PARTICIPANT': '参与成员',
     'MENTOR': '辅导员'
   }
   return labels[role] || role

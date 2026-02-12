@@ -135,7 +135,9 @@ const getStatusType = (status) => {
   const map = {
     'PENDING': 'warning',
     'IN_PROGRESS': 'primary',
-    'COMPLETED': 'success'
+    'SCORED': 'success',
+    'COMPLETED': 'success',
+    'RETURNED': 'danger'
   }
   return map[status] || 'info'
 }
@@ -144,7 +146,9 @@ const getStatusText = (status) => {
   const map = {
     'PENDING': '待评审',
     'IN_PROGRESS': '评审中',
-    'COMPLETED': '已完成'
+    'SCORED': '已评审',
+    'COMPLETED': '已完成',
+    'RETURNED': '已退回'
   }
   return map[status] || status
 }

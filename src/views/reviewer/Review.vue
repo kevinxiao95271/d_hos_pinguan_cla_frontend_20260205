@@ -59,7 +59,7 @@
                   <el-table-column prop="department" label="科室" />
                   <el-table-column prop="role" label="角色" width="100">
                     <template #default="{ row }">
-                      {{ row.role === 'PARTICIPANT' ? '参与人员' : '辅导员' }}
+                      {{ getMemberRoleLabel(row.role) }}
                     </template>
                   </el-table-column>
                 </el-table>
@@ -424,6 +424,15 @@ const getGroupTypeText = (type) => {
     'ADVANCED': '进阶组'
   }
   return map[type] || type || '-'
+}
+
+const getMemberRoleLabel = (role) => {
+  const map = {
+    'LEADER': '负责人',
+    'PARTICIPANT': '参与成员',
+    'MENTOR': '辅导员'
+  }
+  return map[role] || role
 }
 
 // 处理"其他"选项 - 改善就医环境
