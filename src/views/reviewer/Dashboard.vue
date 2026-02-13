@@ -67,6 +67,14 @@
               开始评审
             </el-button>
             <el-button
+              v-else-if="row.status === 'RETURNED'"
+              type="warning"
+              size="small"
+              @click="goToReview(row)"
+            >
+              重新评审
+            </el-button>
+            <el-button
               v-else-if="row.status === 'SCORED' || row.status === 'COMPLETED'"
               type="success"
               size="small"
@@ -166,7 +174,8 @@ const goToReview = (row) => {
       projectName: row.projectName,
       institutionName: row.institutionName,
       institutionLevel: row.institutionLevel,
-      stage: row.stage
+      stage: row.stage,
+      status: row.status
     }
   })
 }
@@ -181,6 +190,7 @@ const viewReview = (row) => {
       institutionName: row.institutionName,
       institutionLevel: row.institutionLevel,
       stage: row.stage,
+      status: row.status,
       isViewMode: 'true'  // 查看模式
     }
   })

@@ -265,6 +265,8 @@
               <el-tag v-if="row.status === 'PENDING'" type="info" size="small">待评审</el-tag>
               <el-tag v-else-if="row.status === 'CONFIRMED'" type="primary" size="small">已确认</el-tag>
               <el-tag v-else-if="row.status === 'SCORED'" type="success" size="small">已评分</el-tag>
+              <el-tag v-else-if="row.status === 'RETURNED'" type="danger" size="small">已退回</el-tag>
+              <el-tag v-else-if="row.status === 'COMPLETED'" type="success" size="small">已完成</el-tag>
               <el-tag v-else type="warning" size="small">{{ row.status }}</el-tag>
             </template>
           </el-table-column>

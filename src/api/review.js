@@ -88,6 +88,17 @@ export function getBookScores(params) {
 }
 
 /**
+ * 获取面谈得分列表（组委会管理）
+ */
+export function getInterviewScores(params) {
+  return request({
+    url: '/admin/reviews/interview-scores',
+    method: 'get',
+    params
+  })
+}
+
+/**
  * 驳回评分
  */
 export function returnScore(data) {

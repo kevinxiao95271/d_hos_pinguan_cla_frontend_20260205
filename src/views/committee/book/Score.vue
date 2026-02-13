@@ -215,12 +215,8 @@ const returnRules = {
 }
 
 const loadData = async () => {
-  const competitionId = localStorage.getItem('currentCompetitionId')
-  if (!competitionId) {
-    ElMessage.warning('请先选择赛事')
-    return
-  }
-  
+  const competitionId = localStorage.getItem('currentCompetitionId') || 21
+
   loading.value = true
   try {
     const params = {

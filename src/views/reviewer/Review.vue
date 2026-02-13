@@ -9,7 +9,18 @@
           </el-tag>
         </div>
       </template>
-      
+
+      <!-- 驳回提示 -->
+      <el-alert
+        v-if="taskInfo.status === 'RETURNED' && !isViewMode"
+        title="评审已被驳回"
+        type="warning"
+        description="此评审已被组委会驳回，请修改评分后重新提交。您可以看到之前提交的评分内容，修改后再次提交即可。"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 20px"
+      />
+
       <div v-loading="loading">
         <el-form
           ref="formRef"
@@ -208,7 +219,7 @@
           
           <el-form-item v-if="!isViewMode">
             <el-button type="primary" :loading="submitting" @click="submitReview">
-              提交评分
+              {{ taskInfo.status === 'RETURNED' ? '重新提交评分' : '提交评分' }}
             </el-button>
           </el-form-item>
         </el-form>
@@ -321,6 +332,7 @@ const loadData = async () => {
     taskInfo.institutionName = route.query.institutionName || ''
     taskInfo.institutionLevel = route.query.institutionLevel || ''
     taskInfo.stage = route.query.stage || 'BOOK'
+    taskInfo.status = route.query.status || ''
     
     // 加载项目详情
     if (registrationId.value) {

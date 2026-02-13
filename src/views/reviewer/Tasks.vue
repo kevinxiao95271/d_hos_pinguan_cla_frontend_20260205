@@ -82,6 +82,14 @@
               评分
             </el-button>
             <el-button
+              v-else-if="row.status === 'RETURNED'"
+              type="warning"
+              size="small"
+              @click="goToReview(row)"
+            >
+              重新评分
+            </el-button>
+            <el-button
               v-else-if="row.status === 'SCORED' || row.status === 'COMPLETED'"
               size="small"
               @click="viewScore(row)"
@@ -230,6 +238,7 @@ const viewDetail = (row) => {
       institutionName: row.institutionName,
       institutionLevel: row.institutionLevel,
       stage: row.stage,
+      status: row.status,
       isViewMode: 'true'  // 标记为查看模式，不允许编辑
     }
   })
@@ -243,7 +252,8 @@ const goToReview = (row) => {
       projectName: row.projectName,
       institutionName: row.institutionName,  // 传递医疗机构名称
       institutionLevel: row.institutionLevel,  // 传递机构等级
-      stage: row.stage  // 传递评审阶段
+      stage: row.stage,  // 传递评审阶段
+      status: row.status
     }
   })
 }
@@ -256,7 +266,8 @@ const viewScore = (row) => {
       registrationId: row.registrationId,
       projectName: row.projectName,
       institutionName: row.institutionName,  // 传递医疗机构名称
-      stage: row.stage  // 传递评审阶段
+      stage: row.stage,  // 传递评审阶段
+      status: row.status
     }
   })
 }
