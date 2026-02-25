@@ -154,6 +154,7 @@ const menuItems = computed(() => {
         children: [
           { path: '/ops/institutions', title: '机构管理' },
           { path: '/ops/reviewers', title: '评审专家管理' },
+          { path: '/ops/users', title: '用户管理' },
           { path: '/ops/dictionaries', title: '字典管理' },
           { path: '/ops/datasource', title: '数据源管理' },
           { path: '/ops/settings', title: '系统设置' }

@@ -16,9 +16,12 @@ let isRefreshing = false
 // 请求拦截器
 request.interceptors.request.use(
   config => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    // 如果配置了skipAuth，则不添加Token（用于公开接口）
+    if (!config.skipAuth) {
+      const token = localStorage.getItem('token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
     }
     return config
   },

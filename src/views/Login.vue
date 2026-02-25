@@ -19,15 +19,19 @@
             placeholder="请输入手机号"
             size="large"
             prefix-icon="Phone"
+            maxlength="11"
           />
         </el-form-item>
         
-        <el-form-item prop="name">
+        <el-form-item prop="password">
           <el-input
-            v-model="form.name"
-            placeholder="请输入姓名"
+            v-model="form.password"
+            type="password"
+            placeholder="请输入密码"
             size="large"
-            prefix-icon="User"
+            prefix-icon="Lock"
+            show-password
+            @keyup.enter="handleLogin"
           />
         </el-form-item>
         
@@ -42,6 +46,15 @@
             登录
           </el-button>
         </el-form-item>
+
+        <div class="login-footer">
+          <el-link type="primary" @click="goToRegister">
+            还没有账号？立即注册
+          </el-link>
+          <el-link type="info" @click="handleForgotPassword">
+            忘记密码？
+          </el-link>
+        </div>
       </el-form>
       
       <div class="test-accounts">
@@ -66,6 +79,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { loginWithPassword } from '@/api/auth'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -84,7 +98,7 @@ const loading = ref(false)
 
 const form = reactive({
   phone: '',
-  name: ''
+  password: ''
 })
 
 const rules = {
@@ -92,59 +106,43 @@ const rules = {
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '手机号格式不正确', trigger: 'blur' }
   ],
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' }
   ]
 }
 
 const testAccounts = [
-  // 参赛者账号（5个）
-  { phone: '13799999112', name: '王建国', label: '参赛-王建国', role: 'CONTESTANT', institutionId: null },
-  { phone: '13966000890', name: '参赛者1', label: '参赛者1', role: 'CONTESTANT', institutionId: null },
-  { phone: '13965999231', name: '参赛者2', label: '参赛者2', role: 'CONTESTANT', institutionId: null },
-  { phone: '13966000430', name: '参赛者3', label: '参赛者3', role: 'CONTESTANT', institutionId: null },
-  { phone: '13965999424', name: '参赛者4', label: '参赛者4', role: 'CONTESTANT', institutionId: null },
-  // 评委账号（3个）
-  { phone: '13800002569', name: '孙丽娟', label: '评委-孙丽娟', role: 'REVIEWER', institutionId: null },
-  { phone: '13900000001', name: '王建国', label: '评委-王建国', role: 'REVIEWER', institutionId: null },
-  { phone: '13800000084', name: '李明华', label: '评委-李明华', role: 'REVIEWER', institutionId: null },
-  // 组委会管理员（2个）
-  { phone: '13800000127', name: 'CommitteeAdmin A', label: '组委会A', role: 'COMMITTEE_ADMIN', institutionId: null },
-  { phone: '13799999971', name: 'CommitteeAdmin B', label: '组委会B', role: 'COMMITTEE_ADMIN', institutionId: null },
-  // 系统维护员（2个）
-  { phone: '13800000005', name: 'OPS User 1', label: '运维1', role: 'OPS', institutionId: null },
-  { phone: '13800000027', name: 'OPS User 2', label: '运维2', role: 'OPS', institutionId: null }
+  // 旧系统测试账号（使用旧登录方式）
+  { phone: '13799999112', name: '王建国', label: '测试-王建国', password: '（旧账号）' },
+  { phone: '13800000127', name: 'CommitteeAdmin A', label: '组委会A', password: '（旧账号）' },
+  { phone: '13800000005', name: 'OPS User 1', label: '运维1', password: '（旧账号）' }
 ]
 
 const fillAccount = (account) => {
   form.phone = account.phone
-  form.name = account.name
+  if (account.password && account.password !== '（旧账号）') {
+    form.password = account.password
+  } else {
+    form.password = ''
+  }
 }
 
 const handleLogin = async () => {
   try {
     await formRef.value.validate()
     loading.value = true
-    
-    // 查找测试账号信息
-    const account = testAccounts.find(acc => acc.phone === form.phone)
-    
+
     const loginData = {
       phone: form.phone,
-      name: form.name,
-      title: 'Test Title',
-      role: account?.role || 'CONTESTANT',
-      institutionId: account?.institutionId || null,
-      reviewerGroupCode: account?.role === 'REVIEWER' ? 'A1' : null,
-      interviewGroupCode: account?.role === 'REVIEWER' ? 'A1' : null,
-      expertBackground: account?.role === 'REVIEWER' ? 'MEDICAL' : null
+      password: form.password
     }
-    
-    const res = await userStore.login(loginData)
-    
-    if (res.success) {
+
+    const res = await loginWithPassword(loginData)
+
+    if (res.success && res.data) {
+      userStore.setUserInfo(res.data)
       ElMessage.success('登录成功')
-      
+
       // 根据角色跳转到对应页面
       const role = userStore.role
       if (role === 'CONTESTANT') {
@@ -154,16 +152,28 @@ const handleLogin = async () => {
       } else if (role === 'COMMITTEE_ADMIN') {
         router.push('/committee/book-stage/registration')
       } else if (role === 'OPS') {
-        router.push('/committee/book-stage/registration')
+        router.push('/ops/institutions')
       } else {
         router.push('/dashboard')
       }
+    } else {
+      ElMessage.error(res.message || '手机号或密码错误')
     }
   } catch (error) {
     console.error('登录失败:', error)
+    const message = error.response?.data?.message || error.message || '登录失败'
+    ElMessage.error(message)
   } finally {
     loading.value = false
   }
+}
+
+const goToRegister = () => {
+  router.push('/register')
+}
+
+const handleForgotPassword = () => {
+  ElMessage.info('密码重置功能开发中，请联系管理员')
 }
 </script>
 
@@ -202,6 +212,12 @@ const handleLogin = async () => {
     
     .login-form {
       margin-bottom: 24px;
+
+      .login-footer {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 16px;
+      }
     }
     
     .test-accounts {

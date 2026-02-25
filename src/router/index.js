@@ -9,6 +9,12 @@ const routes = [
     meta: { title: '登录 - 浙江省品管大赛' }
   },
   {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/Register.vue'),
+    meta: { title: '用户注册 - 浙江省品管大赛' }
+  },
+  {
     path: '/',
     redirect: '/dashboard'
   },
@@ -213,6 +219,12 @@ const routes = [
         name: 'Reviewers',
         component: () => import('@/views/ops/Reviewers.vue'),
         meta: { title: '评审专家管理' }
+      },
+      {
+        path: 'users',
+        name: 'UserManagement',
+        component: () => import('@/views/ops/UserManagement.vue'),
+        meta: { title: '用户管理' }
       },
       {
         path: 'dictionaries',

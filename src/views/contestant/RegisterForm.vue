@@ -39,15 +39,16 @@
               </el-select>
             </el-form-item>
             
-            <el-form-item label="医疗机构" prop="institutionId">
-              <el-select v-model="form.basic.institutionId" placeholder="请选择机构" style="width: 100%;">
-                <el-option
-                  v-for="inst in institutions"
-                  :key="inst.id"
-                  :label="inst.name"
-                  :value="inst.id"
-                />
-              </el-select>
+            <el-form-item label="医疗机构">
+              <el-input 
+                :value="userStore.institutionName" 
+                readonly 
+                disabled
+                style="width: 100%;"
+              />
+              <div style="color: #909399; font-size: 12px; margin-top: 4px;">
+                您的报名将自动关联到您注册时绑定的机构，无需选择
+              </div>
             </el-form-item>
             
             <el-form-item label="项目名称" prop="projectName">
@@ -152,6 +153,10 @@
               </el-select>
             </el-form-item>
             
+            <el-form-item v-if="form.activity.subjectTypeCode === 'other' || form.activity.subjectTypeCode === 'subject_type_11'" label="其他主题类型说明" prop="subjectTypeOther">
+              <el-input v-model="form.activity.subjectTypeOther" placeholder="请输入其他主题类型的具体说明" />
+            </el-form-item>
+            
             <el-form-item label="运用手法" prop="methodCode">
               <el-select v-model="form.activity.methodCode" placeholder="请选择" style="width: 100%;">
                 <el-option
@@ -163,8 +168,12 @@
               </el-select>
             </el-form-item>
             
+            <el-form-item v-if="form.activity.methodCode === 'other'" label="其他运用手法说明" prop="methodOther">
+              <el-input v-model="form.activity.methodOther" placeholder="请输入其他运用手法的具体说明" />
+            </el-form-item>
+            
             <el-form-item label="改善就医感受" prop="experienceImproveCode">
-              <el-select v-model="form.activity.experienceImproveCode" placeholder="请选择" clearable style="width: 100%;">
+              <el-select v-model="form.activity.experienceImproveCode" placeholder="请选择" style="width: 100%;">
                 <el-option
                   v-for="item in experienceImproves"
                   :key="item.code"
@@ -174,8 +183,12 @@
               </el-select>
             </el-form-item>
             
+            <el-form-item v-if="form.activity.experienceImproveCode === 'other'" label="其他改善就医感受说明" prop="experienceImproveOther">
+              <el-input v-model="form.activity.experienceImproveOther" placeholder="请输入其他改善就医感受的具体说明" />
+            </el-form-item>
+            
             <el-form-item label="医疗质量安全主题" prop="qualityTopicCode">
-              <el-select v-model="form.activity.qualityTopicCode" placeholder="请选择" clearable style="width: 100%;">
+              <el-select v-model="form.activity.qualityTopicCode" placeholder="请选择" style="width: 100%;">
                 <el-option
                   v-for="item in qualityTopics"
                   :key="item.code"
@@ -183,6 +196,10 @@
                   :value="item.code"
                 />
               </el-select>
+            </el-form-item>
+            
+            <el-form-item v-if="form.activity.qualityTopicCode === 'other'" label="其他质量主题说明" prop="qualityTopicOther">
+              <el-input v-model="form.activity.qualityTopicOther" placeholder="请输入其他质量主题的具体说明" />
             </el-form-item>
             
             <el-form-item label="平均工作年限" prop="avgWorkYears">
@@ -201,6 +218,13 @@
                 <el-radio :label="false">否</el-radio>
               </el-radio-group>
             </el-form-item>
+            
+            <el-form-item label="是否与数字化/人工智能应用相关" prop="relatedToDigitalAi">
+              <el-radio-group v-model="form.activity.relatedToDigitalAi">
+                <el-radio :label="true">是</el-radio>
+                <el-radio :label="false">否</el-radio>
+              </el-radio-group>
+            </el-form-item>
           </el-form>
         </div>
         
@@ -213,6 +237,13 @@
             label-width="200px"
             :disabled="isDisabled"
           >
+            <el-form-item label="主题" prop="theme">
+              <el-input
+                v-model="form.summary.theme"
+                placeholder="请输入项目主题"
+              />
+            </el-form-item>
+            
             <el-form-item label="计划" prop="plan">
               <el-input
                 v-model="form.summary.plan"
@@ -222,39 +253,57 @@
               />
             </el-form-item>
             
-            <el-form-item label="问题结构与对策措施探讨" prop="problemAnalysis">
+            <el-form-item label="问题结构与对策措施探讨" prop="problem">
               <el-input
-                v-model="form.summary.problemAnalysis"
+                v-model="form.summary.problem"
                 type="textarea"
                 :rows="4"
                 placeholder="请输入问题分析"
               />
             </el-form-item>
             
-            <el-form-item label="对策行动过程" prop="implementation">
+            <el-form-item label="对策行动过程" prop="action">
               <el-input
-                v-model="form.summary.implementation"
+                v-model="form.summary.action"
                 type="textarea"
                 :rows="4"
-                placeholder="请输入实施过程"
+                placeholder="请输入对策行动过程"
               />
             </el-form-item>
             
-            <el-form-item label="成功表现" prop="result">
+            <el-form-item label="成功表现" prop="success">
               <el-input
-                v-model="form.summary.result"
+                v-model="form.summary.success"
                 type="textarea"
                 :rows="4"
-                placeholder="请输入成果表现"
+                placeholder="请输入成功表现"
               />
             </el-form-item>
             
-            <el-form-item label="讨论总结" prop="review">
+            <el-form-item label="讨论总结" prop="discussion">
               <el-input
-                v-model="form.summary.review"
+                v-model="form.summary.discussion"
                 type="textarea"
                 :rows="4"
                 placeholder="请输入讨论总结"
+              />
+            </el-form-item>
+            
+            <el-form-item label="操作说明">
+              <el-input
+                v-model="form.summary.operation"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入操作说明（可选）"
+              />
+            </el-form-item>
+            
+            <el-form-item label="成果展示">
+              <el-input
+                v-model="form.summary.presentation"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入成果展示说明（可选）"
               />
             </el-form-item>
           </el-form>
@@ -337,6 +386,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 import {
   createRegistration,
   updateRegistration,
@@ -348,11 +398,11 @@ import {
   getRegistrationDetail
 } from '@/api/registration'
 import { getCompetitions } from '@/api/competition'
-import { getInstitutions } from '@/api/institution'
 import { getDictionaries } from '@/api/dictionary'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 const registrationId = ref(route.params.id !== 'new' ? route.params.id : null)
 const currentStep = ref(0)
@@ -361,7 +411,6 @@ const saving = ref(false)
 const submitting = ref(false)
 
 const competitions = ref([])
-const institutions = ref([])
 const subjectTypes = ref([])
 const methods = ref([])
 const experienceImproves = ref([])
@@ -376,7 +425,6 @@ const form = reactive({
   status: 'DRAFT',
   basic: {
     competitionId: null,
-    institutionId: null,
     projectName: '',
     groupType: 'BASIC'
   },
@@ -388,19 +436,27 @@ const form = reactive({
     theme: '',
     keywords: '',
     subjectTypeCode: '',
+    subjectTypeOther: '',
     methodCode: '',
+    methodOther: '',
     experienceImproveCode: '',
+    experienceImproveOther: '',
     qualityTopicCode: '',
+    qualityTopicOther: '',
     avgWorkYears: 0,
     avgAge: 0,
-    crossDepartment: false
+    crossDepartment: false,
+    relatedToDigitalAi: false
   },
   summary: {
+    theme: '',
     plan: '',
-    problemAnalysis: '',
-    implementation: '',
-    result: '',
-    review: ''
+    problem: '',
+    action: '',
+    success: '',
+    discussion: '',
+    operation: '',
+    presentation: ''
   },
   materials: {
     registrationForm: [],
@@ -413,23 +469,27 @@ const isDisabled = computed(() => form.status === 'SUBMITTED')
 
 const basicRules = {
   competitionId: [{ required: true, message: '请选择赛事', trigger: 'change' }],
-  institutionId: [{ required: true, message: '请选择机构', trigger: 'change' }],
   projectName: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
   groupType: [{ required: true, message: '请选择竞赛组别', trigger: 'change' }]
 }
 
 const activityRules = {
   theme: [{ required: true, message: '请输入活动主题', trigger: 'blur' }],
+  keywords: [{ required: true, message: '请输入关键词', trigger: 'blur' }],
   subjectTypeCode: [{ required: true, message: '请选择主题类型', trigger: 'change' }],
-  methodCode: [{ required: true, message: '请选择运用手法', trigger: 'change' }]
+  methodCode: [{ required: true, message: '请选择运用手法', trigger: 'change' }],
+  experienceImproveCode: [{ required: true, message: '请选择改善就医感受', trigger: 'change' }],
+  qualityTopicCode: [{ required: true, message: '请选择医疗质量安全主题', trigger: 'change' }],
+  relatedToDigitalAi: [{ required: true, message: '请选择是否与数字化/AI相关', trigger: 'change' }]
 }
 
 const summaryRules = {
+  theme: [{ required: true, message: '请输入项目主题', trigger: 'blur' }],
   plan: [{ required: true, message: '请输入计划内容', trigger: 'blur' }],
-  problemAnalysis: [{ required: true, message: '请输入问题分析', trigger: 'blur' }],
-  implementation: [{ required: true, message: '请输入实施过程', trigger: 'blur' }],
-  result: [{ required: true, message: '请输入成果表现', trigger: 'blur' }],
-  review: [{ required: true, message: '请输入讨论总结', trigger: 'blur' }]
+  problem: [{ required: true, message: '请输入问题分析', trigger: 'blur' }],
+  action: [{ required: true, message: '请输入对策行动过程', trigger: 'blur' }],
+  success: [{ required: true, message: '请输入成功表现', trigger: 'blur' }],
+  discussion: [{ required: true, message: '请输入讨论总结', trigger: 'blur' }]
 }
 
 const loadData = async () => {
@@ -438,7 +498,6 @@ const loadData = async () => {
     // 加载下拉选项
     await Promise.all([
       loadCompetitions(),
-      loadInstitutions(),
       loadDictionaries()
     ])
     
@@ -465,17 +524,6 @@ const loadCompetitions = async () => {
   }
 }
 
-const loadInstitutions = async () => {
-  try {
-    const res = await getInstitutions()
-    if (res.success) {
-      institutions.value = res.data || []
-    }
-  } catch (error) {
-    console.error('加载机构失败:', error)
-  }
-}
-
 const loadDictionaries = async () => {
   try {
     const [subjectTypesRes, methodsRes, experienceRes, qualityRes] = await Promise.all([
@@ -485,10 +533,20 @@ const loadDictionaries = async () => {
       getDictionaries('quality_topic')
     ])
     
-    if (subjectTypesRes.success) subjectTypes.value = subjectTypesRes.data || []
-    if (methodsRes.success) methods.value = methodsRes.data || []
-    if (experienceRes.success) experienceImproves.value = experienceRes.data || []
-    if (qualityRes.success) qualityTopics.value = qualityRes.data || []
+    // 兼容两种响应格式：
+    // 1. 标准格式: {success: true, data: [...]}
+    // 2. 直接返回列表: [{code, label}, ...]
+    subjectTypes.value = Array.isArray(subjectTypesRes) ? subjectTypesRes : (subjectTypesRes.data || [])
+    methods.value = Array.isArray(methodsRes) ? methodsRes : (methodsRes.data || [])
+    experienceImproves.value = Array.isArray(experienceRes) ? experienceRes : (experienceRes.data || [])
+    qualityTopics.value = Array.isArray(qualityRes) ? qualityRes : (qualityRes.data || [])
+    
+    console.log('📚 字典数据加载:', {
+      subjectTypes: subjectTypes.value.length,
+      methods: methods.value.length,
+      experienceImproves: experienceImproves.value.length,
+      qualityTopics: qualityTopics.value.length
+    })
   } catch (error) {
     console.error('加载字典失败:', error)
   }
@@ -498,14 +556,24 @@ const loadRegistrationDetail = async () => {
   try {
     const res = await getRegistrationDetail(registrationId.value)
     if (res.success && res.data) {
+      // 适配后端响应结构
       const data = res.data
-      form.status = data.status
+      const registration = data.registration || data
+      
+      // 状态
+      form.status = registration.status
       
       // 基本信息
-      form.basic.competitionId = data.competitionId
-      form.basic.institutionId = data.institutionId
-      form.basic.projectName = data.projectName
-      form.basic.groupType = data.groupType
+      // competitionId 可能在顶层或在registration中
+      form.basic.competitionId = data.competitionId || registration.competitionId
+      form.basic.projectName = registration.projectName
+      form.basic.groupType = registration.groupType
+      
+      console.log('📝 加载报名详情:', {
+        competitionId: form.basic.competitionId,
+        projectName: form.basic.projectName,
+        groupType: form.basic.groupType
+      })
       
       // 成员信息
       if (data.members && data.members.length > 0) {
@@ -519,8 +587,9 @@ const loadRegistrationDetail = async () => {
       }
       
       // 项目总结
-      if (data.summary) {
-        Object.assign(form.summary, data.summary)
+      if (data.projectSummary) {
+        Object.assign(form.summary, data.projectSummary)
+        console.log('📄 项目总结数据加载:', form.summary)
       }
     }
   } catch (error) {
@@ -608,6 +677,13 @@ const saveBasicInfo = async () => {
       if (res.success && res.data) {
         registrationId.value = res.data.id
         ElMessage.success('创建成功')
+        
+        // 创建成功后，更新URL为编辑模式，避免刷新后丢失ID
+        router.replace({
+          name: 'RegisterForm',
+          params: { id: res.data.id }
+        })
+        
         return true
       }
     } else {
@@ -674,6 +750,11 @@ const saveSummary = async () => {
     return false
   }
   
+  console.log('📤 保存项目总结:', {
+    registrationId: registrationId.value,
+    summaryData: form.summary
+  })
+  
   try {
     const res = await updateRegistrationSummary(registrationId.value, form.summary)
     if (res.success) {
@@ -682,6 +763,11 @@ const saveSummary = async () => {
     }
   } catch (error) {
     console.error('保存项目总结失败:', error)
+    console.error('❌ 错误详情:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data
+    })
     ElMessage.error('保存项目总结失败')
     return false
   }

@@ -68,3 +68,91 @@ export function importInstitutions(file) {
     }
   })
 }
+
+/**
+ * 搜索机构（高性能，支持分页）
+ * 公开接口，无需Token
+ */
+export function searchInstitutions(data) {
+  return request({
+    url: '/institutions/search',
+    method: 'post',
+    data,
+    skipAuth: true
+  })
+}
+
+/**
+ * 获取热门地区
+ * 公开接口，无需Token
+ */
+export function getHotRegions(limit = 10) {
+  return request({
+    url: '/institutions/hot-regions',
+    method: 'get',
+    params: { limit },
+    skipAuth: true
+  })
+}
+
+/**
+ * 获取所有地区列表（区县级别）
+ * 公开接口，无需Token
+ */
+export function getAllRegions() {
+  return request({
+    url: '/institutions/regions',
+    method: 'get',
+    skipAuth: true
+  })
+}
+
+/**
+ * 获取城市列表（市级别，推荐使用）
+ * 公开接口，无需Token
+ */
+export function getCities() {
+  return request({
+    url: '/institutions/cities',
+    method: 'get',
+    skipAuth: true
+  })
+}
+
+/**
+ * 获取指定城市的区县列表
+ * 公开接口，无需Token
+ */
+export function getDistricts(city) {
+  return request({
+    url: '/institutions/districts',
+    method: 'get',
+    params: { city },
+    skipAuth: true
+  })
+}
+
+/**
+ * 获取所有等级列表
+ * 公开接口，无需Token
+ */
+export function getAllLevels() {
+  return request({
+    url: '/institutions/levels',
+    method: 'get',
+    skipAuth: true
+  })
+}
+
+/**
+ * 自动完成（输入提示）
+ * 公开接口，无需Token
+ */
+export function autocomplete(prefix) {
+  return request({
+    url: '/institutions/autocomplete',
+    method: 'get',
+    params: { prefix },
+    skipAuth: true
+  })
+}

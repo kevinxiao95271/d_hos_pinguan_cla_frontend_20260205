@@ -21,18 +21,23 @@ export const useUserStore = defineStore('user', {
   },
   
   actions: {
+    // 设置用户信息（注册或登录成功后调用）
+    setUserInfo(userData) {
+      this.token = userData.token
+      this.userInfo = userData
+      
+      const loginTimestamp = Date.now()
+      localStorage.setItem('token', userData.token)
+      localStorage.setItem('userInfo', JSON.stringify(userData))
+      localStorage.setItem('loginTime', new Date().toLocaleString('zh-CN'))
+      localStorage.setItem('loginTimestamp', loginTimestamp.toString())
+    },
+    
+    // 旧的登录方法（兼容现有代码）
     async login(loginData) {
       const res = await login(loginData)
       if (res.success && res.data) {
-        this.token = res.data.token
-        this.userInfo = res.data
-        
-        // 存储token和登录时间戳（用于检查过期）
-        const loginTimestamp = Date.now()
-        localStorage.setItem('token', res.data.token)
-        localStorage.setItem('userInfo', JSON.stringify(res.data))
-        localStorage.setItem('loginTime', new Date().toLocaleString('zh-CN'))
-        localStorage.setItem('loginTimestamp', loginTimestamp.toString())
+        this.setUserInfo(res.data)
       }
       return res
     },
