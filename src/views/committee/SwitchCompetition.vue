@@ -62,11 +62,12 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getCompetitions } from '@/api/competition'
+import { getCurrentCompetitionId, setCurrentCompetitionId } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 const competitions = ref([])
-const currentCompetitionId = ref(parseInt(localStorage.getItem('currentCompetitionId')) || null)
+const currentCompetitionId = ref(getCurrentCompetitionId())
 
 const loadData = async () => {
   try {
@@ -85,7 +86,7 @@ const handleCurrentChange = (row) => {
 
 const switchCompetition = (row) => {
   currentCompetitionId.value = row.id
-  localStorage.setItem('currentCompetitionId', row.id)
+  setCurrentCompetitionId(row.id)
   ElMessage.success(`已切换到赛事：${row.name}`)
   
   // 跳转到报名统计页面

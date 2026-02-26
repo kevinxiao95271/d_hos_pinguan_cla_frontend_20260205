@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { login } from '@/api/auth'
+import { clearCurrentCompetitionId } from '@/utils/competition'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -63,7 +64,7 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem('userInfo')
       localStorage.removeItem('loginTime')
       localStorage.removeItem('loginTimestamp')
-      localStorage.removeItem('currentCompetitionId')
+      clearCurrentCompetitionId()
     }
   }
 })

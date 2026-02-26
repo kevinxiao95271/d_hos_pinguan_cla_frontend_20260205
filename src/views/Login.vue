@@ -65,6 +65,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { loginWithPassword } from '@/api/auth'
+import { ensureCurrentCompetition } from '@/utils/competition'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -119,6 +120,8 @@ const handleLogin = async () => {
       } else if (role === 'REVIEWER') {
         router.push('/reviewer/dashboard')
       } else if (role === 'COMMITTEE_ADMIN') {
+        // 赛事管理者：自动初始化当前赛事
+        await initializeCompetitionForAdmin()
         router.push('/committee/book-stage/registration')
       } else if (role === 'OPS') {
         router.push('/ops/institutions')
@@ -135,6 +138,12 @@ const handleLogin = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 为赛事管理者自动初始化当前赛事
+const initializeCompetitionForAdmin = async () => {
+  console.log('⏳ 正在为赛事管理者初始化赛事...')
+  await ensureCurrentCompetition()
 }
 
 const goToRegister = () => {
