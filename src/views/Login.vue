@@ -3,7 +3,6 @@
     <div class="login-box">
       <div class="login-header">
         <h1>浙江省品管大赛管理系统</h1>
-        <p>Quality Competition Management System</p>
       </div>
       
       <el-form
@@ -56,20 +55,6 @@
           </el-link>
         </div>
       </el-form>
-      
-      <div class="test-accounts">
-        <el-divider>测试账号</el-divider>
-        <div class="account-grid">
-          <el-button
-            v-for="account in testAccounts"
-            :key="account.phone"
-            size="small"
-            @click="fillAccount(account)"
-          >
-            {{ account.label }}
-          </el-button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -109,22 +94,6 @@ const rules = {
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' }
   ]
-}
-
-const testAccounts = [
-  // 旧系统测试账号（使用旧登录方式）
-  { phone: '13799999112', name: '王建国', label: '测试-王建国', password: '（旧账号）' },
-  { phone: '13800000127', name: 'CommitteeAdmin A', label: '组委会A', password: '（旧账号）' },
-  { phone: '13800000005', name: 'OPS User 1', label: '运维1', password: '（旧账号）' }
-]
-
-const fillAccount = (account) => {
-  form.phone = account.phone
-  if (account.password && account.password !== '（旧账号）') {
-    form.password = account.password
-  } else {
-    form.password = ''
-  }
 }
 
 const handleLogin = async () => {
@@ -200,31 +169,14 @@ const handleForgotPassword = () => {
         font-size: 24px;
         font-weight: 600;
         color: #333;
-        margin: 0 0 8px 0;
-      }
-      
-      p {
-        font-size: 14px;
-        color: #999;
         margin: 0;
       }
     }
     
     .login-form {
-      margin-bottom: 24px;
-
       .login-footer {
         display: flex;
         justify-content: space-between;
-        margin-top: 16px;
-      }
-    }
-    
-    .test-accounts {
-      .account-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
         margin-top: 16px;
       }
     }
