@@ -755,8 +755,24 @@ const confirmChangeGroup = async () => {
 
 const autoGroup = async () => {
   try {
+    // 检查是否选择了竞赛组别
+    if (!filters.groupType) {
+      ElMessage.warning('请先选择竞赛组别再进行自动分组')
+      return
+    }
+    
+    // 根据组别确定分组前缀
+    const prefixMap = {
+      'BASIC': 'A',           // 基层组
+      'COMPREHENSIVE': 'B',   // 综合组
+      'ADVANCED': 'C'         // 进阶组
+    }
+    const groupPrefix = prefixMap[filters.groupType]
+    
+    const groupTypeText = getGroupTypeText(filters.groupType)
+    
     await ElMessageBox.confirm(
-      '确定要自动分配分组吗？将按每组10人自动分配到A组系列（A1、A2、A3...）',
+      `确定要对【${groupTypeText}】进行自动分组吗？将按每组25人自动分配到${groupPrefix}组系列（${groupPrefix}1、${groupPrefix}2、${groupPrefix}3...）`,
       '提示',
       {
         type: 'warning',
@@ -767,8 +783,9 @@ const autoGroup = async () => {
     
     const res = await autoGroupRegistrations({
       competitionId: filters.competitionId,
-      groupPrefix: 'A',  // 分组前缀
-      groupSize: 10      // 每组人数
+      groupType: filters.groupType,  // 指定组别
+      groupPrefix: groupPrefix,      // 根据组别自动选择前缀
+      groupSize: 25                  // 每组人数
     })
     
     if (res.success) {

@@ -280,7 +280,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCompetition } from '@/api/competition'
 import {
   filterRegistrations,
@@ -436,13 +436,45 @@ const handleSelectionChange = (selection) => {
 
 const autoGroup = async () => {
   try {
+    // 检查是否选择了竞赛组别
+    if (!registrationFilters.groupType) {
+      ElMessage.warning('请先选择竞赛组别再进行自动分组')
+      return
+    }
+    
+    // 根据组别确定分组前缀
+    const prefixMap = {
+      'BASIC': 'A',           // 基层组
+      'COMPREHENSIVE': 'B',   // 综合组
+      'ADVANCED': 'C'         // 进阶组
+    }
+    const groupPrefix = prefixMap[registrationFilters.groupType]
+    const groupTypeText = getGroupTypeText(registrationFilters.groupType)
+    
+    await ElMessageBox.confirm(
+      `确定要对【${groupTypeText}】进行自动分组吗？将按每组25人自动分配到${groupPrefix}组系列（${groupPrefix}1、${groupPrefix}2、${groupPrefix}3...）`,
+      '提示',
+      {
+        type: 'warning',
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }
+    )
+    
     await autoGroupRegistrations({
-      competitionId: competitionId.value
+      competitionId: competitionId.value,
+      groupType: registrationFilters.groupType,  // 指定组别
+      groupPrefix: groupPrefix,                  // 根据组别自动选择前缀
+      groupSize: 25                              // 每组人数
     })
+    
     ElMessage.success('自动分组成功')
     loadRegistrations()
   } catch (error) {
-    console.error('自动分组失败:', error)
+    if (error !== 'cancel') {
+      console.error('自动分组失败:', error)
+      ElMessage.error('自动分组失败')
+    }
   }
 }
 

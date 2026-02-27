@@ -349,6 +349,7 @@ import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
+import dayjs from 'dayjs'
 
 const { stagesList } = useCompetitionStages()
 
@@ -446,6 +447,11 @@ const getQualityTopicDisplay = (activityInfo) => {
   return activityInfo.qualityTopicLabel || '未填写'
 }
 
+// 格式化日期时间
+const formatDate = (date) => {
+  return date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+}
+
 // 加载面谈池数据（仅进阶组）
 const loadPoolData = async () => {
   loading.value = true
@@ -500,25 +506,49 @@ const viewDetail = async (row) => {
   detailLoading.value = true
   
   try {
-    const res = await getRegistration(row.registrationId)
+    // 兼容不同的字段名：registrationId 或 id
+    const id = row.registrationId || row.id
+    
+    if (!id) {
+      console.error('❌ 缺少项目ID:', row)
+      ElMessage.error('缺少项目ID，无法查看详情')
+      detailDialogVisible.value = false
+      return
+    }
+    
+    console.log('⏳ 正在加载详情，ID:', id)
+    const res = await getRegistration(id)
+    
     if (res.success) {
       currentDetail.value = res.data
+      console.log('✅ 详情加载成功:', res.data)
     } else {
-      ElMessage.error('加载详情失败')
+      console.error('❌ 加载详情失败:', res.message)
+      ElMessage.error(res.message || '加载详情失败')
     }
   } catch (error) {
-    console.error('加载详情失败:', error)
-    ElMessage.error('加载详情失败')
+    console.error('❌ 加载详情异常:', error)
+    ElMessage.error('加载详情失败: ' + (error.message || '未知错误'))
   } finally {
     detailLoading.value = false
   }
 }
 
 const changeInterviewGroup = (row) => {
+  // 兼容不同的字段名：registrationId 或 id
+  const id = row.registrationId || row.id
+  
+  if (!id) {
+    console.error('❌ 缺少项目ID:', row)
+    ElMessage.error('缺少项目ID，无法设置分组')
+    return
+  }
+  
   groupDialogVisible.value = true
-  groupForm.registrationIds = [row.registrationId]
+  groupForm.registrationIds = [id]
   groupForm.currentGroupCode = row.groupCode || ''
   groupForm.groupCode = ''
+  console.log('📝 设置分组，项目ID:', id)
 }
 
 const batchGroupInterview = () => {
@@ -527,13 +557,23 @@ const batchGroupInterview = () => {
     return
   }
   
+  // 兼容不同的字段名：registrationId 或 id
+  const registrationIds = selectedItems.value.map(r => r.registrationId || r.id).filter(id => id)
+  
+  if (registrationIds.length === 0) {
+    console.error('❌ 所有选中项目都缺少ID:', selectedItems.value)
+    ElMessage.error('选中项目缺少ID，无法批量分组')
+    return
+  }
+  
   groupDialogVisible.value = true
-  groupForm.registrationIds = selectedItems.value.map(r => r.registrationId)
+  groupForm.registrationIds = registrationIds
   
   // 显示所有选中项目的当前分组
   const currentCodes = [...new Set(selectedItems.value.map(r => r.groupCode || '未分组'))]
   groupForm.currentGroupCode = currentCodes.join(', ')
   groupForm.groupCode = ''
+  console.log('📝 批量设置分组，项目数量:', registrationIds.length)
 }
 
 const confirmGroup = async () => {
@@ -563,7 +603,7 @@ const autoGroupInterview = async () => {
       cancelButtonText: '取消',
       inputPattern: /^[1-9]\d*$/,
       inputErrorMessage: '请输入有效的数字',
-      inputValue: '6'
+      inputValue: '25'
     }).then(async ({ value }) => {
       const groupSize = parseInt(value)
       
@@ -583,9 +623,17 @@ const autoGroupInterview = async () => {
         const batch = ungroupedItems.slice(start, end)
         const groupCode = `C${i + 1}`
         
+        // 兼容不同的字段名：id 或 registrationId
+        const batchIds = batch.map(item => item.id || item.registrationId).filter(id => id)
+        
+        if (batchIds.length === 0) {
+          console.error(`❌ 分组 ${groupCode} 的项目缺少ID:`, batch)
+          continue
+        }
+        
         try {
           const res = await batchClassifyRegistrations({
-            registrationIds: batch.map(item => item.id),
+            registrationIds: batchIds,
             groupCode: groupCode
           })
           
