@@ -153,7 +153,7 @@
               </el-select>
             </el-form-item>
             
-            <el-form-item v-if="form.activity.subjectTypeCode === 'other' || form.activity.subjectTypeCode === 'subject_type_11'" label="其他主题类型说明" prop="subjectTypeOther">
+            <el-form-item v-if="form.activity.subjectTypeCode === 'other'" label="其他主题类型说明" prop="subjectTypeOther">
               <el-input v-model="form.activity.subjectTypeOther" placeholder="请输入其他主题类型的具体说明" />
             </el-form-item>
             
@@ -504,6 +504,13 @@ const loadData = async () => {
     // 如果是编辑模式，加载报名详情
     if (registrationId.value) {
       await loadRegistrationDetail()
+    } else {
+      // 新建模式：检查query参数，如果有competitionId则自动预选
+      const competitionIdFromQuery = route.query.competitionId
+      if (competitionIdFromQuery) {
+        form.basic.competitionId = parseInt(competitionIdFromQuery)
+        console.log('📋 从赛事列表跳转，自动预选赛事ID:', form.basic.competitionId)
+      }
     }
   } catch (error) {
     console.error('加载数据失败:', error)

@@ -153,8 +153,11 @@ const handleButtonClick = (item) => {
       router.push(`/contestant/registration/${myReg.id}`)
     }
   } else {
-    // 跳转到报名页面
-    router.push(`/contestant/register/${item.id}`)
+    // 跳转到新建报名页面，通过query参数传递赛事ID
+    router.push({
+      path: '/contestant/register/new',
+      query: { competitionId: item.id }
+    })
   }
 }
 
