@@ -62,9 +62,9 @@
             
             <el-form-item label="竞赛组别" prop="groupType">
               <el-radio-group v-model="form.basic.groupType">
-                <el-radio label="BASIC">基层组</el-radio>
-                <el-radio label="COMPREHENSIVE">综合组</el-radio>
-                <el-radio label="ADVANCED">进阶组</el-radio>
+                <el-radio value="BASIC">基层组</el-radio>
+                <el-radio value="COMPREHENSIVE">综合组</el-radio>
+                <el-radio value="ADVANCED">进阶组</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-form>
@@ -214,15 +214,15 @@
             
             <el-form-item label="跨部门" prop="crossDepartment">
               <el-radio-group v-model="form.activity.crossDepartment">
-                <el-radio :label="true">是</el-radio>
-                <el-radio :label="false">否</el-radio>
+                <el-radio :value="true">是</el-radio>
+                <el-radio :value="false">否</el-radio>
               </el-radio-group>
             </el-form-item>
             
             <el-form-item label="是否与数字化/人工智能应用相关" prop="relatedToDigitalAi">
               <el-radio-group v-model="form.activity.relatedToDigitalAi">
-                <el-radio :label="true">是</el-radio>
-                <el-radio :label="false">否</el-radio>
+                <el-radio :value="true">是</el-radio>
+                <el-radio :value="false">否</el-radio>
               </el-radio-group>
             </el-form-item>
           </el-form>
@@ -333,7 +333,7 @@
                   <span style="color: #606266;">请先下载模版：</span>
                   <el-link 
                     type="primary" 
-                    :underline="false"
+                    underline="never"
                     @click="downloadTemplateFile(registrationFormTemplate)"
                     :icon="Download"
                   >
@@ -364,7 +364,7 @@
                   <span style="color: #606266;">请先下载模版：</span>
                   <el-link 
                     type="primary" 
-                    :underline="false"
+                    underline="never"
                     @click="downloadTemplateFile(resultReportTemplate)"
                     :icon="Download"
                   >

@@ -227,6 +227,12 @@ const routes = [
         meta: { title: '用户管理' }
       },
       {
+        path: 'registrations',
+        name: 'OpsRegistrations',
+        component: () => import('@/views/ops/Registrations.vue'),
+        meta: { title: '报名列表' }
+      },
+      {
         path: 'dictionaries',
         name: 'Dictionaries',
         component: () => import('@/views/ops/Dictionaries.vue'),

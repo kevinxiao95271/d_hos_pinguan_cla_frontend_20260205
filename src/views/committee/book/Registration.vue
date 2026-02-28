@@ -879,20 +879,16 @@ const syncScroll = (source) => {
 
 // 更新顶部滚动条宽度
 const updateTopScrollbarWidth = () => {
-  console.log('updateTopScrollbarWidth 被调用')
-  if (topScrollbar.value && tableContainer.value) {
-    const tableBody = tableContainer.value.querySelector('.el-table__body-wrapper')
-    console.log('找到的元素:', tableBody)
-    if (tableBody) {
-      const scrollContent = topScrollbar.value.querySelector('.top-scrollbar-content')
-      if (scrollContent) {
-        const tableWidth = tableBody.scrollWidth
-        scrollContent.style.width = `${tableWidth}px`
-        console.log('✅ 更新顶部滚动条宽度:', tableWidth, 'px')
-      }
+  if (!topScrollbar.value || !tableContainer.value) {
+    return
+  }
+  const tableBody = tableContainer.value.querySelector('.el-table__body-wrapper')
+  if (tableBody) {
+    const scrollContent = topScrollbar.value.querySelector('.top-scrollbar-content')
+    if (scrollContent) {
+      const tableWidth = tableBody.scrollWidth
+      scrollContent.style.width = `${tableWidth}px`
     }
-  } else {
-    console.log('❌ 找不到 ref 元素:', { topScrollbar: topScrollbar.value, tableContainer: tableContainer.value })
   }
 }
 

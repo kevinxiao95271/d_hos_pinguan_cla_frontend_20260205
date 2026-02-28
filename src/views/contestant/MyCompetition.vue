@@ -375,23 +375,27 @@ const loadData = async () => {
       })
       
       // 加载赛事信息（优先使用API返回的competitionId，否则使用localStorage）
-      const competitionId = data.registration?.competitionId || localStorage.getItem('currentCompetitionId') || '21'
+      const competitionId = data.registration?.competitionId || localStorage.getItem('currentCompetitionId')
       
-      try {
-        const compRes = await getCompetition(competitionId)
-        if (compRes.success && compRes.data) {
-          competition.value = compRes.data
-          console.log('✅ 赛事信息已加载:', {
-            registerStart: compRes.data.registerStart,
-            registerEnd: compRes.data.registerEnd,
-            bookReviewStart: compRes.data.bookReviewStart,
-            bookReviewEnd: compRes.data.bookReviewEnd
-          })
-        } else {
-          console.warn('⚠️ 赛事信息加载失败')
+      if (competitionId) {
+        try {
+          const compRes = await getCompetition(competitionId)
+          if (compRes.success && compRes.data) {
+            competition.value = compRes.data
+            console.log('✅ 赛事信息已加载:', {
+              registerStart: compRes.data.registerStart,
+              registerEnd: compRes.data.registerEnd,
+              bookReviewStart: compRes.data.bookReviewStart,
+              bookReviewEnd: compRes.data.bookReviewEnd
+            })
+          } else {
+            console.warn('⚠️ 赛事信息加载失败')
+          }
+        } catch (err) {
+          console.error('❌ 加载赛事信息异常:', err)
         }
-      } catch (err) {
-        console.error('❌ 加载赛事信息异常:', err)
+      } else {
+        console.warn('⚠️ 未找到赛事ID，跳过赛事信息加载')
       }
       
       // 获取机构信息
