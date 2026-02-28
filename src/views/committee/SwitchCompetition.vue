@@ -23,16 +23,16 @@
       >
         <el-table-column type="index" width="55" label="序号" />
         <el-table-column prop="name" label="赛事名称" />
-        <el-table-column prop="currentStage" label="当前阶段">
+        <el-table-column prop="stage" label="当前阶段">
           <template #default="{ row }">
-            <el-tag :type="getStageType(row.currentStage)">
-              {{ getStageText(row.currentStage) }}
+            <el-tag :type="getStageType(row.stage)">
+              {{ getStageText(row.stage) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="registrationStartTime" label="报名时间">
+        <el-table-column prop="registerStart" label="报名时间">
           <template #default="{ row }">
-            {{ formatDateRange(row.registrationStartTime, row.registrationEndTime) }}
+            {{ formatDateRange(row.registerStart, row.registerEnd) }}
           </template>
         </el-table-column>
         <el-table-column prop="createdAt" label="创建时间">
@@ -75,15 +75,26 @@ const loadData = async () => {
     const res = await getCompetitions()
     if (res.success) {
       competitions.value = res.data || []
+      console.log('✅ 加载赛事列表成功:', competitions.value.length, '个赛事')
+    } else {
+      console.warn('⚠️ 加载赛事列表失败:', res.message)
+      ElMessage.warning('加载赛事列表失败：' + (res.message || '未知错误'))
     }
-    
-    // 从后端获取当前赛事ID
+  } catch (error) {
+    console.error('❌ 加载赛事列表异常:', error)
+    ElMessage.error('加载赛事列表失败：' + error.message)
+    return
+  }
+  
+  // 从后端获取当前赛事ID（独立的try-catch，避免影响赛事列表显示）
+  try {
     const currentId = await getCurrentCompetitionId()
     if (currentId) {
       currentCompetitionId.value = currentId
+      console.log('✅ 当前赛事ID:', currentId)
     }
   } catch (error) {
-    console.error('加载赛事列表失败:', error)
+    console.warn('⚠️ 获取当前赛事ID失败:', error)
   }
 }
 
@@ -111,8 +122,8 @@ const switchCompetition = async (row) => {
 
 const getStageType = (stage) => {
   const map = {
-    'REGISTRATION': 'success',
-    'BOOK': 'warning',
+    'REGISTER': 'success',
+    'BOOK_REVIEW': 'warning',
     'INTERVIEW': 'warning',
     'FINAL': 'danger'
   }
@@ -121,8 +132,8 @@ const getStageType = (stage) => {
 
 const getStageText = (stage) => {
   const map = {
-    'REGISTRATION': '报名中',
-    'BOOK': '书审中',
+    'REGISTER': '报名中',
+    'BOOK_REVIEW': '书审中',
     'INTERVIEW': '面谈中',
     'FINAL': '决赛中'
   }

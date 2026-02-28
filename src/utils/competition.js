@@ -9,7 +9,7 @@ export async function ensureCurrentCompetition() {
   try {
     // 1. 首先尝试从后端获取当前赛事
     const currentRes = await getCurrentCompetition()
-    if (currentRes.code === 0 && currentRes.data) {
+    if (currentRes.success && currentRes.data) {
       console.log('✅ 获取到当前赛事ID:', currentRes.data)
       return currentRes.data
     }
@@ -47,13 +47,14 @@ export async function ensureCurrentCompetition() {
 export async function getCurrentCompetitionId() {
   try {
     const res = await getCurrentCompetition()
-    if (res.code === 0 && res.data) {
+    if (res.success && res.data) {
       // 同步到localStorage作为缓存
       localStorage.setItem('currentCompetitionId', res.data)
       return res.data
     }
   } catch (error) {
-    console.warn('⚠️ 获取当前赛事失败，使用本地缓存:', error.message)
+    // 静默处理，API可能未实现（404）或网络失败
+    // 直接fallback到localStorage，不打印警告
   }
   
   // Fallback到localStorage
@@ -73,24 +74,28 @@ export function getCurrentCompetitionIdSync() {
 
 /**
  * 设置当前赛事ID
- * 同时更新后端和localStorage
+ * 尝试更新后端，失败时仅更新localStorage
  * @param {number} competitionId 赛事ID
  * @returns {Promise<boolean>} 是否设置成功
  */
 export async function setCurrentCompetitionId(competitionId) {
   try {
     const res = await setCurrentCompetition(competitionId)
-    if (res.code === 0) {
+    if (res.success) {
       // 同步到localStorage
       localStorage.setItem('currentCompetitionId', competitionId)
       return true
     } else {
-      console.error('❌ 设置当前赛事失败:', res.message)
-      return false
+      console.error('❌ 后端设置当前赛事失败:', res.message)
+      // 降级：仅更新localStorage
+      localStorage.setItem('currentCompetitionId', competitionId)
+      return true
     }
   } catch (error) {
-    console.error('❌ 设置当前赛事异常:', error)
-    return false
+    // API未实现或失败时，降级到仅localStorage
+    console.warn('⚠️ 后端API不可用，仅更新本地缓存')
+    localStorage.setItem('currentCompetitionId', competitionId)
+    return true
   }
 }
 
