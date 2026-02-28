@@ -128,6 +128,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import { getStatsSummary } from '@/api/admin'
+import { getCurrentCompetitionId } from '@/utils/competition'
 
 const subjectChart = ref(null)
 const regionChart = ref(null)
@@ -151,8 +152,12 @@ const loadData = async () => {
   try {
     console.log('📊 正在加载统计数据...')
     
-    // 获取当前赛事ID，默认为21（2026浙江品管大赛）
-    const competitionId = localStorage.getItem('currentCompetitionId') || 21
+    // 获取当前赛事ID
+    const competitionId = await getCurrentCompetitionId()
+    if (!competitionId) {
+      ElMessage.warning('未找到当前赛事，请先切换赛事')
+      return
+    }
     console.log('   当前赛事ID:', competitionId)
     
     // 调用后端统计接口，传递 competitionId 参数

@@ -90,3 +90,27 @@ export function deleteCompetitionTemplate(competitionId, templateId) {
     method: 'delete'
   })
 }
+
+/**
+ * 获取当前活跃赛事ID
+ * 所有已登录用户可调用
+ */
+export function getCurrentCompetition() {
+  return request({
+    url: '/admin/current-competition',
+    method: 'get'
+  })
+}
+
+/**
+ * 设置当前活跃赛事
+ * 仅管理员角色可调用 (COMMITTEE_ADMIN, COMMITTEE, OPS)
+ * @param {number} competitionId 赛事ID
+ */
+export function setCurrentCompetition(competitionId) {
+  return request({
+    url: '/admin/current-competition',
+    method: 'post',
+    params: { competitionId }
+  })
+}

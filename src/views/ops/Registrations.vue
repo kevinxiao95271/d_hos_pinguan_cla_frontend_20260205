@@ -327,6 +327,7 @@ import { filterRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import { getCompetitions } from '@/api/competition'
+import { getCurrentCompetitionId } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 const loading = ref(false)
@@ -361,10 +362,17 @@ const loadCompetitions = async () => {
     if (res.success) {
       competitions.value = res.data || []
       
-      // 如果没有选择赛事且有可用赛事，自动选择第一个
-      if (!filters.competitionId && competitions.value.length > 0) {
-        filters.competitionId = competitions.value[0].id
-        console.log('✅ 自动选择赛事:', competitions.value[0].name)
+      // 优先使用后端全局当前赛事
+      if (!filters.competitionId) {
+        const currentCompetitionId = await getCurrentCompetitionId()
+        if (currentCompetitionId) {
+          filters.competitionId = currentCompetitionId
+          console.log('✅ 使用全局当前赛事ID:', currentCompetitionId)
+        } else if (competitions.value.length > 0) {
+          // 如果没有全局当前赛事，选择第一个
+          filters.competitionId = competitions.value[0].id
+          console.log('✅ 自动选择第一个赛事:', competitions.value[0].name)
+        }
       }
     }
   } catch (error) {

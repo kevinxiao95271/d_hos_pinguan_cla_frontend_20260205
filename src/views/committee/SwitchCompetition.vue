@@ -62,18 +62,25 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getCompetitions } from '@/api/competition'
-import { getCurrentCompetitionId, setCurrentCompetitionId } from '@/utils/competition'
+import { getCurrentCompetitionId, getCurrentCompetitionIdSync, setCurrentCompetitionId } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 const competitions = ref([])
-const currentCompetitionId = ref(getCurrentCompetitionId())
+const currentCompetitionId = ref(getCurrentCompetitionIdSync())
 
 const loadData = async () => {
   try {
+    // 加载赛事列表
     const res = await getCompetitions()
     if (res.success) {
       competitions.value = res.data || []
+    }
+    
+    // 从后端获取当前赛事ID
+    const currentId = await getCurrentCompetitionId()
+    if (currentId) {
+      currentCompetitionId.value = currentId
     }
   } catch (error) {
     console.error('加载赛事列表失败:', error)
@@ -84,13 +91,22 @@ const handleCurrentChange = (row) => {
   // 可以高亮显示当前选中的行
 }
 
-const switchCompetition = (row) => {
-  currentCompetitionId.value = row.id
-  setCurrentCompetitionId(row.id)
-  ElMessage.success(`已切换到赛事：${row.name}`)
-  
-  // 跳转到报名统计页面
-  router.push('/committee/statistics')
+const switchCompetition = async (row) => {
+  try {
+    const success = await setCurrentCompetitionId(row.id)
+    if (success) {
+      currentCompetitionId.value = row.id
+      ElMessage.success(`已切换到赛事：${row.name}`)
+      
+      // 跳转到报名统计页面
+      router.push('/committee/statistics')
+    } else {
+      ElMessage.error('切换赛事失败，请稍后重试')
+    }
+  } catch (error) {
+    console.error('切换赛事异常:', error)
+    ElMessage.error('切换赛事失败：' + error.message)
+  }
 }
 
 const getStageType = (stage) => {

@@ -383,6 +383,7 @@ import { filterRegistrations, batchClassifyRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
 import { downloadMaterial } from '@/api/material'
+import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 const { stagesList } = useCompetitionStages()
@@ -412,13 +413,8 @@ const dictionaries = reactive({
   methods: []
 })
 
-const getCurrentCompetitionId = () => {
-  const competitionId = localStorage.getItem('currentCompetitionId')
-  return competitionId ? parseInt(competitionId) : 21
-}
-
 const filters = reactive({
-  competitionId: getCurrentCompetitionId(),
+  competitionId: getCurrentCompetitionIdSync(),
   groupType: 'ADVANCED', // 固定为进阶组
   institutionName: '',
   groupCode: null,
@@ -782,7 +778,13 @@ const updateTopScrollbarWidth = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 加载当前赛事ID
+  const competitionId = await getCurrentCompetitionId()
+  if (competitionId) {
+    filters.competitionId = competitionId
+  }
+  
   loadDictionaries()
   loadPoolData()
   

@@ -288,6 +288,7 @@ import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { getRegistration, getRegistrationReviewDetails } from '@/api/registration'
 import { getCompetition } from '@/api/competition'
+import { getCurrentCompetitionId } from '@/utils/competition'
 import StageProgress from '@/components/StageProgress.vue'
 import dayjs from 'dayjs'
 
@@ -374,8 +375,8 @@ const loadData = async () => {
         summary: data.projectSummary
       })
       
-      // 加载赛事信息（优先使用API返回的competitionId，否则使用localStorage）
-      const competitionId = data.registration?.competitionId || localStorage.getItem('currentCompetitionId')
+      // 加载赛事信息（优先使用API返回的competitionId，否则使用后端全局当前赛事）
+      const competitionId = data.registration?.competitionId || await getCurrentCompetitionId()
       
       if (competitionId) {
         try {

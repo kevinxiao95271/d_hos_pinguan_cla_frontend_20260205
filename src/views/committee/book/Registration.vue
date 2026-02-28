@@ -485,6 +485,7 @@ import { filterRegistrations, batchClassifyRegistrations, autoGroupRegistrations
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
 import { downloadMaterial } from '@/api/material'
+import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 //分页
@@ -516,13 +517,8 @@ const dictionaries = reactive({
 // 使用 composable 获取跑马灯数据
 const { stagesList } = useCompetitionStages()
 
-const getCurrentCompetitionId = () => {
-  const competitionId = localStorage.getItem('currentCompetitionId')
-  return competitionId ? parseInt(competitionId) : 21
-}
-
 const filters = reactive({
-  competitionId: getCurrentCompetitionId(),
+  competitionId: getCurrentCompetitionIdSync(),
   institutionName: '',
   groupType: '',
   groupCode: '',
@@ -892,7 +888,13 @@ const updateTopScrollbarWidth = () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 加载当前赛事ID
+  const competitionId = await getCurrentCompetitionId()
+  if (competitionId) {
+    filters.competitionId = competitionId
+  }
+  
   loadDictionaries()
   loadRegistrations()
   

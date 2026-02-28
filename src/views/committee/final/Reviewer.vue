@@ -282,10 +282,11 @@ import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewer
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
+import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 
 const { stagesList } = useCompetitionStages()
 
-const competitionId = ref(localStorage.getItem('currentCompetitionId') || '21')
+const competitionId = ref(getCurrentCompetitionIdSync())
 
 // 报名列表分页
 const {
@@ -618,7 +619,13 @@ const getLoadTagType = (load) => {
   return 'danger'
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 加载当前赛事ID
+  const currentCompetitionId = await getCurrentCompetitionId()
+  if (currentCompetitionId) {
+    competitionId.value = currentCompetitionId
+  }
+  
   loadRegistrations()
   loadReviewers()
 })

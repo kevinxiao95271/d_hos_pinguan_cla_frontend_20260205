@@ -689,12 +689,10 @@ import { getRankings } from '@/api/shortlist'
 import { getRegistrationReviewDetails } from '@/api/registration'
 import { getAdminReviewTasks } from '@/api/admin'
 import { getReviewScore } from '@/api/review'
+import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 
 // 赛事ID
-const getCurrentCompetitionId = () => {
-  return parseInt(localStorage.getItem('currentCompetitionId') || '21')
-}
-const competitionId = ref(getCurrentCompetitionId())
+const competitionId = ref(getCurrentCompetitionIdSync())
 
 // 赛事阶段信息
 const { stagesList } = useCompetitionStages()
@@ -1352,7 +1350,13 @@ function getRowClassName({ row }) {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  // 加载当前赛事ID
+  const currentCompetitionId = await getCurrentCompetitionId()
+  if (currentCompetitionId) {
+    competitionId.value = currentCompetitionId
+  }
+  
   loadData()
 })
 </script>

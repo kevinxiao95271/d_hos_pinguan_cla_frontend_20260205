@@ -1,5 +1,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { getCompetition } from '@/api/competition'
+import { getCurrentCompetitionId } from '@/utils/competition'
 
 /**
  * 获取赛事阶段信息的 composable
@@ -39,7 +40,12 @@ export function useCompetitionStages() {
   })
 
   const loadCompetition = async () => {
-    const competitionId = localStorage.getItem('currentCompetitionId') || 21
+    const competitionId = await getCurrentCompetitionId()
+    if (!competitionId) {
+      console.warn('⚠️ 未找到当前赛事ID')
+      return
+    }
+    
     try {
       const res = await getCompetition(competitionId)
       if (res.success && res.data) {

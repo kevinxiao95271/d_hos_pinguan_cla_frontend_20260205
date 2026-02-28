@@ -184,6 +184,7 @@ import { useUserStore } from '@/stores/user'
 import { getBookScores, returnScore } from '@/api/review'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
+import { getCurrentCompetitionId } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 const { stagesList } = useCompetitionStages()
@@ -215,7 +216,7 @@ const returnRules = {
 }
 
 const loadData = async () => {
-  const competitionId = localStorage.getItem('currentCompetitionId')
+  const competitionId = await getCurrentCompetitionId()
   if (!competitionId) {
     ElMessage.warning('请先选择赛事')
     return
