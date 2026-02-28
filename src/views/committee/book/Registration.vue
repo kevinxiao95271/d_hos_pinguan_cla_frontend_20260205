@@ -52,12 +52,12 @@
         </el-form-item>
         
         <el-form-item label="品管工具">
-          <el-select v-model="filters.methodLabel" placeholder="全部" clearable style="width: 180px">
+          <el-select v-model="filters.methodCode" placeholder="全部" clearable style="width: 180px">
             <el-option
               v-for="item in dictionaries.methods"
               :key="item.code"
               :label="item.label"
-              :value="item.label"
+              :value="item.code"
             />
           </el-select>
         </el-form-item>
@@ -116,13 +116,13 @@
           项目名称：{{ filters.projectName }}
         </el-tag>
         <el-tag
-          v-if="filters.methodLabel"
+          v-if="filters.methodCode"
           closable
-          @close="filters.methodLabel = ''; loadRegistrations()"
+          @close="filters.methodCode = ''; loadRegistrations()"
           type="info"
           style="margin-right: 8px"
         >
-          品管工具：{{ filters.methodLabel }}
+          品管工具：{{ getMethodLabel(filters.methodCode) }}
         </el-tag>
       </div>
       
@@ -523,7 +523,7 @@ const filters = reactive({
   groupType: '',
   groupCode: '',
   projectName: '',
-  methodLabel: ''  // 修复：改为 methodLabel（后端期望中文标签）
+  methodCode: ''
 })
 
 const changeGroupDialogVisible = ref(false)
@@ -569,7 +569,7 @@ const hasActiveFilters = computed(() => {
     filters.groupType ||
     filters.groupCode ||
     filters.projectName ||
-    filters.methodLabel
+    filters.methodCode
   )
 })
 
