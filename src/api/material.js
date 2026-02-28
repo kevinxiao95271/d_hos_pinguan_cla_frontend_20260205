@@ -3,7 +3,7 @@ import request from '@/utils/request'
 /**
  * 上传材料文件
  * @param {number} registrationId - 报名ID
- * @param {FormData} formData - 包含file和materialType字段的FormData
+ * @param {FormData} formData - 包含file、type和contentType字段的FormData
  */
 export function uploadMaterial(registrationId, formData) {
   return request({

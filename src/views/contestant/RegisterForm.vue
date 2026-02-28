@@ -933,18 +933,22 @@ const submitForm = async () => {
     try {
       // 上传报名表
       if (form.materials.registrationForm.length > 0 && form.materials.registrationForm[0].raw) {
+        const file = form.materials.registrationForm[0].raw
         const formData = new FormData()
-        formData.append('file', form.materials.registrationForm[0].raw)
-        formData.append('materialType', 'REGISTRATION_FORM')
+        formData.append('file', file)
+        formData.append('type', 'REGISTRATION_FORM')
+        formData.append('contentType', file.type || 'application/octet-stream')
         await uploadMaterial(registrationId.value, formData)
         console.log('✅ 报名表上传成功')
       }
       
       // 上传成果报告书
       if (form.materials.report.length > 0 && form.materials.report[0].raw) {
+        const file = form.materials.report[0].raw
         const formData = new FormData()
-        formData.append('file', form.materials.report[0].raw)
-        formData.append('materialType', 'REPORT')
+        formData.append('file', file)
+        formData.append('type', 'REPORT')
+        formData.append('contentType', file.type || 'application/octet-stream')
         await uploadMaterial(registrationId.value, formData)
         console.log('✅ 成果报告书上传成功')
       }
@@ -952,9 +956,11 @@ const submitForm = async () => {
       // 上传佐证材料
       for (const evidence of form.materials.evidence) {
         if (evidence.raw) {
+          const file = evidence.raw
           const formData = new FormData()
-          formData.append('file', evidence.raw)
-          formData.append('materialType', 'EVIDENCE')
+          formData.append('file', file)
+          formData.append('type', 'EVIDENCE')
+          formData.append('contentType', file.type || 'application/octet-stream')
           await uploadMaterial(registrationId.value, formData)
         }
       }
