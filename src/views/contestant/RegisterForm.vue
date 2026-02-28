@@ -935,6 +935,7 @@ const submitForm = async () => {
       if (form.materials.registrationForm.length > 0 && form.materials.registrationForm[0].raw) {
         const formData = new FormData()
         formData.append('file', form.materials.registrationForm[0].raw)
+        formData.append('materialType', 'REGISTRATION_FORM')
         await uploadMaterial(registrationId.value, formData)
         console.log('✅ 报名表上传成功')
       }
@@ -943,6 +944,7 @@ const submitForm = async () => {
       if (form.materials.report.length > 0 && form.materials.report[0].raw) {
         const formData = new FormData()
         formData.append('file', form.materials.report[0].raw)
+        formData.append('materialType', 'REPORT')
         await uploadMaterial(registrationId.value, formData)
         console.log('✅ 成果报告书上传成功')
       }
@@ -952,6 +954,7 @@ const submitForm = async () => {
         if (evidence.raw) {
           const formData = new FormData()
           formData.append('file', evidence.raw)
+          formData.append('materialType', 'EVIDENCE')
           await uploadMaterial(registrationId.value, formData)
         }
       }

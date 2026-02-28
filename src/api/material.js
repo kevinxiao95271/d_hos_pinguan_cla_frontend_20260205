@@ -3,11 +3,11 @@ import request from '@/utils/request'
 /**
  * 上传材料文件
  * @param {number} registrationId - 报名ID
- * @param {FormData} formData - 包含file字段的FormData
+ * @param {FormData} formData - 包含file和materialType字段的FormData
  */
 export function uploadMaterial(registrationId, formData) {
   return request({
-    url: `/materials/upload/${registrationId}`,
+    url: `/registrations/${registrationId}/materials`,
     method: 'post',
     data: formData,
     headers: {
