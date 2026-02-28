@@ -173,6 +173,23 @@
             {{ formatDate(row.submittedAt) }}
           </template>
         </el-table-column>
+        <el-table-column label="材料" width="120">
+          <template #default="{ row }">
+            <div v-if="row.materials && row.materials.length > 0">
+              <el-tag type="success" size="small">{{ row.materials.length }}个文件</el-tag>
+              <el-button 
+                type="primary" 
+                size="small" 
+                link
+                @click="viewMaterials(row)"
+                style="margin-left: 5px;"
+              >
+                查看
+              </el-button>
+            </div>
+            <el-tag v-else type="info" size="small">无材料</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="viewDetail(row)">
@@ -467,6 +484,7 @@ import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations, autoGroupRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
+import { downloadMaterial } from '@/api/material'
 import dayjs from 'dayjs'
 
 //分页
@@ -616,12 +634,42 @@ const getQualityTopicDisplay = (activityInfo) => {
   return activityInfo.qualityTopicLabel || '未填写'
 }
 
-// 下载文件
-const downloadFile = (file) => {
-  if (file.fileUrl) {
-    window.open(file.fileUrl, '_blank')
-  } else {
-    ElMessage.warning('文件链接不存在')
+// 查看材料（列表页）
+const viewMaterials = async (row) => {
+  detailDialogVisible.value = true
+  detailLoading.value = true
+  
+  try {
+    const res = await getRegistration(row.registrationId)
+    if (res.success) {
+      currentDetail.value = res.data
+    } else {
+      ElMessage.error('加载详情失败')
+    }
+  } catch (error) {
+    console.error('加载详情失败:', error)
+    ElMessage.error('加载详情失败')
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+// 下载材料文件
+const downloadFile = async (material) => {
+  try {
+    const blob = await downloadMaterial(material.id)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = material.fileName || '材料文件'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('下载成功')
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    ElMessage.error('下载失败，请检查权限或稍后重试')
   }
 }
 

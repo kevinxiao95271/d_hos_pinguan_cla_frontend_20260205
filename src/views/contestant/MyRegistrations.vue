@@ -11,6 +11,7 @@
       </template>
       
       <el-table :data="registrations" v-loading="loading" border>
+        <el-table-column prop="id" label="项目编号" width="100" />
         <el-table-column prop="projectName" label="项目名称" min-width="200" />
         <el-table-column prop="institutionName" label="医疗机构" width="180" />
         <el-table-column prop="institutionLevel" label="机构等级" width="120">
@@ -41,6 +42,14 @@
         <el-table-column prop="submittedAt" label="提交时间" width="160">
           <template #default="{ row }">
             {{ formatDate(row.submittedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="材料" width="120">
+          <template #default="{ row }">
+            <div v-if="row.materials && row.materials.length > 0">
+              <el-tag type="success" size="small">{{ row.materials.length }}个文件</el-tag>
+            </div>
+            <el-tag v-else type="info" size="small">未上传</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">

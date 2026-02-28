@@ -233,6 +233,12 @@ const routes = [
         meta: { title: '字典管理' }
       },
       {
+        path: 'templates',
+        name: 'SystemTemplates',
+        component: () => import('@/views/ops/SystemTemplates.vue'),
+        meta: { title: '系统模版管理' }
+      },
+      {
         path: 'datasource',
         name: 'Datasource',
         component: () => import('@/views/ops/Datasource.vue'),

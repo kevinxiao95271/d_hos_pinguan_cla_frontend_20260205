@@ -103,6 +103,23 @@
           </el-table-column>
           <el-table-column prop="methodLabel" label="品管工具" min-width="140" />
           <el-table-column prop="applicantName" label="报名人" width="100" />
+          <el-table-column label="材料" width="120">
+            <template #default="{ row }">
+              <div v-if="row.materials && row.materials.length > 0">
+                <el-tag type="success" size="small">{{ row.materials.length }}个文件</el-tag>
+                <el-button 
+                  type="primary" 
+                  size="small" 
+                  link
+                  @click="viewMaterials(row)"
+                  style="margin-left: 5px;"
+                >
+                  查看
+                </el-button>
+              </div>
+              <el-tag v-else type="info" size="small">无材料</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="150">
             <template #default="{ row }">
               <el-button type="primary" size="small" @click="viewDetail(row)">
@@ -331,6 +348,22 @@
           <el-table-column prop="department" label="科室" />
         </el-table>
         <el-empty v-else description="暂无辅导员" :image-size="80" />
+        
+        <!-- 材料文件 -->
+        <div v-if="currentDetail?.materials && currentDetail.materials.length > 0">
+          <el-divider content-position="left">材料文件</el-divider>
+          <el-table :data="currentDetail.materials" border>
+            <el-table-column prop="fileName" label="文件名" />
+            <el-table-column prop="fileType" label="类型" width="100" />
+            <el-table-column label="操作" width="120">
+              <template #default="{ row }">
+                <el-button type="primary" size="small" @click="downloadFile(row)">
+                  下载
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
       </div>
       
       <template #footer>
@@ -349,6 +382,7 @@ import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { getDictionaryByType } from '@/api/dictionary'
+import { downloadMaterial } from '@/api/material'
 import dayjs from 'dayjs'
 
 const { stagesList } = useCompetitionStages()
@@ -531,6 +565,53 @@ const viewDetail = async (row) => {
     ElMessage.error('加载详情失败: ' + (error.message || '未知错误'))
   } finally {
     detailLoading.value = false
+  }
+}
+
+// 查看材料（列表页）
+const viewMaterials = async (row) => {
+  detailDialogVisible.value = true
+  detailLoading.value = true
+  
+  try {
+    const id = row.registrationId || row.id
+    if (!id) {
+      console.error('❌ 缺少项目ID:', row)
+      ElMessage.error('缺少项目ID')
+      detailDialogVisible.value = false
+      return
+    }
+    
+    const res = await getRegistration(id)
+    if (res.success) {
+      currentDetail.value = res.data
+    } else {
+      ElMessage.error('加载详情失败')
+    }
+  } catch (error) {
+    console.error('加载详情失败:', error)
+    ElMessage.error('加载详情失败')
+  } finally {
+    detailLoading.value = false
+  }
+}
+
+// 下载材料文件
+const downloadFile = async (material) => {
+  try {
+    const blob = await downloadMaterial(material.id)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = material.fileName || '材料文件'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('下载成功')
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    ElMessage.error('下载失败，请检查权限或稍后重试')
   }
 }
 

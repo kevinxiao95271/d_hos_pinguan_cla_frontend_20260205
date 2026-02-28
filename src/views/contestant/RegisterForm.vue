@@ -312,50 +312,82 @@
         <!-- 步骤5: 材料上传 -->
         <div v-show="currentStep === 4">
           <el-form label-width="150px" :disabled="isDisabled">
-            <el-form-item label="报名表">
-              <el-upload
-                :auto-upload="false"
-                :on-change="handleRegistrationFormChange"
-                :file-list="form.materials.registrationForm"
-                :limit="1"
-              >
-                <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持PDF、Word格式，文件大小不超过10MB
-                  </div>
-                </template>
-              </el-upload>
+            <el-form-item label="报名表" required>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <el-upload
+                  :auto-upload="false"
+                  :on-change="handleRegistrationFormChange"
+                  :on-remove="handleRegistrationFormRemove"
+                  :file-list="form.materials.registrationForm"
+                  :limit="1"
+                  accept=".pdf,.doc,.docx"
+                >
+                  <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
+                  <template #tip>
+                    <div class="el-upload__tip">
+                      支持PDF、Word格式，文件大小不超过30MB
+                    </div>
+                  </template>
+                </el-upload>
+                <div v-if="registrationFormTemplate" class="template-download-hint">
+                  <span style="color: #606266;">请先下载模版：</span>
+                  <el-link 
+                    type="primary" 
+                    :underline="false"
+                    @click="downloadTemplateFile(registrationFormTemplate)"
+                    :icon="Download"
+                  >
+                    {{ registrationFormTemplate.fileName }}
+                  </el-link>
+                </div>
+              </div>
             </el-form-item>
             
-            <el-form-item label="成果汇报书">
-              <el-upload
-                :auto-upload="false"
-                :on-change="handleReportChange"
-                :file-list="form.materials.report"
-                :limit="1"
-              >
-                <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持PDF、Word格式，文件大小不超过10MB
-                  </div>
-                </template>
-              </el-upload>
+            <el-form-item label="成果报告书" required>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <el-upload
+                  :auto-upload="false"
+                  :on-change="handleReportChange"
+                  :on-remove="handleReportRemove"
+                  :file-list="form.materials.report"
+                  :limit="1"
+                  accept=".pdf,.doc,.docx"
+                >
+                  <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
+                  <template #tip>
+                    <div class="el-upload__tip">
+                      支持PDF、Word格式，文件大小不超过30MB
+                    </div>
+                  </template>
+                </el-upload>
+                <div v-if="resultReportTemplate" class="template-download-hint">
+                  <span style="color: #606266;">请先下载模版：</span>
+                  <el-link 
+                    type="primary" 
+                    :underline="false"
+                    @click="downloadTemplateFile(resultReportTemplate)"
+                    :icon="Download"
+                  >
+                    {{ resultReportTemplate.fileName }}
+                  </el-link>
+                </div>
+              </div>
             </el-form-item>
             
             <el-form-item label="佐证材料">
               <el-upload
                 :auto-upload="false"
                 :on-change="handleEvidenceChange"
+                :on-remove="handleEvidenceRemove"
                 :file-list="form.materials.evidence"
                 :limit="5"
                 multiple
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.rar"
               >
                 <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
                 <template #tip>
                   <div class="el-upload__tip">
-                    支持PDF、Word、图片格式，最多5个文件，每个文件不超过10MB
+                    支持PDF、Word、图片、压缩包格式（ZIP/RAR），最多5个文件，每个文件不超过30MB
                   </div>
                 </template>
               </el-upload>
@@ -386,6 +418,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Download } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import {
   createRegistration,
@@ -399,6 +432,8 @@ import {
 } from '@/api/registration'
 import { getCompetitions } from '@/api/competition'
 import { getDictionaries } from '@/api/dictionary'
+import { getActiveTemplates, downloadTemplate } from '@/api/systemTemplate'
+import { uploadMaterial } from '@/api/material'
 
 const route = useRoute()
 const router = useRouter()
@@ -415,6 +450,7 @@ const subjectTypes = ref([])
 const methods = ref([])
 const experienceImproves = ref([])
 const qualityTopics = ref([])
+const templates = ref([])
 
 const basicFormRef = ref(null)
 const membersFormRef = ref(null)
@@ -467,6 +503,16 @@ const form = reactive({
 
 const isDisabled = computed(() => form.status === 'SUBMITTED')
 
+// 获取报名表模版
+const registrationFormTemplate = computed(() => {
+  return templates.value.find(t => t.templateType === 'registration_form')
+})
+
+// 获取成果报告书模版
+const resultReportTemplate = computed(() => {
+  return templates.value.find(t => t.templateType === 'result_report')
+})
+
 const basicRules = {
   competitionId: [{ required: true, message: '请选择赛事', trigger: 'change' }],
   projectName: [{ required: true, message: '请输入项目名称', trigger: 'blur' }],
@@ -500,6 +546,11 @@ const loadData = async () => {
       loadCompetitions(),
       loadDictionaries()
     ])
+    
+    // 异步加载模版（不阻塞主流程）
+    loadTemplates().catch(err => {
+      console.warn('模版加载失败（不影响其他功能）:', err)
+    })
     
     // 如果是编辑模式，加载报名详情
     if (registrationId.value) {
@@ -556,6 +607,37 @@ const loadDictionaries = async () => {
     })
   } catch (error) {
     console.error('加载字典失败:', error)
+  }
+}
+
+const loadTemplates = async () => {
+  try {
+    const res = await getActiveTemplates()
+    if (res.success) {
+      templates.value = res.data || []
+      console.log('✅ 加载模版列表:', templates.value.length, '个模版')
+    }
+  } catch (error) {
+    console.error('❌ 加载模版失败:', error)
+    // 模版加载失败不影响其他功能，只记录错误
+  }
+}
+
+const downloadTemplateFile = async (template) => {
+  try {
+    const blob = await downloadTemplate(template.id)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = template.fileName || `${template.templateName}_v${template.version}.docx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('模版下载成功')
+  } catch (error) {
+    console.error('下载模版失败:', error)
+    ElMessage.error('下载模版失败')
   }
 }
 
@@ -631,14 +713,38 @@ const removeMentor = (index) => {
 }
 
 const handleRegistrationFormChange = (file, fileList) => {
+  if (file.size > 30 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过30MB')
+    return false
+  }
+  form.materials.registrationForm = fileList
+}
+
+const handleRegistrationFormRemove = (file, fileList) => {
   form.materials.registrationForm = fileList
 }
 
 const handleReportChange = (file, fileList) => {
+  if (file.size > 30 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过30MB')
+    return false
+  }
+  form.materials.report = fileList
+}
+
+const handleReportRemove = (file, fileList) => {
   form.materials.report = fileList
 }
 
 const handleEvidenceChange = (file, fileList) => {
+  if (file.size > 30 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过30MB')
+    return false
+  }
+  form.materials.evidence = fileList
+}
+
+const handleEvidenceRemove = (file, fileList) => {
   form.materials.evidence = fileList
 }
 
@@ -800,6 +906,16 @@ const saveDraft = async () => {
 
 const submitForm = async () => {
   try {
+    // 验证必填材料
+    if (form.materials.registrationForm.length === 0) {
+      ElMessage.warning('请上传报名表')
+      return
+    }
+    if (form.materials.report.length === 0) {
+      ElMessage.warning('请上传成果报告书')
+      return
+    }
+    
     // 确认提交
     await ElMessageBox.confirm(
       '确认提交报名？提交后将无法修改。',
@@ -813,8 +929,38 @@ const submitForm = async () => {
     
     submitting.value = true
     
-    // 上传材料
-    // TODO: 上传材料文件
+    // 上传材料文件
+    try {
+      // 上传报名表
+      if (form.materials.registrationForm.length > 0 && form.materials.registrationForm[0].raw) {
+        const formData = new FormData()
+        formData.append('file', form.materials.registrationForm[0].raw)
+        await uploadMaterial(registrationId.value, formData)
+        console.log('✅ 报名表上传成功')
+      }
+      
+      // 上传成果报告书
+      if (form.materials.report.length > 0 && form.materials.report[0].raw) {
+        const formData = new FormData()
+        formData.append('file', form.materials.report[0].raw)
+        await uploadMaterial(registrationId.value, formData)
+        console.log('✅ 成果报告书上传成功')
+      }
+      
+      // 上传佐证材料
+      for (const evidence of form.materials.evidence) {
+        if (evidence.raw) {
+          const formData = new FormData()
+          formData.append('file', evidence.raw)
+          await uploadMaterial(registrationId.value, formData)
+        }
+      }
+      console.log('✅ 佐证材料上传成功')
+    } catch (uploadError) {
+      console.error('材料上传失败:', uploadError)
+      ElMessage.error('材料上传失败，请重试')
+      return
+    }
     
     // 提交报名
     const res = await submitRegistration(registrationId.value)
@@ -857,6 +1003,19 @@ onMounted(() => {
   
   .member-item {
     margin-bottom: 15px;
+  }
+  
+  .template-download-hint {
+    padding: 8px 12px;
+    background-color: #f0f9ff;
+    border: 1px solid #d1e7fd;
+    border-radius: 4px;
+    font-size: 13px;
+    
+    .el-link {
+      margin-left: 4px;
+      font-weight: 500;
+    }
   }
   
   .button-group {
