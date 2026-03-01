@@ -411,10 +411,19 @@ const loadStats = async () => {
 const loadUsers = async () => {
   tableLoading.value = true
   try {
+    // 构建参数，过滤空字符串（后端不接受空字符串，但接受null或不传）
     const params = {
-      ...searchForm,
       page: currentPage.value - 1,
       size: pageSize.value
+    }
+    
+    // 只添加非空的搜索条件
+    if (searchForm.phone) params.phone = searchForm.phone
+    if (searchForm.name) params.name = searchForm.name
+    if (searchForm.role) params.role = searchForm.role
+    if (searchForm.institutionId) params.institutionId = searchForm.institutionId
+    if (searchForm.enabled !== null && searchForm.enabled !== undefined) {
+      params.enabled = searchForm.enabled
     }
 
     const res = await queryUsers(params)
