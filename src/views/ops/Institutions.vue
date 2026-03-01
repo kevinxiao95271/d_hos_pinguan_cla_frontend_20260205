@@ -20,8 +20,25 @@
           </el-space>
         </div>
       </template>
-      
-      <el-table :data="institutions" border>
+
+      <!-- 搜索栏 -->
+      <el-form :inline="true" class="search-form" @submit.prevent="handleSearch">
+        <el-form-item label="机构名称">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="请输入机构名称关键词"
+            clearable
+            style="width: 240px"
+            @clear="handleSearch"
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="handleSearch">查询</el-button>
+          <el-button @click="handleReset">重置</el-button>
+        </el-form-item>
+      </el-form>
+
+      <el-table v-loading="loading" :data="institutions" border>
         <el-table-column prop="name" label="机构名称" />
         <el-table-column prop="code" label="机构编号" />
         <el-table-column prop="level" label="机构等级" width="120">
@@ -135,11 +152,12 @@ const {
   pageSizes,
   showPagination,
   extractDataList,
-  resetPagination,
-  getPaginationParams
+  resetPagination
 } = usePagination({ defaultPageSize: 50 })
 
 const institutions = ref([])
+const loading = ref(false)
+const searchKeyword = ref('')
 const dialogVisible = ref(false)
 const dialogTitle = ref('新建机构')
 const formRef = ref(null)
@@ -160,14 +178,37 @@ const rules = {
 }
 
 const loadData = async () => {
+  loading.value = true
   try {
-    const res = await getInstitutions(getPaginationParams())
+    // 后端使用 0-indexed 分页，Spring Data 格式
+    const params = {
+      keyword: searchKeyword.value || null,
+      page: currentPage.value - 1,
+      size: pageSize.value
+    }
+    const res = await getInstitutions(params)
     if (res.success) {
       institutions.value = extractDataList(res.data)
+    } else {
+      ElMessage.error(res.message || '加载机构列表失败')
     }
   } catch (error) {
     console.error('加载机构列表失败:', error)
+    ElMessage.error('加载机构列表失败，请稍后重试')
+  } finally {
+    loading.value = false
   }
+}
+
+const handleSearch = () => {
+  resetPagination()
+  loadData()
+}
+
+const handleReset = () => {
+  searchKeyword.value = ''
+  resetPagination()
+  loadData()
 }
 
 const createInstitution = () => {
@@ -250,6 +291,10 @@ onMounted(() => {
     align-items: center;
     font-size: 18px;
     font-weight: 600;
+  }
+
+  .search-form {
+    margin-bottom: 16px;
   }
 
   .pagination-container {

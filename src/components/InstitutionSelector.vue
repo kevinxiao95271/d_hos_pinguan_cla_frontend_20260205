@@ -87,7 +87,12 @@
 
     <!-- 搜索结果列表 -->
     <div v-loading="loading" class="results-container">
-      <el-empty v-if="!loading && institutions.length === 0" description="暂无数据" />
+      <!-- 无过滤条件时提示用户先选择城市或输入关键词 -->
+      <div v-if="!loading && !hasFilter" class="search-hint">
+        <el-icon size="32" color="#c0c4cc"><Search /></el-icon>
+        <p>请选择城市或输入关键词搜索机构</p>
+      </div>
+      <el-empty v-else-if="!loading && institutions.length === 0" description="暂无数据" />
       
       <div v-else class="institution-list">
         <div
@@ -130,7 +135,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import { searchInstitutions, getCities, getDistricts, getAllLevels } from '@/api/institution'
 
@@ -167,6 +172,11 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
 const loading = ref(false)
+
+// 是否有任意过滤条件（无条件时不自动加载全量数据）
+const hasFilter = computed(() =>
+  !!(filters.city || filters.district || filters.level || filters.keyword)
+)
 
 // 选择城市
 const selectCity = (city) => {
@@ -223,26 +233,23 @@ const loadDistricts = async (city) => {
   }
 }
 
-// 加载机构列表
+// 加载机构列表（需有过滤条件才执行，避免无意义的全量扫描）
 const loadInstitutions = async () => {
+  if (!hasFilter.value) {
+    institutions.value = []
+    total.value = 0
+    return
+  }
   loading.value = true
   try {
-    // 根据优先级确定region参数：区县 > 城市
-    let region = null
-    if (filters.district) {
-      region = filters.district
-    } else if (filters.city) {
-      region = filters.city
-    }
-
+    const region = filters.district || filters.city || null
     const params = {
       keyword: filters.keyword || null,
-      region: region,
+      region,
       level: filters.level || null,
       page: currentPage.value - 1,
       size: pageSize.value
     }
-
     const res = await searchInstitutions(params)
     if (res.success) {
       institutions.value = res.data.content
@@ -267,24 +274,15 @@ const clearSelection = () => {
   emit('select', null)
 }
 
-// 初始化
+// 初始化：并行加载城市列表和等级列表，机构列表等用户选择过滤条件后再加载
 onMounted(async () => {
   try {
-    // 并行加载所有初始数据
     const [citiesRes, levelsRes] = await Promise.all([
       getCities(),
       getAllLevels()
     ])
-
-    if (citiesRes.success) {
-      cities.value = citiesRes.data
-    }
-    if (levelsRes.success) {
-      allLevels.value = levelsRes.data
-    }
-
-    // 加载初始机构列表
-    loadInstitutions()
+    if (citiesRes.success) cities.value = citiesRes.data
+    if (levelsRes.success) allLevels.value = levelsRes.data
   } catch (error) {
     console.error('初始化失败:', error)
   }
@@ -338,6 +336,20 @@ onMounted(async () => {
     background: #fff;
     border: 1px solid #e4e7ed;
     border-radius: 8px;
+
+    .search-hint {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 0;
+      color: #909399;
+
+      p {
+        margin-top: 12px;
+        font-size: 14px;
+      }
+    }
 
     .institution-list {
       margin-bottom: 16px;

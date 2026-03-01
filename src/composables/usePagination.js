@@ -21,11 +21,15 @@ export function usePagination(options = {}) {
 
   /**
    * 判断是否为分页结果
-   * @param {*} data 
+   * 支持两种格式：
+   * - 自定义格式: { content, pageNo, pageSize, totalCount, totalPages, hasNext, hasPrevious }
+   * - Spring Data 格式: { content, number, size, totalElements, totalPages }
+   * @param {*} data
    * @returns {boolean}
    */
   function isPageResult(data) {
-    return data && typeof data === 'object' && 'content' in data && 'pageNo' in data
+    return data && typeof data === 'object' && 'content' in data &&
+      ('pageNo' in data || 'number' in data)
   }
 
   /**
@@ -35,15 +39,16 @@ export function usePagination(options = {}) {
    */
   function extractDataList(data) {
     if (!data) return []
-    
+
     if (isPageResult(data)) {
-      // 分页结果
-      currentPage.value = data.pageNo
-      pageSize.value = data.pageSize
-      totalCount.value = data.totalCount
-      totalPages.value = data.totalPages
-      hasNext.value = data.hasNext
-      hasPrevious.value = data.hasPrevious
+      // 兼容自定义格式 (pageNo/totalCount) 和 Spring Data 格式 (number/totalElements)
+      const isSpringData = 'number' in data && !('pageNo' in data)
+      currentPage.value = isSpringData ? data.number + 1 : data.pageNo
+      pageSize.value = data.pageSize ?? data.size ?? pageSize.value
+      totalCount.value = data.totalCount ?? data.totalElements ?? 0
+      totalPages.value = data.totalPages ?? 0
+      hasNext.value = data.hasNext ?? (currentPage.value < totalPages.value)
+      hasPrevious.value = data.hasPrevious ?? (currentPage.value > 1)
       return data.content || []
     } else {
       // 非分页结果（数组）
