@@ -288,3 +288,27 @@ export function getHistoricalData(params) {
     params
   })
 }
+
+/**
+ * 重置用户密码（OPS专用）
+ * @param {number} userId - 用户ID
+ * @returns {Promise} 返回新密码 { newPassword: "XXXXXX" }
+ */
+export function resetUserPassword(userId) {
+  return request({
+    url: `/admin/users/${userId}/reset-password`,
+    method: 'post'
+  })
+}
+
+/**
+ * 删除报名记录（OPS专用）
+ * @param {number} registrationId - 报名ID
+ * @returns {Promise}
+ */
+export function deleteRegistration(registrationId) {
+  return request({
+    url: `/admin/registrations/${registrationId}`,
+    method: 'delete'
+  })
+}

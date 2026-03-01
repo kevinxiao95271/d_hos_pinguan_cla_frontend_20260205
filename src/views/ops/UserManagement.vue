@@ -130,7 +130,7 @@
             {{ row.lastLoginAt ? formatDate(row.lastLoginAt) : '-' }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" align="center" fixed="right">
+        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="{ row }">
             <el-button
               v-if="row.enabled"
@@ -147,6 +147,13 @@
               @click="handleEnable(row)"
             >
               启用
+            </el-button>
+            <el-button
+              size="small"
+              type="primary"
+              @click="handleResetPassword(row)"
+            >
+              重置密码
             </el-button>
           </template>
         </el-table-column>
@@ -262,14 +269,14 @@
     <!-- 初始密码对话框 -->
     <el-dialog
       v-model="passwordVisible"
-      title="评委账号创建成功"
+      :title="createdReviewer.institutionName === '-' ? '密码重置成功' : '评委账号创建成功'"
       width="500px"
       :close-on-click-modal="false"
     >
       <el-alert
         type="success"
         :closable="false"
-        description="请立即记录以下信息并通知评委"
+        :description="createdReviewer.institutionName === '-' ? '新密码已生成，请立即记录' : '请立即记录以下信息并通知评委'"
         style="margin-bottom: 20px"
       />
 
@@ -281,10 +288,10 @@
           <el-descriptions-item label="姓名">
             {{ createdReviewer.name }}
           </el-descriptions-item>
-          <el-descriptions-item label="初始密码">
+          <el-descriptions-item :label="createdReviewer.institutionName === '-' ? '新密码' : '初始密码'">
             <span class="initial-password">{{ createdReviewer.initialPassword }}</span>
           </el-descriptions-item>
-          <el-descriptions-item label="所属机构">
+          <el-descriptions-item label="所属机构" v-if="createdReviewer.institutionName !== '-'">
             {{ createdReviewer.institutionName }}
           </el-descriptions-item>
         </el-descriptions>
@@ -293,7 +300,7 @@
       <el-alert
         type="warning"
         :closable="false"
-        description="请提醒评委首次登录后尽快修改密码"
+        :description="createdReviewer.institutionName === '-' ? '请及时通知用户新密码' : '请提醒评委首次登录后尽快修改密码'"
         style="margin-top: 20px"
       />
 
@@ -313,6 +320,7 @@ import { Plus } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import InstitutionSelector from '@/components/InstitutionSelector.vue'
 import { queryUsers, createReviewer, disableUser, enableUser, getUserStatistics } from '@/api/user'
+import { resetUserPassword } from '@/api/admin'
 
 // 统计数据
 const stats = reactive({
@@ -560,6 +568,42 @@ const handleEnable = async (user) => {
     console.error('启用用户失败:', error)
     const message = error.response?.data?.message || error.message || '启用失败'
     ElMessage.error(message)
+  }
+}
+
+// 重置密码
+const handleResetPassword = async (user) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认重置用户 ${user.name}（${user.phone}）的密码？将生成6位随机密码。`,
+      '重置密码',
+      {
+        confirmButtonText: '确认重置',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+
+    const res = await resetUserPassword(user.id)
+
+    if (res.success) {
+      // 显示新密码
+      createdReviewer.phone = user.phone
+      createdReviewer.name = user.name
+      createdReviewer.initialPassword = res.data.newPassword
+      createdReviewer.institutionName = user.institutionName || '-'
+      passwordVisible.value = true
+      
+      ElMessage.success('密码重置成功')
+    } else {
+      ElMessage.error(res.message || '密码重置失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('重置密码失败:', error)
+      const message = error.response?.data?.message || error.message || '密码重置失败'
+      ElMessage.error(message)
+    }
   }
 }
 

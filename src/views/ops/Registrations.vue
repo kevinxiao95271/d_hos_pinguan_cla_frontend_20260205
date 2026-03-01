@@ -185,10 +185,13 @@
             <el-tag v-else type="info" size="small">无材料</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="100" fixed="right">
+        <el-table-column label="操作" width="160" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="viewDetail(row)">
               详情
+            </el-button>
+            <el-button type="danger" size="small" @click="handleDelete(row)">
+              删除
             </el-button>
           </template>
         </el-table-column>
@@ -322,8 +325,8 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { filterRegistrations } from '@/api/admin'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { filterRegistrations, deleteRegistration } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import { getCompetitions } from '@/api/competition'
@@ -503,6 +506,38 @@ const downloadFile = async (material) => {
   } catch (error) {
     console.error('下载文件失败:', error)
     ElMessage.error('下载失败')
+  }
+}
+
+// 删除报名
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除报名【${row.projectName}】？此操作将级联删除所有相关数据（评审任务、评分、材料文件等），且不可恢复！`,
+      '危险操作',
+      {
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消',
+        type: 'error',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    const registrationId = row.registrationId || row.id
+    const res = await deleteRegistration(registrationId)
+
+    if (res.success) {
+      ElMessage.success('删除成功')
+      loadRegistrations()
+    } else {
+      ElMessage.error(res.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除报名失败:', error)
+      const message = error.response?.data?.message || error.message || '删除失败'
+      ElMessage.error(message)
+    }
   }
 }
 
