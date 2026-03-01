@@ -123,7 +123,7 @@
         <el-table
           :data="reviewers"
           v-loading="loadingReviewers"
-          height="580"
+          max-height="650"
           @selection-change="handleReviewerSelectionChange"
           :row-class-name="getReviewerRowClass"
           size="small"
