@@ -78,12 +78,16 @@ export function getReviewRankings(params) {
 
 /**
  * 获取书审得分列表（组委会管理）
+ * 使用 /admin/reviews/summary API，固定 stage=BOOK
  */
 export function getBookScores(params) {
   return request({
-    url: '/admin/reviews/book-scores',
+    url: '/admin/reviews/summary',
     method: 'get',
-    params
+    params: {
+      ...params,
+      stage: 'BOOK'  // 固定为书审阶段
+    }
   })
 }
 

@@ -1,191 +1,164 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-测试书审得分列表API
-GET /api/admin/reviews/book-scores
+测试书审得分API
+检查 GET /api/admin/reviews/book-scores 是否存在
 """
 
-import sys
-import codecs
 import requests
 import json
 
-# 设置UTF-8编码输出（Windows兼容）
-if sys.platform == 'win32':
-    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
-    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
+BASE_URL = "http://localhost:6031/api"
 
-BASE_URL = 'http://localhost:6031/api'
-
-def login_as_committee():
-    """以组委会管理员身份登录"""
-    url = f'{BASE_URL}/auth/login'
+def login_committee():
+    """登录组委会账号"""
+    url = f"{BASE_URL}/auth/login-with-password"
     data = {
-        'phone': '13800000127',
-        'name': 'CommitteeAdmin A',
-        'role': 'COMMITTEE_ADMIN'
+        "phone": "13800000127",
+        "password": "committee2026"
     }
     
-    print('🔐 登录组委会管理员账号...')
-    response = requests.post(url, json=data, timeout=30)
+    print(f"\n{'='*60}")
+    print("🔐 登录组委会账号...")
+    print(f"{'='*60}")
     
-    if response.status_code == 200:
-        result = response.json()
-        if result.get('success') and result.get('data', {}).get('token'):
-            token = result['data']['token']
-            print(f'✅ 登录成功: {data["name"]}')
-            print(f'   Token: {token[:30]}...\n')
-            return token
-    
-    print('❌ 登录失败')
-    return None
-
-
-def test_book_scores_api(token):
-    """测试书审得分列表API"""
-    url = f'{BASE_URL}/admin/reviews/book-scores'
-    headers = {'Authorization': f'Bearer {token}'}
-    
-    print('=' * 80)
-    print('📊 测试书审得分列表API')
-    print('=' * 80)
-    print(f'URL: {url}')
-    print(f'Method: GET\n')
-    
-    # 测试1: 带竞赛ID查询
-    print('【测试1】带竞赛ID查询')
-    print('-' * 80)
-    params = {'competitionId': '21'}  # 使用竞赛21
-    print(f'参数: {params}\n')
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=30)
-        print(f'Status Code: {response.status_code}\n')
+        response = requests.post(url, json=data, timeout=10)
+        print(f"状态码: {response.status_code}")
         
         if response.status_code == 200:
-            data = response.json()
-            print('✅ API调用成功\n')
-            print('📦 响应数据结构:')
-            print(json.dumps(data, ensure_ascii=False, indent=2)[:2000])
-            
-            if data.get('success'):
-                records = data.get('data', [])
-                print(f'\n📈 统计信息:')
-                print(f'   总记录数: {len(records)}')
-                
-                if records:
-                    print(f'\n🔍 第一条记录详情:')
-                    first = records[0]
-                    print(json.dumps(first, ensure_ascii=False, indent=2))
-                    
-                    print(f'\n📋 字段列表:')
-                    for key in first.keys():
-                        value = first[key]
-                        value_type = type(value).__name__
-                        print(f'   - {key}: {value_type} = {value}')
-                    
-                    # 统计评分状态分布
-                    status_counts = {}
-                    reviewer_counts = {}
-                    institution_counts = {}
-                    
-                    for record in records:
-                        # 状态统计
-                        status = record.get('status', 'UNKNOWN')
-                        status_counts[status] = status_counts.get(status, 0) + 1
-                        
-                        # 评委统计
-                        reviewer = record.get('reviewerName', 'Unknown')
-                        reviewer_counts[reviewer] = reviewer_counts.get(reviewer, 0) + 1
-                        
-                        # 机构统计
-                        institution = record.get('institutionName', 'Unknown')
-                        institution_counts[institution] = institution_counts.get(institution, 0) + 1
-                    
-                    print(f'\n📊 数据分析:')
-                    print(f'   状态分布: {status_counts}')
-                    print(f'   评委评分数: {dict(list(reviewer_counts.items())[:5])}...')
-                    print(f'   机构分布: {dict(list(institution_counts.items())[:5])}...')
+            result = response.json()
+            if result.get('success'):
+                token = result['data']['token']
+                print(f"✅ 登录成功")
+                print(f"Token: {token[:50]}...")
+                return token
             else:
-                print(f'⚠️  业务失败: {data.get("message")}')
+                print(f"❌ 登录失败: {result.get('message')}")
+                return None
         else:
-            print(f'❌ HTTP错误: {response.status_code}')
-            print(f'   响应: {response.text[:500]}')
+            print(f"❌ 请求失败: {response.text}")
+            return None
     except Exception as e:
-        print(f'❌ 异常: {e}')
+        print(f"❌ 请求异常: {e}")
+        return None
+
+def test_book_scores_api(token):
+    """测试书审得分API"""
+    url = f"{BASE_URL}/admin/reviews/book-scores"
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    params = {
+        "competitionId": 1
+    }
     
-    # 测试2: 带筛选参数查询
-    print('\n\n【测试2】带筛选参数查询')
-    print('-' * 80)
+    print(f"\n{'='*60}")
+    print("📊 测试书审得分API")
+    print(f"{'='*60}")
+    print(f"URL: GET {url}")
+    print(f"参数: {params}")
     
-    test_params = [
-        {'competitionId': '21', 'status': 'SUBMITTED', 'desc': '已提交状态'},
-        {'competitionId': '21', 'groupType': 'COMPREHENSIVE', 'desc': '综合组'},
-        {'competitionId': '21', 'reviewerName': '李明华', 'desc': '指定评委'},
-        {'competitionId': '21', 'page': '0', 'size': '10', 'desc': '分页参数'}
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=10)
+        print(f"\n状态码: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"\n响应数据:")
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            
+            if result.get('success'):
+                data = result.get('data', [])
+                print(f"\n✅ API调用成功")
+                print(f"返回记录数: {len(data)}")
+                
+                if len(data) > 0:
+                    print(f"\n第一条记录示例:")
+                    print(json.dumps(data[0], indent=2, ensure_ascii=False))
+            else:
+                print(f"\n❌ API返回失败: {result.get('message')}")
+        elif response.status_code == 404:
+            print(f"\n❌ API不存在 (404)")
+            print(f"响应内容: {response.text}")
+        else:
+            print(f"\n❌ 请求失败")
+            print(f"响应内容: {response.text}")
+    except Exception as e:
+        print(f"\n❌ 请求异常: {e}")
+
+def check_alternative_apis(token):
+    """检查可能的替代API"""
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    
+    print(f"\n{'='*60}")
+    print("🔍 检查可能的替代API")
+    print(f"{'='*60}")
+    
+    # 可能的API端点
+    endpoints = [
+        "/admin/reviews/scores",
+        "/admin/reviews/summary",
+        "/reviews/scores",
+        "/admin/reviews/tasks"
     ]
     
-    for params in test_params:
-        desc = params.pop('desc')
-        print(f'\n🔸 筛选条件: {desc}')
-        print(f'   参数: {params}')
+    for endpoint in endpoints:
+        url = f"{BASE_URL}{endpoint}"
+        params = {"competitionId": 1, "stage": "BOOK"}
+        
+        print(f"\n尝试: GET {url}")
+        print(f"参数: {params}")
         
         try:
-            response = requests.get(url, headers=headers, params=params, timeout=30)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
+            print(f"状态码: {response.status_code}")
+            
             if response.status_code == 200:
-                data = response.json()
-                if data.get('success'):
-                    records = data.get('data', [])
-                    print(f'   结果: ✅ {len(records)} 条记录')
+                result = response.json()
+                if result.get('success'):
+                    data = result.get('data')
+                    if isinstance(data, list):
+                        print(f"✅ 成功 - 返回 {len(data)} 条记录")
+                    elif isinstance(data, dict):
+                        print(f"✅ 成功 - 返回对象，keys: {list(data.keys())}")
+                    else:
+                        print(f"✅ 成功 - 数据类型: {type(data)}")
+                    
+                    # 显示部分数据
+                    print(f"数据预览:")
+                    print(json.dumps(result, indent=2, ensure_ascii=False)[:500])
                 else:
-                    print(f'   结果: ⚠️  {data.get("message")}')
+                    print(f"⚠️ 返回失败: {result.get('message')}")
+            elif response.status_code == 404:
+                print(f"❌ 不存在 (404)")
             else:
-                print(f'   结果: ❌ HTTP {response.status_code}')
+                print(f"⚠️ 状态码: {response.status_code}")
         except Exception as e:
-            print(f'   结果: ❌ {e}')
-
-
-def test_return_score_api(token):
-    """测试驳回评分API"""
-    url = f'{BASE_URL}/admin/reviews/scores/return'
-    headers = {'Authorization': f'Bearer {token}'}
-    
-    print('\n\n' + '=' * 80)
-    print('🔄 测试驳回评分API (仅检查接口存在性，不实际执行)')
-    print('=' * 80)
-    print(f'URL: {url}')
-    print(f'Method: POST')
-    print(f'请求格式: {{scoreId: number, reason: string}}\n')
-    
-    # 不实际执行驳回，只检查接口响应
-    print('✅ 驳回API已在后端实现（POST /api/admin/reviews/scores/return）')
-    print('   参数: scoreId (评分ID), reason (驳回原因)')
-    print('   功能: 删除评分记录，任务状态改为RETURNED')
-
+            print(f"❌ 请求异常: {e}")
 
 def main():
-    print('╔' + '═' * 78 + '╗')
-    print('║' + ' ' * 25 + '书审得分列表API探测' + ' ' * 26 + '║')
-    print('╚' + '═' * 78 + '╝\n')
+    print("="*60)
+    print("书审得分API测试")
+    print("="*60)
     
     # 登录
-    token = login_as_committee()
+    token = login_committee()
     if not token:
-        print('❌ 无法获取token，终止测试')
-        return 1
+        print("\n❌ 无法获取token，测试终止")
+        return
     
-    # 测试书审得分列表API
+    # 测试目标API
     test_book_scores_api(token)
     
-    # 测试驳回评分API
-    test_return_score_api(token)
+    # 检查替代API
+    check_alternative_apis(token)
     
-    print('\n' + '=' * 80)
-    print('✅ API探测完成')
-    print('=' * 80 + '\n')
-    
-    return 0
+    print(f"\n{'='*60}")
+    print("测试完成")
+    print(f"{'='*60}")
 
-
-if __name__ == '__main__':
-    exit_code = main()
-    sys.exit(exit_code)
+if __name__ == "__main__":
+    main()
