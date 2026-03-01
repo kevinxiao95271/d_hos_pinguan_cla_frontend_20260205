@@ -26,7 +26,7 @@
               type="success"
               size="large"
             >
-              {{ template.templateName }} (v{{ template.version }})
+              {{ getTemplateTypeName(template.templateType) }} (v{{ template.version }})
             </el-tag>
           </el-space>
         </div>
@@ -38,20 +38,28 @@
       <!-- 所有模版列表 -->
       <el-table :data="allTemplates" v-loading="loading" border>
         <el-table-column prop="id" label="模版ID" width="100" />
-        <el-table-column prop="templateName" label="模版名称" min-width="180" />
+        <el-table-column prop="templateType" label="模版类型" min-width="180">
+          <template #default="{ row }">
+            {{ getTemplateTypeName(row.templateType) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="version" label="版本号" width="100" />
         <el-table-column prop="fileName" label="文件名" min-width="200" />
-        <el-table-column prop="filePath" label="存储路径" min-width="250" show-overflow-tooltip />
-        <el-table-column prop="active" label="状态" width="100">
+        <el-table-column prop="fileSize" label="文件大小" width="120">
           <template #default="{ row }">
-            <el-tag :type="row.active ? 'success' : 'info'">
-              {{ row.active ? '有效' : '已停用' }}
+            {{ formatFileSize(row.fileSize) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="isActive" label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.isActive ? 'success' : 'info'">
+              {{ row.isActive ? '有效' : '已停用' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="上传时间" width="170">
+        <el-table-column prop="uploadedAt" label="上传时间" width="170">
           <template #default="{ row }">
-            {{ formatDate(row.createdAt) }}
+            {{ formatDate(row.uploadedAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
@@ -64,23 +72,7 @@
               >
                 下载
               </el-button>
-              <el-button
-                v-if="row.active"
-                type="danger"
-                size="small"
-                @click="deactivateTemplate(row)"
-              >
-                停用
-              </el-button>
-              <el-button
-                v-else
-                type="danger"
-                size="small"
-                plain
-                @click="deleteTemplate(row)"
-              >
-                删除
-              </el-button>
+              <!-- 当前激活的模版不显示停用/删除按钮 -->
             </el-space>
           </template>
         </el-table-column>
@@ -171,18 +163,13 @@ onMounted(() => {
 const loadTemplates = async () => {
   loading.value = true
   try {
-    // 加载有效模版和所有模版
-    const [activeRes, allRes] = await Promise.all([
-      getActiveTemplates(),
-      getAllTemplates()
-    ])
+    // 只加载有效模版（当前激活的模版）
+    const activeRes = await getActiveTemplates()
     
     if (activeRes.success) {
       activeTemplates.value = activeRes.data || []
-    }
-    
-    if (allRes.success) {
-      allTemplates.value = allRes.data || []
+      // OPS管理页面也只显示当前激活的模版
+      allTemplates.value = activeRes.data || []
     }
   } catch (error) {
     console.error('加载模版列表失败:', error)
@@ -194,6 +181,21 @@ const loadTemplates = async () => {
 
 const formatDate = (date) => {
   return date ? dayjs(date).format('YYYY-MM-DD HH:mm:ss') : '-'
+}
+
+const getTemplateTypeName = (type) => {
+  const typeMap = {
+    'registration_form': '报名表模版',
+    'result_report': '成果报告书模版'
+  }
+  return typeMap[type] || type
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '-'
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB'
+  return (bytes / 1024 / 1024).toFixed(2) + ' MB'
 }
 
 const handleFileChange = (file) => {

@@ -2,12 +2,14 @@ import request from '@/utils/request'
 
 /**
  * 获取机构列表
+ * 注意：后端已将此接口改为POST方式，使用/search端点
+ * 原因：数据量过大(42K+)，必须使用分页查询
  */
 export function getInstitutions(params) {
   return request({
-    url: '/institutions',
-    method: 'get',
-    params
+    url: '/institutions/search',
+    method: 'post',
+    data: params  // POST使用data，不是params
   })
 }
 
