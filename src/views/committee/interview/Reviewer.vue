@@ -389,9 +389,6 @@ const resetRegistrationFilter = () => {
   loadRegistrations()
 }
 
-// 处理评委列表每页数目变化
-const handleReviewerPageSizeChange = () => {
-  // 改变每页数目时，重置到第一页
 // 选中报名
 const handleRegistrationSelectionChange = (selection) => {
   selectedRegistrations.value = selection
