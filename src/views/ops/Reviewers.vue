@@ -161,12 +161,28 @@ const rules = {
 // 加载机构列表
 const loadInstitutions = async () => {
   try {
-    const res = await getInstitutions()
+    const res = await getInstitutions({
+      page: 0,
+      size: 10000  // 获取足够多的机构用于下拉选择
+    })
+    
     if (res.success && res.data) {
-      institutions.value = res.data
+      // 处理不同的响应格式
+      if (Array.isArray(res.data)) {
+        institutions.value = res.data
+      } else if (res.data.content) {
+        // 分页格式: { content: [], totalElements: N, ... }
+        institutions.value = res.data.content
+      } else {
+        institutions.value = []
+      }
+      
+      console.log(`✅ 加载了 ${institutions.value.length} 个机构`)
     }
   } catch (error) {
     console.error('加载机构列表失败:', error)
+    // 失败时使用空数组，不影响页面其他功能
+    institutions.value = []
   }
 }
 
