@@ -14,9 +14,18 @@
       <!-- 筛选条件 -->
       <el-form :model="filters" :inline="true" style="margin-bottom: 20px">
         <el-form-item label="机构">
-          <el-select v-model="filters.institutionId" placeholder="请选择机构" clearable style="width: 200px">
+          <el-select
+            v-model="filters.institutionId"
+            placeholder="输入机构名称搜索"
+            filterable
+            remote
+            clearable
+            :remote-method="searchFilterInst"
+            :loading="filterInstLoading"
+            style="width: 200px"
+          >
             <el-option
-              v-for="inst in institutions"
+              v-for="inst in filterInstOptions"
               :key="inst.id"
               :label="inst.name"
               :value="inst.id"
@@ -83,9 +92,17 @@
           <el-input v-model="form.title" placeholder="请输入职称" maxlength="50" />
         </el-form-item>
         <el-form-item label="所属机构" prop="institutionId">
-          <el-select v-model="form.institutionId" placeholder="请选择所属机构" style="width: 100%">
+          <el-select
+            v-model="form.institutionId"
+            placeholder="输入机构名称搜索"
+            filterable
+            remote
+            :remote-method="searchFormInst"
+            :loading="formInstLoading"
+            style="width: 100%"
+          >
             <el-option
-              v-for="inst in institutions"
+              v-for="inst in formInstOptions"
               :key="inst.id"
               :label="inst.name"
               :value="inst.id"
@@ -115,7 +132,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getReviewers, createReviewer, updateReviewer, deleteReviewer } from '@/api/review'
-import { getInstitutions } from '@/api/institution'
+import { autocomplete } from '@/api/institution'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -126,7 +143,14 @@ const currentId = ref(null)
 const formRef = ref(null)
 
 const reviewers = ref([])
-const institutions = ref([])
+
+// 筛选栏机构远程搜索
+const filterInstOptions = ref([])
+const filterInstLoading = ref(false)
+
+// 表单机构远程搜索
+const formInstOptions = ref([])
+const formInstLoading = ref(false)
 
 const filters = reactive({
   institutionId: null,
@@ -158,31 +182,37 @@ const rules = {
   ]
 }
 
-// 加载机构列表
-const loadInstitutions = async () => {
+// 筛选栏机构远程搜索（输入关键词后才查询）
+const searchFilterInst = async (query) => {
+  if (!query || query.trim().length < 1) {
+    filterInstOptions.value = []
+    return
+  }
+  filterInstLoading.value = true
   try {
-    const res = await getInstitutions({
-      page: 0,
-      size: 10000  // 获取足够多的机构用于下拉选择
-    })
-    
-    if (res.success && res.data) {
-      // 处理不同的响应格式
-      if (Array.isArray(res.data)) {
-        institutions.value = res.data
-      } else if (res.data.content) {
-        // 分页格式: { content: [], totalElements: N, ... }
-        institutions.value = res.data.content
-      } else {
-        institutions.value = []
-      }
-      
-      console.log(`✅ 加载了 ${institutions.value.length} 个机构`)
-    }
+    const res = await autocomplete(query.trim())
+    if (res.success) filterInstOptions.value = res.data || []
   } catch (error) {
-    console.error('加载机构列表失败:', error)
-    // 失败时使用空数组，不影响页面其他功能
-    institutions.value = []
+    console.error('搜索机构失败:', error)
+  } finally {
+    filterInstLoading.value = false
+  }
+}
+
+// 表单机构远程搜索
+const searchFormInst = async (query) => {
+  if (!query || query.trim().length < 1) {
+    formInstOptions.value = []
+    return
+  }
+  formInstLoading.value = true
+  try {
+    const res = await autocomplete(query.trim())
+    if (res.success) formInstOptions.value = res.data || []
+  } catch (error) {
+    console.error('搜索机构失败:', error)
+  } finally {
+    formInstLoading.value = false
   }
 }
 
@@ -233,13 +263,18 @@ const handleEdit = (row) => {
   isEdit.value = true
   currentId.value = row.id
   dialogTitle.value = '编辑评委'
-  
+
   form.phone = row.phone
   form.name = row.name
   form.title = row.title
   form.institutionId = row.institutionId
   form.expertBackground = row.expertBackground || ''
-  
+
+  // 预填当前机构到选项，保证已选值能正确显示
+  if (row.institutionId && row.institutionName) {
+    formInstOptions.value = [{ id: row.institutionId, name: row.institutionName }]
+  }
+
   dialogVisible.value = true
 }
 
@@ -319,7 +354,6 @@ const resetForm = () => {
 }
 
 onMounted(() => {
-  loadInstitutions()
   loadData()
 })
 </script>
