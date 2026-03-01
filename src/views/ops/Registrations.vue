@@ -139,7 +139,6 @@
         style="margin-top: 20px"
       >
         <el-table-column prop="registrationId" label="项目编号" width="100" />
-        <el-table-column prop="competitionName" label="赛事" width="180" />
         <el-table-column prop="projectName" label="项目名称" min-width="200" />
         <el-table-column prop="institutionName" label="医疗机构" min-width="160" />
         <el-table-column prop="institutionLevel" label="机构等级" width="120">
@@ -206,7 +205,7 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
         style="margin-top: 20px; justify-content: center"
-        @size-change="loadRegistrations"
+        @size-change="currentPage = 1; loadRegistrations()"
         @current-change="loadRegistrations"
       />
     </el-card>
@@ -342,6 +341,7 @@ const detailDialogVisible = ref(false)
 const imagePreviewVisible = ref(false)
 const imagePreviewUrl = ref('')
 
+const registrations = ref([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
@@ -393,22 +393,21 @@ const loadRegistrations = async () => {
   loading.value = true
   try {
     const params = {
-      competitionId: filters.competitionId,  // competitionId是必需参数
-      page: currentPage.value - 1,
+      competitionId: filters.competitionId,
+      page: currentPage.value,
       size: pageSize.value
     }
-    
     if (filters.status) params.status = filters.status
     if (filters.institutionName) params.institutionName = filters.institutionName
     if (filters.groupType) params.groupType = filters.groupType
     if (filters.projectName) params.projectName = filters.projectName
-    
+
     const res = await filterRegistrations(params)
     if (res.success) {
-      registrations.value = res.data?.content || res.data || []
-      total.value = res.data?.totalElements || registrations.value.length
-      
-      console.log('✅ 加载报名列表成功:', registrations.value.length, '条')
+      registrations.value = res.data?.content || []
+      total.value = res.data?.totalElements || 0
+      currentPage.value = res.data?.pageNo ?? currentPage.value
+      console.log('✅ 报名列表 第', currentPage.value, '页，共', total.value, '条')
     } else {
       ElMessage.error('加载失败')
     }
