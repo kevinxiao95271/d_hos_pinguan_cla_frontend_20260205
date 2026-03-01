@@ -91,7 +91,7 @@
             :total="regTotalCount"
             :page-sizes="regPageSizes"
             layout="total, sizes, prev, pager, next, jumper"
-            @size-change="loadRegistrations"
+            @size-change="handleRegistrationPageSizeChange"
             @current-change="loadRegistrations"
           />
         </div>
@@ -181,7 +181,7 @@
             :total="revTotalCount"
             :page-sizes="revPageSizes"
             layout="total, sizes, prev, pager, next, jumper"
-            @size-change="loadReviewers"
+            @size-change="handleReviewerPageSizeChange"
             @current-change="loadReviewers"
           />
         </div>
@@ -421,6 +421,20 @@ const resetRegistrationFilter = () => {
   }
   regResetPagination()
   loadRegistrations()
+}
+
+// 处理报名列表每页数目变化
+const handleRegistrationPageSizeChange = () => {
+  // 改变每页数目时，重置到第一页
+  regCurrentPage.value = 1
+  loadRegistrations()
+}
+
+// 处理评委列表每页数目变化
+const handleReviewerPageSizeChange = () => {
+  // 改变每页数目时，重置到第一页
+  revCurrentPage.value = 1
+  loadReviewers()
 }
 
 // 已分配的任务映射 {registrationId: [reviewerId1, reviewerId2, ...]}

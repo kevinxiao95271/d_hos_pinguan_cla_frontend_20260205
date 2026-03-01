@@ -182,7 +182,7 @@
             :total="revTotalCount"
             :page-sizes="revPageSizes"
             layout="total, sizes, prev, pager, next, jumper"
-            @size-change="loadReviewers"
+            @size-change="handleReviewerPageSizeChange"
             @current-change="loadReviewers"
           />
         </div>
@@ -412,6 +412,13 @@ const resetRegistrationFilter = () => {
     projectName: ''
   }
   loadRegistrations()
+}
+
+// 处理评委列表每页数目变化
+const handleReviewerPageSizeChange = () => {
+  // 改变每页数目时，重置到第一页
+  revCurrentPage.value = 1
+  loadReviewers()
 }
 
 // 选中报名
