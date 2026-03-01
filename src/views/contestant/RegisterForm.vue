@@ -382,12 +382,13 @@
                 :file-list="form.materials.evidence"
                 :limit="5"
                 multiple
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.zip,.rar"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.zip,.rar"
               >
                 <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
                 <template #tip>
                   <div class="el-upload__tip">
-                    支持PDF、Word、图片、压缩包格式（ZIP/RAR），最多5个文件，每个文件不超过30MB
+                    支持格式：PDF (.pdf)、Word (.doc/.docx)、Excel (.xls/.xlsx)、PPT (.ppt/.pptx)、图片 (.jpg/.jpeg/.png)、压缩包 (.zip/.rar)<br>
+                    限制：最多5个文件，单个文件不超过30MB
                   </div>
                 </template>
               </el-upload>
