@@ -164,19 +164,6 @@
             </template>
           </el-table-column>
         </el-table>
-
-        <!-- 评委列表分页器 -->
-        <div v-if="revShowPagination" class="pagination-container">
-          <el-pagination
-            v-model:current-page="revCurrentPage"
-            v-model:page-size="revPageSize"
-            :total="revTotalCount"
-            :page-sizes="revPageSizes"
-            layout="total, sizes, prev, pager, next, jumper"
-            @size-change="handleReviewerPageSizeChange"
-            @current-change="loadReviewers"
-          />
-        </div>
       </el-card>
     </div>
 
@@ -300,18 +287,6 @@ const {
   getPaginationParams: regGetPaginationParams
 } = usePagination({ defaultPageSize: 50 })
 
-// 评委列表分页
-const {
-  currentPage: revCurrentPage,
-  pageSize: revPageSize,
-  totalCount: revTotalCount,
-  pageSizes: revPageSizes,
-  showPagination: revShowPagination,
-  extractDataList: revExtractDataList,
-  resetPagination: revResetPagination,
-  getPaginationParams: revGetPaginationParams
-} = usePagination({ defaultPageSize: 50 })
-
 // 报名列表
 const registrations = ref([])
 const loadingRegistrations = ref(false)
@@ -368,11 +343,11 @@ const loadReviewers = async () => {
   loadingReviewers.value = true
   try {
     const res = await getReviewers({
-      competitionId: competitionId.value,
-      ...revGetPaginationParams()
+      competitionId: competitionId.value
     })
     if (res.success) {
-      reviewers.value = revExtractDataList(res.data)
+      // 直接使用返回的数组，不使用分页
+      reviewers.value = Array.isArray(res.data) ? res.data : []
       console.log(`✅ 加载评委列表成功：${reviewers.value.length} 位`)
     } else {
       ElMessage.error(res.message || '加载评委列表失败')
@@ -397,14 +372,6 @@ const resetRegistrationFilter = () => {
   }
   loadRegistrations()
 }
-
-// 处理评委列表每页数目变化
-const handleReviewerPageSizeChange = () => {
-  // 改变每页数目时，重置到第一页
-  revCurrentPage.value = 1
-  loadReviewers()
-}
-
 // 选中报名
 const handleRegistrationSelectionChange = (selection) => {
   selectedRegistrations.value = selection
