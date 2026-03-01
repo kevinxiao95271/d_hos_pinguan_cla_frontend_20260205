@@ -130,7 +130,6 @@
         <el-table
           :data="reviewers"
           v-loading="loadingReviewers"
-          max-height="650"
           @selection-change="handleReviewerSelectionChange"
           :row-class-name="getReviewerRowClass"
           size="small"
@@ -371,10 +370,12 @@ const loadReviewers = async () => {
     const res = await getReviewers({
       competitionId: competitionId.value
     })
+    console.log('📊 评委API响应:', res)
     if (res.success) {
       // 直接使用返回的数组，不使用分页
       reviewers.value = Array.isArray(res.data) ? res.data : []
       console.log(`✅ 加载评委列表成功：${reviewers.value.length} 位`)
+      console.log('📋 评委数据:', reviewers.value)
     } else {
       ElMessage.error(res.message || '加载评委列表失败')
       reviewers.value = []
