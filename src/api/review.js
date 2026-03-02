@@ -92,6 +92,21 @@ export function getBookScores(params) {
 }
 
 /**
+ * 获取面谈得分列表（组委会管理）
+ * 使用 /admin/reviews/summary API，固定 stage=INTERVIEW
+ */
+export function getInterviewScores(params) {
+  return request({
+    url: '/admin/reviews/summary',
+    method: 'get',
+    params: {
+      ...params,
+      stage: 'INTERVIEW'
+    }
+  })
+}
+
+/**
  * 驳回评分
  */
 export function returnScore(data) {
