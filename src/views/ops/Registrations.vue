@@ -173,8 +173,8 @@
               <!-- 报名材料 -->
               <div>
                 <span style="color:#909399;font-size:12px">报名材料：</span>
-                <template v-if="row.materials && row.materials.filter(m => m.type !== 'payment_proof').length > 0">
-                  <el-tag type="success" size="small">{{ row.materials.filter(m => m.type !== 'payment_proof').length }}个</el-tag>
+                <template v-if="row.materials && row.materials.length > 0">
+                  <el-tag type="success" size="small">{{ row.materials.length }}个</el-tag>
                   <el-button type="primary" size="small" link @click="viewMaterials(row)" style="margin-left:4px">查看</el-button>
                 </template>
                 <el-tag v-else type="info" size="small">无</el-tag>
@@ -182,8 +182,8 @@
               <!-- 缴费凭证 -->
               <div>
                 <span style="color:#909399;font-size:12px">缴费凭证：</span>
-                <template v-if="row.materials && row.materials.filter(m => m.type === 'payment_proof').length > 0">
-                  <el-tag type="warning" size="small">{{ row.materials.filter(m => m.type === 'payment_proof').length }}张</el-tag>
+                <template v-if="row.paymentProofs && row.paymentProofs.length > 0">
+                  <el-tag type="warning" size="small">{{ row.paymentProofs.length }}张</el-tag>
                   <el-button type="warning" size="small" link @click="viewPaymentProof(row)" style="margin-left:4px">查看</el-button>
                 </template>
                 <el-tag v-else type="info" size="small">未上传</el-tag>
@@ -492,7 +492,7 @@ const currentProofReg = ref(null)
 
 const viewPaymentProof = (row) => {
   currentProofReg.value = row
-  currentProofList.value = (row.materials || []).filter(m => m.type === 'payment_proof')
+  currentProofList.value = row.paymentProofs || []
   proofDialogVisible.value = true
 }
 
