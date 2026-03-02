@@ -167,21 +167,28 @@
             {{ formatDate(row.submittedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="材料" width="120">
+        <el-table-column label="材料" width="160">
           <template #default="{ row }">
-            <div v-if="row.materials && row.materials.length > 0">
-              <el-tag type="success" size="small">{{ row.materials.length }}个文件</el-tag>
-              <el-button 
-                type="primary" 
-                size="small" 
-                link
-                @click="viewMaterials(row)"
-                style="margin-left: 5px;"
-              >
-                查看
-              </el-button>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <!-- 报名材料 -->
+              <div>
+                <span style="color:#909399;font-size:12px">报名材料：</span>
+                <template v-if="row.materials && row.materials.filter(m => m.type !== 'payment_proof').length > 0">
+                  <el-tag type="success" size="small">{{ row.materials.filter(m => m.type !== 'payment_proof').length }}个</el-tag>
+                  <el-button type="primary" size="small" link @click="viewMaterials(row)" style="margin-left:4px">查看</el-button>
+                </template>
+                <el-tag v-else type="info" size="small">无</el-tag>
+              </div>
+              <!-- 缴费凭证 -->
+              <div>
+                <span style="color:#909399;font-size:12px">缴费凭证：</span>
+                <template v-if="row.materials && row.materials.filter(m => m.type === 'payment_proof').length > 0">
+                  <el-tag type="warning" size="small">{{ row.materials.filter(m => m.type === 'payment_proof').length }}张</el-tag>
+                  <el-button type="warning" size="small" link @click="viewPaymentProof(row)" style="margin-left:4px">查看</el-button>
+                </template>
+                <el-tag v-else type="info" size="small">未上传</el-tag>
+              </div>
             </div>
-            <el-tag v-else type="info" size="small">无材料</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160" fixed="right">
@@ -319,6 +326,32 @@
         <img :src="imagePreviewUrl" style="max-width: 100%; max-height: 70vh;" />
       </div>
     </el-dialog>
+
+    <!-- 缴费凭证弹窗 -->
+    <el-dialog
+      v-model="proofDialogVisible"
+      :title="`缴费凭证 (${currentProofList.length} 张) — ${currentProofReg?.projectName || ''}`"
+      width="600px"
+    >
+      <el-empty v-if="currentProofList.length === 0" description="暂无缴费凭证" />
+      <el-table v-else :data="currentProofList" border>
+        <el-table-column type="index" label="#" width="50" align="center" />
+        <el-table-column prop="fileName" label="文件名" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="uploadedAt" label="上传时间" width="160" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.uploadedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" align="center">
+          <template #default="{ row }">
+            <el-button type="primary" size="small" link @click="downloadProof(row)">下载</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="proofDialogVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -450,6 +483,35 @@ const viewDetail = async (row) => {
 
 const viewMaterials = async (row) => {
   await viewDetail(row)
+}
+
+// 缴费凭证弹窗
+const proofDialogVisible = ref(false)
+const currentProofList = ref([])
+const currentProofReg = ref(null)
+
+const viewPaymentProof = (row) => {
+  currentProofReg.value = row
+  currentProofList.value = (row.materials || []).filter(m => m.type === 'payment_proof')
+  proofDialogVisible.value = true
+}
+
+const downloadProof = async (material) => {
+  try {
+    const blob = await downloadMaterial(material.id)
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = material.fileName || '缴费凭证'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('下载成功')
+  } catch (error) {
+    console.error('下载失败:', error)
+    ElMessage.error('下载失败')
+  }
 }
 
 // 判断文件是否可以预览
