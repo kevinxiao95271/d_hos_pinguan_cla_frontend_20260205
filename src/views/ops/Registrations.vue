@@ -341,7 +341,6 @@ const detailDialogVisible = ref(false)
 const imagePreviewVisible = ref(false)
 const imagePreviewUrl = ref('')
 
-const registrations = ref([])
 const currentPage = ref(1)
 const pageSize = ref(20)
 const total = ref(0)
