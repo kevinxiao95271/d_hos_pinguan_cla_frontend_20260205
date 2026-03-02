@@ -213,8 +213,7 @@ const loadAllProofs = async () => {
   results.forEach((result, idx) => {
     const regId = submitted[idx].id
     if (result.status === 'fulfilled' && result.value.success) {
-      const mats = result.value.data?.materials || []
-      proofMap[regId] = mats.filter(m => m.type === 'payment_proof')
+      proofMap[regId] = result.value.data?.paymentProofs || []
     } else {
       proofMap[regId] = []
     }
@@ -285,8 +284,7 @@ const viewProof = async (row) => {
   try {
     const res = await getRegistration(row.id)
     if (res.success) {
-      const mats = res.data?.materials || []
-      currentProofList.value = mats.filter(m => m.type === 'payment_proof')
+      currentProofList.value = res.data?.paymentProofs || []
       proofMap[row.id] = currentProofList.value
     }
   } catch (error) {
