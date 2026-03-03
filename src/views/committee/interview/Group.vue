@@ -353,9 +353,18 @@
         <div v-if="currentDetail?.materials && currentDetail.materials.length > 0">
           <el-divider content-position="left">材料文件</el-divider>
           <el-table :data="currentDetail.materials" border>
+            <el-table-column label="类型" width="160">
+              <template #default="{ row }">
+                {{ getMaterialTypeLabel(row.type) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="fileName" label="文件名" />
-            <el-table-column prop="fileType" label="类型" width="100" />
-            <el-table-column label="操作" width="120">
+            <el-table-column prop="uploadedAt" label="上传时间" width="160">
+              <template #default="{ row }">
+                {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100">
               <template #default="{ row }">
                 <el-button type="primary" size="small" @click="downloadFile(row)">
                   下载
@@ -590,6 +599,18 @@ const viewMaterials = async (row) => {
   } finally {
     detailLoading.value = false
   }
+}
+
+const getMaterialTypeLabel = (type) => {
+  const map = {
+    'REGISTRATION_FORM_DOC': '报名表 Word',
+    'REGISTRATION_FORM_PDF': '报名表 PDF',
+    'REGISTRATION_FORM': '报名表',
+    'REPORT': '成果报告书',
+    'EVIDENCE': '佐证材料',
+    'payment_proof': '缴费凭证'
+  }
+  return map[type] || type
 }
 
 // 下载材料文件

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="review-page">
     <el-card>
       <template #header>
@@ -120,6 +120,28 @@
                   </el-descriptions-item>
                 </el-descriptions>
               </div>
+              <!-- 材料文件 -->
+              <div v-if="projectDetail.materials && projectDetail.materials.length > 0" style="margin-bottom: 20px;">
+                <h4>材料文件</h4>
+                <el-table :data="projectDetail.materials" border size="small">
+                  <el-table-column label="类型" width="160">
+                    <template #default="{ row }">
+                      {{ getMaterialTypeLabel(row.type) }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column prop="fileName" label="文件名" />
+                  <el-table-column prop="uploadedAt" label="上传时间" width="160">
+                    <template #default="{ row }">
+                      {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="100">
+                    <template #default="{ row }">
+                      <el-button type="primary" size="small" @click="downloadFile(row)">下载</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
             </el-collapse-item>
           </el-collapse>
           
@@ -230,6 +252,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { submitReviewScore, getReviewScore } from '@/api/review'
 import { getRegistrationDetail } from '@/api/registration'
+import { downloadMaterial } from '@/api/material'
 
 const route = useRoute()
 const router = useRouter()
@@ -334,7 +357,8 @@ const loadData = async () => {
             registration: data.registration,
             members: data.members || [],
             activityInfo: data.activityInfo,
-            summary: data.projectSummary  // 注意：后端返回的是 projectSummary
+            summary: data.projectSummary,  // 注意：后端返回的是 projectSummary
+            materials: data.materials || []
           }
           
           // 更新任务基本信息（从 registration 对象中提取，优先使用详情接口返回的数据）
@@ -511,6 +535,35 @@ const submitReview = async () => {
 
 const goBack = () => {
   router.back()
+}
+
+const getMaterialTypeLabel = (type) => {
+  const map = {
+    'REGISTRATION_FORM_DOC': '报名表 Word',
+    'REGISTRATION_FORM_PDF': '报名表 PDF',
+    'REGISTRATION_FORM': '报名表',
+    'REPORT': '成果报告书',
+    'EVIDENCE': '佐证材料'
+  }
+  return map[type] || type
+}
+
+const downloadFile = async (material) => {
+  try {
+    const blob = await downloadMaterial(material.id)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = material.fileName || '材料文件'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('下载成功')
+  } catch (error) {
+    console.error('下载文件失败:', error)
+    ElMessage.error('下载失败')
+  }
 }
 
 onMounted(() => {
