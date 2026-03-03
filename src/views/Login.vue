@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-box">
       <div class="login-header">
-        <h1>浙江省医院品管大赛管理系统</h1>
+        <h1>浙江省医院品管大赛平台</h1>
       </div>
       
       <el-form

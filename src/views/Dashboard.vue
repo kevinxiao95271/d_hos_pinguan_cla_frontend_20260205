@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>欢迎使用浙江省医院品管大赛管理系统</span>
+          <span>欢迎使用浙江省医院品管大赛平台</span>
         </div>
       </template>
       
