@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="register-page">
     <el-card>
       <template #header>
@@ -313,13 +313,21 @@
       <!-- 步骤4: 提交资料 -->
       <div v-show="currentStep === 3" class="step-content">
         <el-table :data="materialsList" border>
-          <el-table-column prop="type" label="类型" width="150">
+          <el-table-column prop="type" label="类型" width="200">
             <template #default="{ row }">
               {{ getMaterialTypeText(row.type) }}
             </template>
           </el-table-column>
+          <el-table-column label="状态" width="90">
+            <template #default="{ row }">
+              <el-tag :type="row.fileName ? 'success' : 'info'" size="small">
+                {{ row.fileName ? '已上传' : '未上传' }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="fileName" label="文件名称" />
-          <el-table-column label="操作" width="300">
+          <el-table-column prop="uploadedAt" label="上传时间" width="160" />
+          <el-table-column label="操作" width="260">
             <template #default="{ row }">
               <el-upload
                 :action="`/api/registrations/${registrationId}/materials?type=${row.type}`"
@@ -327,6 +335,7 @@
                 :show-file-list="false"
                 :on-success="(res) => handleUploadSuccess(res, row.type)"
                 :before-upload="beforeUpload"
+                :accept="row.accept"
               >
                 <el-button type="primary" size="small">上传</el-button>
               </el-upload>
@@ -476,16 +485,18 @@ const summaryRules = {
 
 // 提交资料
 const materialsList = ref([
-  { type: 'registration', fileName: '', hasTemplate: true },
-  { type: 'report', fileName: '', hasTemplate: true },
-  { type: 'evidence', fileName: '', hasTemplate: false }
+  { type: 'REGISTRATION_FORM_DOC', accept: '.doc,.docx', fileName: '', uploadedAt: '', hasTemplate: true },
+  { type: 'REGISTRATION_FORM_PDF', accept: '.pdf',       fileName: '', uploadedAt: '', hasTemplate: false },
+  { type: 'REPORT',                accept: '',           fileName: '', uploadedAt: '', hasTemplate: true },
+  { type: 'EVIDENCE',              accept: '',           fileName: '', uploadedAt: '', hasTemplate: false }
 ])
 
 const getMaterialTypeText = (type) => {
   const map = {
-    'registration': '报名表',
-    'report': '成果汇报书',
-    'evidence': '佐证材料'
+    'REGISTRATION_FORM_DOC': '报名表 Word',
+    'REGISTRATION_FORM_PDF': '报名表 PDF（盖章扫描件）',
+    'REPORT':                '成果汇报书',
+    'EVIDENCE':              '佐证材料'
   }
   return map[type] || type
 }
@@ -646,11 +657,11 @@ const saveSummaryInfo = async () => {
 
 // 文件上传
 const beforeUpload = (file) => {
-  const isLt50M = file.size / 1024 / 1024 < 50
-  if (!isLt50M) {
-    ElMessage.error('文件大小不能超过 50MB!')
+  const isLt30M = file.size / 1024 / 1024 < 30
+  if (!isLt30M) {
+    ElMessage.error('文件大小不能超过 30MB!')
   }
-  return isLt50M
+  return isLt30M
 }
 
 const handleUploadSuccess = (res, type) => {
@@ -659,7 +670,12 @@ const handleUploadSuccess = (res, type) => {
     const item = materialsList.value.find(m => m.type === type)
     if (item) {
       item.fileName = res.data.fileName
+      item.uploadedAt = res.data.uploadedAt
+        ? res.data.uploadedAt.replace('T', ' ').substring(0, 16)
+        : ''
     }
+  } else {
+    ElMessage.error(res.message || '上传失败')
   }
 }
 

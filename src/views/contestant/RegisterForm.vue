@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="register-form-page">
     <el-card>
       <template #header>
@@ -312,20 +312,20 @@
         <!-- 步骤5: 材料上传 -->
         <div v-show="currentStep === 4">
           <el-form label-width="150px" :disabled="isDisabled">
-            <el-form-item label="报名表" required>
+            <el-form-item label="报名表 Word" required>
               <div style="display: flex; flex-direction: column; gap: 12px;">
                 <el-upload
                   :auto-upload="false"
-                  :on-change="handleRegistrationFormChange"
-                  :on-remove="handleRegistrationFormRemove"
-                  :file-list="form.materials.registrationForm"
+                  :on-change="handleRegistrationFormDocChange"
+                  :on-remove="handleRegistrationFormDocRemove"
+                  :file-list="form.materials.registrationFormDoc"
                   :limit="1"
-                  accept=".pdf,.doc,.docx"
+                  accept=".doc,.docx"
                 >
-                  <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
+                  <el-button type="primary" :disabled="isDisabled">选择 Word 文件</el-button>
                   <template #tip>
                     <div class="el-upload__tip">
-                      支持PDF、Word格式，文件大小不超过30MB
+                      仅支持 doc/docx 格式，文件大小不超过30MB
                     </div>
                   </template>
                 </el-upload>
@@ -340,6 +340,26 @@
                     {{ registrationFormTemplate.fileName }}
                   </el-link>
                 </div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="报名表 PDF" required>
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <el-upload
+                  :auto-upload="false"
+                  :on-change="handleRegistrationFormPdfChange"
+                  :on-remove="handleRegistrationFormPdfRemove"
+                  :file-list="form.materials.registrationFormPdf"
+                  :limit="1"
+                  accept=".pdf"
+                >
+                  <el-button type="primary" :disabled="isDisabled">选择 PDF 文件</el-button>
+                  <template #tip>
+                    <div class="el-upload__tip">
+                      仅支持 pdf 格式（盖章扫描件），文件大小不超过30MB
+                    </div>
+                  </template>
+                </el-upload>
               </div>
             </el-form-item>
             
@@ -496,7 +516,8 @@ const form = reactive({
     presentation: ''
   },
   materials: {
-    registrationForm: [],
+    registrationFormDoc: [],
+    registrationFormPdf: [],
     report: [],
     evidence: []
   }
@@ -713,16 +734,28 @@ const removeMentor = (index) => {
   form.members.mentors.splice(index, 1)
 }
 
-const handleRegistrationFormChange = (file, fileList) => {
+const handleRegistrationFormDocChange = (file, fileList) => {
   if (file.size > 30 * 1024 * 1024) {
     ElMessage.error('文件大小不能超过30MB')
     return false
   }
-  form.materials.registrationForm = fileList
+  form.materials.registrationFormDoc = fileList
 }
 
-const handleRegistrationFormRemove = (file, fileList) => {
-  form.materials.registrationForm = fileList
+const handleRegistrationFormDocRemove = (file, fileList) => {
+  form.materials.registrationFormDoc = fileList
+}
+
+const handleRegistrationFormPdfChange = (file, fileList) => {
+  if (file.size > 30 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过30MB')
+    return false
+  }
+  form.materials.registrationFormPdf = fileList
+}
+
+const handleRegistrationFormPdfRemove = (file, fileList) => {
+  form.materials.registrationFormPdf = fileList
 }
 
 const handleReportChange = (file, fileList) => {
@@ -908,8 +941,12 @@ const saveDraft = async () => {
 const submitForm = async () => {
   try {
     // 验证必填材料
-    if (form.materials.registrationForm.length === 0) {
-      ElMessage.warning('请上传报名表')
+    if (form.materials.registrationFormDoc.length === 0) {
+      ElMessage.warning('请上传报名表 Word 文件')
+      return
+    }
+    if (form.materials.registrationFormPdf.length === 0) {
+      ElMessage.warning('请上传报名表 PDF 文件（盖章扫描件）')
       return
     }
     if (form.materials.report.length === 0) {
@@ -932,15 +969,22 @@ const submitForm = async () => {
     
     // 上传材料文件
     try {
-      // 上传报名表
-      if (form.materials.registrationForm.length > 0 && form.materials.registrationForm[0].raw) {
-        const file = form.materials.registrationForm[0].raw
+      // 上传报名表 Word
+      if (form.materials.registrationFormDoc.length > 0 && form.materials.registrationFormDoc[0].raw) {
+        const file = form.materials.registrationFormDoc[0].raw
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('type', 'REGISTRATION_FORM')
-        formData.append('contentType', file.type || 'application/octet-stream')
+        formData.append('type', 'REGISTRATION_FORM_DOC')
         await uploadMaterial(registrationId.value, formData)
-        console.log('✅ 报名表上传成功')
+      }
+
+      // 上传报名表 PDF
+      if (form.materials.registrationFormPdf.length > 0 && form.materials.registrationFormPdf[0].raw) {
+        const file = form.materials.registrationFormPdf[0].raw
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('type', 'REGISTRATION_FORM_PDF')
+        await uploadMaterial(registrationId.value, formData)
       }
       
       // 上传成果报告书
