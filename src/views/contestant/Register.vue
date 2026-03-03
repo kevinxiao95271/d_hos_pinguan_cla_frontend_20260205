@@ -334,7 +334,7 @@
                 :headers="{ Authorization: `Bearer ${token}` }"
                 :show-file-list="false"
                 :on-success="(res) => handleUploadSuccess(res, row.type)"
-                :before-upload="beforeUpload"
+                :before-upload="(file) => beforeUpload(file, row.maxSize)"
                 :accept="row.accept"
               >
                 <el-button type="primary" size="small">上传</el-button>
@@ -485,10 +485,10 @@ const summaryRules = {
 
 // 提交资料
 const materialsList = ref([
-  { type: 'REGISTRATION_FORM_DOC', accept: '.doc,.docx', fileName: '', uploadedAt: '', hasTemplate: true },
-  { type: 'REGISTRATION_FORM_PDF', accept: '.pdf',       fileName: '', uploadedAt: '', hasTemplate: false },
-  { type: 'REPORT',                accept: '',           fileName: '', uploadedAt: '', hasTemplate: true },
-  { type: 'EVIDENCE',              accept: '',           fileName: '', uploadedAt: '', hasTemplate: false }
+  { type: 'REGISTRATION_FORM_DOC', accept: '.doc,.docx', maxSize: 30,  fileName: '', uploadedAt: '', hasTemplate: true },
+  { type: 'REGISTRATION_FORM_PDF', accept: '.pdf',       maxSize: 30,  fileName: '', uploadedAt: '', hasTemplate: false },
+  { type: 'REPORT',                accept: '',           maxSize: 30,  fileName: '', uploadedAt: '', hasTemplate: true },
+  { type: 'EVIDENCE',              accept: '',           maxSize: 100, fileName: '', uploadedAt: '', hasTemplate: false }
 ])
 
 const getMaterialTypeText = (type) => {
@@ -496,7 +496,7 @@ const getMaterialTypeText = (type) => {
     'REGISTRATION_FORM_DOC': '报名表 Word',
     'REGISTRATION_FORM_PDF': '报名表 PDF（盖章扫描件）',
     'REPORT':                '成果汇报书',
-    'EVIDENCE':              '佐证材料'
+    'EVIDENCE':              '佐证材料（≤100MB，视频请打包成压缩包）'
   }
   return map[type] || type
 }
@@ -656,12 +656,12 @@ const saveSummaryInfo = async () => {
 }
 
 // 文件上传
-const beforeUpload = (file) => {
-  const isLt30M = file.size / 1024 / 1024 < 30
-  if (!isLt30M) {
-    ElMessage.error('文件大小不能超过 30MB!')
+const beforeUpload = (file, maxSize = 30) => {
+  const ok = file.size / 1024 / 1024 < maxSize
+  if (!ok) {
+    ElMessage.error(`文件大小不能超过 ${maxSize}MB!`)
   }
-  return isLt30M
+  return ok
 }
 
 const handleUploadSuccess = (res, type) => {

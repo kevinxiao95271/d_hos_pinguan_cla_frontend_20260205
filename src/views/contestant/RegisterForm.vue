@@ -408,7 +408,8 @@
                 <template #tip>
                   <div class="el-upload__tip">
                     支持格式：PDF (.pdf)、Word (.doc/.docx)、Excel (.xls/.xlsx)、PPT (.ppt/.pptx)、图片 (.jpg/.jpeg/.png)、压缩包 (.zip/.rar)<br>
-                    限制：最多5个文件，单个文件不超过30MB
+                    限制：最多5个文件，单个文件不超过100MB<br>
+                    <span style="color:#E6A23C;">视频文件请先打包成压缩包（.zip/.rar）再上传</span>
                   </div>
                 </template>
               </el-upload>
@@ -771,8 +772,8 @@ const handleReportRemove = (file, fileList) => {
 }
 
 const handleEvidenceChange = (file, fileList) => {
-  if (file.size > 30 * 1024 * 1024) {
-    ElMessage.error('文件大小不能超过30MB')
+  if (file.size > 100 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过100MB')
     return false
   }
   form.materials.evidence = fileList
