@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="my-competition-page">
     <el-card>
       <template #header>
@@ -201,7 +201,7 @@
                 <el-descriptions-item label="对策实施">
                   {{ typeof bookReview.actionScore === 'number' ? bookReview.actionScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
-                <el-descriptions-item label="成功表现">
+                <el-descriptions-item label="成果表现">
                   {{ typeof bookReview.successScore === 'number' ? bookReview.successScore.toFixed(1) : '-' }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="检讨">

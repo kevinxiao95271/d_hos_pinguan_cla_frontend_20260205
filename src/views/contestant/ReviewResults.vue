@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="review-results-page">
     <el-card>
       <template #header>
@@ -34,7 +34,7 @@
                 <el-descriptions-item label="对策实施">
                   {{ (result.implementationScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
-                <el-descriptions-item label="成功表现">
+                <el-descriptions-item label="成果表现">
                   {{ (result.resultScore || 0).toFixed(1) }} 分
                 </el-descriptions-item>
                 <el-descriptions-item label="检讨">

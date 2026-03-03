@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="review-page">
     <el-card>
       <template #header>
@@ -158,7 +158,7 @@
             <span style="margin-left: 10px; color: #909399;">满分20分</span>
           </el-form-item>
           
-          <el-form-item label="成功表现" prop="resultScore">
+          <el-form-item label="成果表现" prop="resultScore">
             <el-input-number v-model="form.resultScore" :min="0" :max="15" :step="0.1" :precision="1" />
             <span style="margin-left: 10px; color: #909399;">满分15分</span>
           </el-form-item>

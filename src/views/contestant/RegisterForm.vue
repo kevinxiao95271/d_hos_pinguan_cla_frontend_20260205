@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="register-form-page">
     <el-card>
       <template #header>
@@ -271,12 +271,12 @@
               />
             </el-form-item>
             
-            <el-form-item label="成功表现" prop="success">
+            <el-form-item label="成果表现" prop="success">
               <el-input
                 v-model="form.summary.success"
                 type="textarea"
                 :rows="4"
-                placeholder="请输入成功表现"
+                placeholder="请输入成果表现"
               />
             </el-form-item>
             
@@ -535,7 +535,7 @@ const summaryRules = {
   plan: [{ required: true, message: '请输入计划内容', trigger: 'blur' }],
   problem: [{ required: true, message: '请输入问题分析', trigger: 'blur' }],
   action: [{ required: true, message: '请输入对策行动过程', trigger: 'blur' }],
-  success: [{ required: true, message: '请输入成功表现', trigger: 'blur' }],
+  success: [{ required: true, message: '请输入成果表现', trigger: 'blur' }],
   discussion: [{ required: true, message: '请输入讨论总结', trigger: 'blur' }]
 }
 
