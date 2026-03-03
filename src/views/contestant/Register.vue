@@ -54,7 +54,13 @@
             <el-radio-group v-model="basicForm.groupType">
               <el-radio value="ADVANCED">进阶组</el-radio>
               <el-radio value="COMPREHENSIVE">综合组</el-radio>
-              <el-radio value="BASIC">基层组</el-radio>
+              <el-tooltip
+                :disabled="!isThirdLevel"
+                content="基层组仅限二级及以下医疗机构报名，三级机构不可选"
+                placement="top"
+              >
+                <el-radio value="BASIC" :disabled="isThirdLevel">基层组</el-radio>
+              </el-tooltip>
             </el-radio-group>
           </el-form-item>
           
@@ -392,7 +398,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
@@ -422,7 +428,17 @@ const token = computed(() => userStore.token)
 const institutionInfo = reactive({
   name: '',
   code: '',
-  uscc: ''
+  uscc: '',
+  level: ''
+})
+
+// 三级机构不可选基层组
+const isThirdLevel = computed(() => institutionInfo.level?.startsWith('三级'))
+
+watch(isThirdLevel, (val) => {
+  if (val && basicForm.groupType === 'BASIC') {
+    basicForm.groupType = 'COMPREHENSIVE'
+  }
 })
 
 // 字典数据
@@ -519,6 +535,7 @@ const loadInstitutionInfo = async () => {
       institutionInfo.name = res.data.name
       institutionInfo.code = res.data.code
       institutionInfo.uscc = res.data.uscc
+      institutionInfo.level = res.data.level || ''
     }
   } catch (error) {
     console.error('加载机构信息失败:', error)

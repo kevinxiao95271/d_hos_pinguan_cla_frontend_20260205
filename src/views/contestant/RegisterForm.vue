@@ -62,7 +62,13 @@
             
             <el-form-item label="竞赛组别" prop="groupType">
               <el-radio-group v-model="form.basic.groupType">
-                <el-radio value="BASIC">基层组</el-radio>
+                <el-tooltip
+                  :disabled="!isThirdLevel"
+                  content="基层组仅限二级及以下医疗机构报名，三级机构不可选"
+                  placement="top"
+                >
+                  <el-radio value="BASIC" :disabled="isThirdLevel">基层组</el-radio>
+                </el-tooltip>
                 <el-radio value="COMPREHENSIVE">综合组</el-radio>
                 <el-radio value="ADVANCED">进阶组</el-radio>
               </el-radio-group>
@@ -447,7 +453,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
@@ -466,6 +472,7 @@ import { getCompetitions } from '@/api/competition'
 import { getDictionaries } from '@/api/dictionary'
 import { getActiveTemplates, downloadTemplate } from '@/api/systemTemplate'
 import { uploadMaterial } from '@/api/material'
+import { getInstitution } from '@/api/institution'
 
 const route = useRoute()
 const router = useRouter()
@@ -535,6 +542,16 @@ const form = reactive({
 })
 
 const isDisabled = computed(() => form.status === 'SUBMITTED')
+
+// 三级机构不可选基层组
+const institutionLevel = ref('')
+const isThirdLevel = computed(() => institutionLevel.value?.startsWith('三级'))
+
+watch(isThirdLevel, (val) => {
+  if (val && form.basic.groupType === 'BASIC') {
+    form.basic.groupType = 'COMPREHENSIVE'
+  }
+})
 
 // 获取报名表模版
 const registrationFormTemplate = computed(() => {
@@ -1049,8 +1066,19 @@ const goBack = () => {
   router.back()
 }
 
-onMounted(() => {
+onMounted(async () => {
   loadData()
+  // 加载机构等级，用于基层组限制
+  if (userStore.institutionId) {
+    try {
+      const res = await getInstitution(userStore.institutionId)
+      if (res.success && res.data) {
+        institutionLevel.value = res.data.level || ''
+      }
+    } catch (e) {
+      console.error('加载机构等级失败:', e)
+    }
+  }
 })
 </script>
 
