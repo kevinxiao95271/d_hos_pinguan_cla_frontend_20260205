@@ -87,11 +87,11 @@
       :close-on-click-modal="false"
     >
       <el-form :model="uploadForm" label-width="120px">
-        <el-form-item label="模版名称" required>
-          <el-input 
-            v-model="uploadForm.templateName" 
-            placeholder="例如：报名表模版"
-          />
+        <el-form-item label="模版类型" required>
+          <el-select v-model="uploadForm.templateType" placeholder="请选择模版类型" style="width:100%">
+            <el-option label="报名表模版" value="registration_form" />
+            <el-option label="成果报告书模版" value="result_report" />
+          </el-select>
         </el-form-item>
         <el-form-item label="选择文件" required>
           <el-upload
@@ -121,7 +121,7 @@
         <el-button
           type="primary"
           :loading="uploading"
-          :disabled="!uploadForm.templateName || !uploadForm.file"
+          :disabled="!uploadForm.templateType || !uploadForm.file"
           @click="handleUpload"
         >
           确认上传
@@ -150,7 +150,7 @@ const activeTemplates = ref([])
 const allTemplates = ref([])
 
 const uploadForm = ref({
-  templateName: '',
+  templateType: '',
   file: null
 })
 
@@ -207,8 +207,8 @@ const handleFileChange = (file) => {
 }
 
 const handleUpload = async () => {
-  if (!uploadForm.value.templateName || !uploadForm.value.file) {
-    ElMessage.warning('请填写模版名称并选择文件')
+  if (!uploadForm.value.templateType || !uploadForm.value.file) {
+    ElMessage.warning('请选择模版类型并选择文件')
     return
   }
   
@@ -217,8 +217,7 @@ const handleUpload = async () => {
     
     const formData = new FormData()
     formData.append('file', uploadForm.value.file)
-    // 注意：后端可能需要templateName参数，根据实际API调整
-    // 如果后端支持，可以添加：formData.append('templateName', uploadForm.value.templateName)
+    formData.append('templateType', uploadForm.value.templateType)
     
     const res = await uploadTemplate(formData)
     
@@ -226,7 +225,7 @@ const handleUpload = async () => {
       ElMessage.success('上传成功')
       uploadDialogVisible.value = false
       uploadForm.value = {
-        templateName: '',
+        templateType: '',
         file: null
       }
       // 清空upload组件
