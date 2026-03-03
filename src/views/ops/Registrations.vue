@@ -536,12 +536,11 @@ const downloadProof = async (material) => {
   }
 }
 
-// 判断文件是否可以预览
+// 判断文件是否可以预览（仅图片，PDF 统一走下载）
 const canPreview = (fileName) => {
   if (!fileName) return false
   const lowerName = fileName.toLowerCase()
-  return lowerName.endsWith('.pdf') || 
-         lowerName.endsWith('.jpg') || 
+  return lowerName.endsWith('.jpg') || 
          lowerName.endsWith('.jpeg') || 
          lowerName.endsWith('.png') || 
          lowerName.endsWith('.gif')
