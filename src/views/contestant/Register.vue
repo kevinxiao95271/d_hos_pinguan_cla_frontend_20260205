@@ -312,6 +312,16 @@
       
       <!-- 步骤4: 提交资料 -->
       <div v-show="currentStep === 3" class="step-content">
+        <el-alert
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 12px;"
+        >
+          <template #default>
+            报名表要求Word文档形式，请单位盖章后另上传PDF扫描件一份。
+          </template>
+        </el-alert>
         <el-table :data="materialsList" border>
           <el-table-column prop="type" label="类型" width="200">
             <template #default="{ row }">

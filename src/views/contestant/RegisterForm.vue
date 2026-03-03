@@ -314,6 +314,16 @@
           <el-form label-width="150px" :disabled="isDisabled">
             <el-form-item label="报名表 Word" required>
               <div style="display: flex; flex-direction: column; gap: 12px;">
+                <el-alert
+                  type="info"
+                  :closable="false"
+                  show-icon
+                  style="padding: 6px 12px;"
+                >
+                  <template #default>
+                    报名表要求Word文档形式，请单位盖章后另上传PDF扫描件一份。
+                  </template>
+                </el-alert>
                 <el-upload
                   :auto-upload="false"
                   :on-change="handleRegistrationFormDocChange"
