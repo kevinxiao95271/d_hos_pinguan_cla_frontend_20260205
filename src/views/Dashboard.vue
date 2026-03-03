@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="dashboard">
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>欢迎使用浙江省品管大赛管理系统</span>
+          <span>欢迎使用浙江省医院品管大赛管理系统</span>
         </div>
       </template>
       

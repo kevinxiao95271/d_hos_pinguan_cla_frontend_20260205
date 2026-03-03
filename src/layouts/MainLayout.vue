@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <el-container class="main-layout">
     <el-header class="header">
       <div class="header-left">
-        <h1 class="title">浙江省品管大赛管理系统</h1>
+        <h1 class="title">浙江省医院品管大赛管理系统</h1>
       </div>
       <div class="header-right">
         <el-dropdown @command="handleCommand">
