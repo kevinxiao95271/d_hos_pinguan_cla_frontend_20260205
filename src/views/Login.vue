@@ -56,9 +56,6 @@
         </div>
 
         <div class="login-extra">
-          <el-link type="info" :underline="false" style="color: #67b3e8;" @click="showScorePdf = true">
-            📄 浙江省医院品管大赛历年积分汇总情况
-          </el-link>
           <el-link type="info" :underline="false" style="color: #67b3e8;" @click="showGuidePdf = true">
             📄 报名系统操作说明
           </el-link>
@@ -89,27 +86,6 @@
     />
   </el-dialog>
 
-  <!-- 历年评分 PDF 预览弹窗 -->
-  <el-dialog
-    v-model="showScorePdf"
-    title="历年评分参考"
-    width="80%"
-    top="5vh"
-    destroy-on-close
-  >
-    <template #header>
-      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-        <span style="font-size:16px; font-weight:600;">浙江省医院品管大赛历年积分汇总情况</span>
-        <el-button type="primary" size="small" :icon="Download" @click="downloadPdf">
-          下载 PDF
-        </el-button>
-      </div>
-    </template>
-    <iframe
-      :src="pdfUrl"
-      style="width:100%; height:75vh; border:none;"
-    />
-  </el-dialog>
 </template>
 
 <script setup>
@@ -206,16 +182,6 @@ const goToRegister = () => {
 
 const handleForgotPassword = () => {
   ElMessage.info('密码重置功能开发中，请联系管理员')
-}
-
-// 历年评分 PDF
-const showScorePdf = ref(false)
-const pdfUrl = `${import.meta.env.BASE_URL}historical_score.pdf`
-const downloadPdf = () => {
-  const a = document.createElement('a')
-  a.href = pdfUrl
-  a.download = '浙江省医院品管大赛历年积分汇总表.pdf'
-  a.click()
 }
 
 // 报名系统操作说明 PDF

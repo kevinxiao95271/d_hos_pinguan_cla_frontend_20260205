@@ -239,6 +239,9 @@
           <el-descriptions-item label="报名时间">
             {{ formatDate(currentDetail.registration.submittedAt) }}
           </el-descriptions-item>
+          <el-descriptions-item label="项目负责人">
+            {{ currentDetail._applicantName || '-' }}
+          </el-descriptions-item>
         </el-descriptions>
         
         <!-- 活动信息 -->
@@ -560,6 +563,7 @@ const viewDetail = async (row) => {
     
     if (res.success) {
       currentDetail.value = res.data
+      currentDetail.value._applicantName = row.applicantName
       console.log('✅ 详情加载成功:', res.data)
     } else {
       console.error('❌ 加载详情失败:', res.message)
@@ -590,6 +594,7 @@ const viewMaterials = async (row) => {
     const res = await getRegistration(id)
     if (res.success) {
       currentDetail.value = res.data
+      currentDetail.value._applicantName = row.applicantName
     } else {
       ElMessage.error('加载详情失败')
     }

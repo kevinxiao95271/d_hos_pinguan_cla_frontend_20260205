@@ -265,8 +265,8 @@
               {{ getStatusText(currentDetail.registration?.status || currentDetail.status) }}
             </el-tag>
           </el-descriptions-item>
-          <el-descriptions-item label="报名人">
-            {{ currentDetail.registration?.applicantName || currentDetail.applicantName }}
+          <el-descriptions-item label="项目负责人">
+            {{ currentDetail.registration?.applicantName || currentDetail.applicantName || currentDetail._applicantName || '-' }}
           </el-descriptions-item>
           <el-descriptions-item label="提交时间">
             {{ formatDate(currentDetail.registration?.submittedAt || currentDetail.submittedAt) }}
@@ -492,6 +492,10 @@ const viewDetail = async (row) => {
     const res = await getRegistration(id)
     if (res.success) {
       currentDetail.value = res.data
+      // 详情接口不含 applicantName，从列表行补充
+      if (!currentDetail.value.applicantName && !currentDetail.value.registration?.applicantName) {
+        currentDetail.value._applicantName = row.applicantName
+      }
     } else {
       ElMessage.error('加载详情失败')
     }

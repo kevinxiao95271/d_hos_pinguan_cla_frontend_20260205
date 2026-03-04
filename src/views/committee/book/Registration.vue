@@ -341,6 +341,9 @@
             <el-tag v-else-if="currentDetail.registration.status === 'REJECTED'" type="danger">已驳回</el-tag>
             <el-tag v-else>{{ currentDetail.registration.status }}</el-tag>
           </el-descriptions-item>
+          <el-descriptions-item label="项目负责人">
+            {{ currentDetail._applicantName || '-' }}
+          </el-descriptions-item>
         </el-descriptions>
         
         <!-- 活动信息 -->
@@ -648,6 +651,7 @@ const viewMaterials = async (row) => {
     const res = await getRegistration(row.registrationId)
     if (res.success) {
       currentDetail.value = res.data
+      currentDetail.value._applicantName = row.applicantName
     } else {
       ElMessage.error('加载详情失败')
     }
@@ -754,6 +758,7 @@ const viewDetail = async (row) => {
     const res = await getRegistration(row.registrationId)
     if (res.success) {
       currentDetail.value = res.data
+      currentDetail.value._applicantName = row.applicantName
     } else {
       ElMessage.error('加载详情失败')
     }

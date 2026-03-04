@@ -52,9 +52,34 @@
             </div>
           </div>
         </el-card>
+
+        <!-- 历年积分参考入口 -->
+        <div class="score-history-link">
+          <el-link :underline="false" style="color: #67b3e8;" @click="showScorePdf = true">
+            📄 浙江省医院品管大赛历年积分汇总情况
+          </el-link>
+        </div>
       </div>
     </el-card>
   </div>
+
+  <!-- 历年积分 PDF 预览弹窗 -->
+  <el-dialog
+    v-model="showScorePdf"
+    width="80%"
+    top="5vh"
+    destroy-on-close
+  >
+    <template #header>
+      <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+        <span style="font-size:16px; font-weight:600;">浙江省医院品管大赛历年积分汇总情况</span>
+        <el-button type="primary" size="small" :icon="Download" @click="downloadScorePdf">
+          下载 PDF
+        </el-button>
+      </div>
+    </template>
+    <iframe :src="scorePdfUrl" style="width:100%; height:75vh; border:none;" />
+  </el-dialog>
 </template>
 
 <script setup>
@@ -62,6 +87,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCompetitions } from '@/api/competition'
 import { getMyRegistrations } from '@/api/registration'
+import { Download } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 
 const router = useRouter()
@@ -161,6 +187,16 @@ const handleButtonClick = (item) => {
   }
 }
 
+// 历年积分 PDF
+const showScorePdf = ref(false)
+const scorePdfUrl = `${import.meta.env.BASE_URL}historical_score.pdf`
+const downloadScorePdf = () => {
+  const a = document.createElement('a')
+  a.href = scorePdfUrl
+  a.download = '浙江省医院品管大赛历年积分汇总表.pdf'
+  a.click()
+}
+
 onMounted(() => {
   loadData()
 })
@@ -220,6 +256,11 @@ onMounted(() => {
           justify-content: flex-end;
         }
       }
+    }
+
+    .score-history-link {
+      margin-top: 12px;
+      text-align: center;
     }
   }
 }
