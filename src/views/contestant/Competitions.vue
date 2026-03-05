@@ -53,10 +53,16 @@
           </div>
         </el-card>
 
-        <!-- 历年积分参考入口 -->
+        <!-- 资料下载区 -->
         <div class="score-history-link">
           <el-link :underline="false" style="color: #67b3e8;" @click="showScorePdf = true">
             📄 浙江省医院品管大赛历年积分汇总情况
+          </el-link>
+          <el-link :underline="false" style="color: #67b3e8;" @click="downloadFile(registrationTemplateUrl, '2026年浙江省医院品管大赛报名表、活动说明、摘要内容模版.docx')">
+            📝 2026年浙江省医院品管大赛报名表、活动说明、摘要内容模版
+          </el-link>
+          <el-link :underline="false" style="color: #67b3e8;" @click="downloadFile(resultReportGuideUrl, '成果报告书制作说明.docx')">
+            📝 成果报告书制作说明
           </el-link>
         </div>
       </div>
@@ -191,9 +197,17 @@ const handleButtonClick = (item) => {
 const showScorePdf = ref(false)
 const scorePdfUrl = `${import.meta.env.BASE_URL}historical_score.pdf`
 const downloadScorePdf = () => {
+  downloadFile(scorePdfUrl, '浙江省医院品管大赛历年积分汇总表.pdf')
+}
+
+// 模版文件
+const registrationTemplateUrl = `${import.meta.env.BASE_URL}registration_template.docx`
+const resultReportGuideUrl = `${import.meta.env.BASE_URL}result_report_guide.docx`
+
+const downloadFile = (url, filename) => {
   const a = document.createElement('a')
-  a.href = scorePdfUrl
-  a.download = '浙江省医院品管大赛历年积分汇总表.pdf'
+  a.href = url
+  a.download = filename
   a.click()
 }
 
@@ -260,7 +274,10 @@ onMounted(() => {
 
     .score-history-link {
       margin-top: 12px;
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
     }
   }
 }
