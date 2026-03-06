@@ -5,6 +5,7 @@
         <div class="card-header">
           <span>{{ registrationId ? '编辑报名' : '新建报名' }}</span>
           <el-tag v-if="form.status === 'DRAFT'" type="warning">草稿</el-tag>
+          <el-tag v-else-if="form.status === 'RETURNED'" type="danger">已被驳回，请修改后重新提交</el-tag>
           <el-tag v-else-if="form.status === 'SUBMITTED'" type="success">已提交</el-tag>
         </div>
       </template>
@@ -466,7 +467,8 @@ import {
   updateRegistrationSummary,
   uploadRegistrationMaterial,
   submitRegistration,
-  getRegistrationDetail
+  getRegistrationDetail,
+  getRegistrationCountByInstitution
 } from '@/api/registration'
 import { getCompetitions } from '@/api/competition'
 import { getDictionaries } from '@/api/dictionary'
@@ -982,6 +984,13 @@ const submitForm = async () => {
       return
     }
     
+    // 提交前检查机构项目数量上限
+    const countRes = await getRegistrationCountByInstitution(form.basic.competitionId)
+    if (countRes.success && countRes.data >= 8) {
+      ElMessage.error('您所在机构在本次赛事中已提交 8 个项目，已达上限，无法继续提交')
+      return
+    }
+
     // 确认提交
     await ElMessageBox.confirm(
       '确认提交报名？提交后将无法修改。',

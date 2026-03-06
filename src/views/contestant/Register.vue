@@ -407,7 +407,8 @@ import {
   updateRegistrationMembers,
   updateRegistrationActivity,
   updateRegistrationSummary,
-  submitRegistration as submitRegistrationApi
+  submitRegistration as submitRegistrationApi,
+  getRegistrationCountByInstitution
 } from '@/api/registration'
 import { getInstitution } from '@/api/institution'
 import { getDictionaryByType } from '@/api/dictionary'
@@ -736,6 +737,12 @@ const deleteMaterial = (type) => {
 const submitRegistration = async () => {
   try {
     submitting.value = true
+    // 提交前检查机构项目数量上限
+    const countRes = await getRegistrationCountByInstitution(competitionId.value)
+    if (countRes.success && countRes.data >= 8) {
+      ElMessage.error('您所在机构在本次赛事中已提交 8 个项目，已达上限，无法继续提交')
+      return
+    }
     await submitRegistrationApi(registrationId.value)
     ElMessage.success('提交成功')
     router.push('/contestant/dashboard')

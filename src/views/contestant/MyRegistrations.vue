@@ -49,7 +49,11 @@
             <el-space :size="4" wrap>
               <template v-if="row.status === 'DRAFT'">
                 <el-button type="primary" size="small" @click="editRegistration(row.id)">编辑</el-button>
-                <el-button type="success" size="small" @click="submitRegistration(row.id)">提交</el-button>
+                <el-button type="success" size="small" @click="submitRegistration(row.id, row.competitionId)">提交</el-button>
+              </template>
+              <template v-else-if="row.status === 'RETURNED'">
+                <el-tag type="warning" size="small" style="margin-right:4px">已被驳回</el-tag>
+                <el-button type="primary" size="small" @click="editRegistration(row.id)">修改后重新提交</el-button>
               </template>
               <template v-else-if="row.status === 'SUBMITTED'">
                 <el-button size="small" disabled style="cursor:not-allowed;opacity:.6">已提交</el-button>
@@ -158,7 +162,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
-import { getMyRegistrations, submitRegistration as submitReg, getRegistration, uploadRegistrationMaterial } from '@/api/registration'
+import { getMyRegistrations, submitRegistration as submitReg, getRegistration, uploadRegistrationMaterial, getRegistrationCountByInstitution } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import dayjs from 'dayjs'
 
@@ -333,8 +337,16 @@ const editRegistration = (id) => router.push(`/contestant/register/${id}`)
 const viewDetail = (id) => router.push(`/contestant/registration/${id}`)
 const viewResults = (id) => router.push(`/contestant/registration/${id}/results`)
 
-const submitRegistration = async (id) => {
+const submitRegistration = async (id, competitionId) => {
   try {
+    // 提交前检查机构项目数量上限
+    if (competitionId) {
+      const countRes = await getRegistrationCountByInstitution(competitionId)
+      if (countRes.success && countRes.data >= 8) {
+        ElMessage.error('您所在机构在本次赛事中已提交 8 个项目，已达上限，无法继续提交')
+        return
+      }
+    }
     await ElMessageBox.confirm('确认提交报名？提交后将无法修改。', '确认提交', {
       confirmButtonText: '确认',
       cancelButtonText: '取消',

@@ -124,6 +124,17 @@ export function getRegistrationsByApplicant(applicantId) {
 }
 
 /**
+ * 获取当前机构在指定赛事下的报名数量
+ */
+export function getRegistrationCountByInstitution(competitionId) {
+  return request({
+    url: '/registrations/count-by-institution',
+    method: 'get',
+    params: { competitionId }
+  })
+}
+
+/**
  * 获取报名详情
  */
 export function getRegistration(id) {

@@ -56,9 +56,10 @@ def main():
     print('[3/4] 解压并部署到 /data/pgds...')
     run(client, 'apt-get install -y unzip 2>/dev/null | tail -1')
     run(client, 'rm -rf /data/pgds_bak && [ -d /data/pgds ] && mv /data/pgds /data/pgds_bak || true')
-    run(client, 'unzip -o /data/dist.zip -d /data/tmp_pgds')
-    run(client, 'mv /data/tmp_pgds/dist /data/pgds')
-    run(client, 'rm -rf /data/tmp_pgds /data/dist.zip')
+    run(client, 'mkdir -p /data/tmp_pgds && unzip -o /data/dist.zip -d /data/tmp_pgds')
+    # zip 内容是 dist/* 直接展开，没有 dist 子目录
+    run(client, 'mv /data/tmp_pgds /data/pgds')
+    run(client, 'rm -f /data/dist.zip')
     run(client, 'ls /data/pgds')
 
     print('[4/4] Reload Nginx...')

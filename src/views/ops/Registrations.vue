@@ -207,10 +207,18 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="viewDetail(row)">
               详情
+            </el-button>
+            <el-button
+              v-if="row.status === 'SUBMITTED'"
+              type="warning"
+              size="small"
+              @click="openReturnDialog(row)"
+            >
+              驳回
             </el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">
               删除
@@ -327,6 +335,13 @@
       </div>
       
       <template #footer>
+        <el-button
+          v-if="(currentDetail?.registration?.status || currentDetail?.status) === 'SUBMITTED'"
+          type="warning"
+          @click="openReturnDialogFromDetail"
+        >
+          驳回此项目
+        </el-button>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
@@ -341,6 +356,36 @@
       <div style="text-align: center;">
         <img :src="imagePreviewUrl" style="max-width: 100%; max-height: 70vh;" />
       </div>
+    </el-dialog>
+
+    <!-- 驳回对话框 -->
+    <el-dialog
+      v-model="returnDialogVisible"
+      title="驳回报名"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <div>
+        <p style="margin-bottom:12px;color:#606266">
+          项目：<strong>{{ returnTarget?.projectName }}</strong>
+        </p>
+        <el-form label-width="80px">
+          <el-form-item label="驳回原因">
+            <el-input
+              v-model="returnReason"
+              type="textarea"
+              :rows="4"
+              placeholder="请填写驳回原因（将通知参赛用户）"
+              maxlength="500"
+              show-word-limit
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button @click="returnDialogVisible = false">取消</el-button>
+        <el-button type="warning" :loading="returning" @click="confirmReturn">确认驳回</el-button>
+      </template>
     </el-dialog>
 
     <!-- 缴费凭证弹窗 -->
@@ -375,7 +420,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { filterRegistrations, deleteRegistration } from '@/api/admin'
-import { getRegistration } from '@/api/registration'
+import { getRegistration, returnRegistration } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import { getCompetitions } from '@/api/competition'
 import { getCurrentCompetitionId } from '@/utils/competition'
@@ -591,6 +636,50 @@ const downloadFile = async (material) => {
   } catch (error) {
     console.error('下载文件失败:', error)
     ElMessage.error('下载失败')
+  }
+}
+
+// 驳回报名
+const returnDialogVisible = ref(false)
+const returnTarget = ref(null)
+const returnReason = ref('')
+const returning = ref(false)
+
+const openReturnDialog = (row) => {
+  returnTarget.value = { registrationId: row.registrationId || row.id, projectName: row.projectName }
+  returnReason.value = ''
+  returnDialogVisible.value = true
+}
+
+const openReturnDialogFromDetail = () => {
+  const id = currentDetail.value?.registration?.id || currentDetail.value?.id
+  const name = currentDetail.value?.registration?.projectName || currentDetail.value?.projectName
+  returnTarget.value = { registrationId: id, projectName: name }
+  returnReason.value = ''
+  returnDialogVisible.value = true
+}
+
+const confirmReturn = async () => {
+  if (!returnReason.value.trim()) {
+    ElMessage.warning('请填写驳回原因')
+    return
+  }
+  returning.value = true
+  try {
+    const res = await returnRegistration(returnTarget.value.registrationId, { reason: returnReason.value.trim() })
+    if (res.success) {
+      ElMessage.success('已驳回，参赛用户可重新编辑后提交')
+      returnDialogVisible.value = false
+      detailDialogVisible.value = false
+      loadRegistrations()
+    } else {
+      ElMessage.error(res.message || '驳回失败')
+    }
+  } catch (error) {
+    console.error('驳回失败:', error)
+    ElMessage.error(error.response?.data?.message || '驳回失败')
+  } finally {
+    returning.value = false
   }
 }
 
