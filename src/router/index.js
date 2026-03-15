@@ -200,7 +200,7 @@ const routes = [
   {
     path: '/ops',
     component: () => import('@/layouts/MainLayout.vue'),
-    meta: { requiresAuth: true, roles: ['OPS'] },
+    meta: { requiresAuth: true, roles: ['COMMITTEE_ADMIN', 'OPS'] },
     children: [
       {
         path: 'dashboard',
