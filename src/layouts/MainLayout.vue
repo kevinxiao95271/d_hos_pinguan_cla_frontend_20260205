@@ -289,46 +289,70 @@ const handleCommand = (command) => {
       
       .el-menu {
         border-right: none;
-        background-color: #001529;
+        // 侧边栏整体渐变背景
+        background: linear-gradient(180deg, #001d3d 0%, #000e1f 100%);
 
         // ── 一级：sub-menu 标题（有子项的折叠组）──
         :deep(.level-1-submenu > .el-sub-menu__title) {
-          font-size: 14px;
+          font-size: 13.5px;
           font-weight: 700;
-          color: #ffffff;
-          letter-spacing: 0.5px;
-          border-left: 3px solid #1890ff;
+          color: #e8f4ff;
+          letter-spacing: 0.6px;
+          // 渐变左边框：用 background 模拟（蓝→青）
+          background-image: linear-gradient(to bottom, #1890ff, #36cfc9),
+                            linear-gradient(to right, rgba(24, 144, 255, 0.08), transparent);
+          background-size: 3px 100%, 100% 100%;
+          background-position: left center, left center;
+          background-repeat: no-repeat, no-repeat;
+          padding-left: 18px !important;
 
           .el-icon {
-            color: #40a9ff;
-            font-size: 16px;
+            // 图标也做渐变（用 filter 近似）
+            color: #40c9ff;
+            font-size: 15px;
+            filter: drop-shadow(0 0 4px rgba(64, 201, 255, 0.5));
           }
 
           &:hover {
-            background-color: #0f2540 !important;
+            background-image: linear-gradient(to bottom, #1890ff, #36cfc9),
+                              linear-gradient(90deg, rgba(24, 144, 255, 0.18), transparent 80%);
+            background-size: 3px 100%, 100% 100%;
+            background-color: transparent !important;
           }
         }
 
         // ── 一级：直接菜单项（无子项，如"入围管理"）──
         :deep(.level-1-item) {
-          font-size: 14px;
+          font-size: 13.5px;
           font-weight: 700;
-          color: #ffffff;
-          letter-spacing: 0.5px;
-          border-left: 3px solid #1890ff;
+          color: #e8f4ff;
+          letter-spacing: 0.6px;
+          background-image: linear-gradient(to bottom, #1890ff, #36cfc9),
+                            linear-gradient(to right, rgba(24, 144, 255, 0.08), transparent);
+          background-size: 3px 100%, 100% 100%;
+          background-position: left center, left center;
+          background-repeat: no-repeat, no-repeat;
+          padding-left: 18px !important;
 
           .el-icon {
-            color: #40a9ff;
-            font-size: 16px;
+            color: #40c9ff;
+            font-size: 15px;
+            filter: drop-shadow(0 0 4px rgba(64, 201, 255, 0.5));
           }
 
           &:hover {
-            background-color: #1890ff !important;
+            background-image: linear-gradient(to bottom, #1890ff, #36cfc9),
+                              linear-gradient(90deg, rgba(24, 144, 255, 0.25), transparent 80%);
+            background-size: 3px 100%, 100% 100%;
+            background-color: transparent !important;
             color: #ffffff !important;
           }
 
           &.is-active {
-            background-color: #1890ff !important;
+            background-image: linear-gradient(to bottom, #1890ff, #36cfc9),
+                              linear-gradient(90deg, rgba(24, 144, 255, 0.3), transparent 80%);
+            background-size: 3px 100%, 100% 100%;
+            background-color: transparent !important;
             color: #ffffff !important;
           }
         }
@@ -336,37 +360,36 @@ const handleCommand = (command) => {
         // ── 二级 sub-menu 标题（有三级子项）──
         :deep(.level-2-submenu > .el-sub-menu__title) {
           font-size: 13px;
-          font-weight: 600;
-          color: #a8c4e0;
-          padding-left: 32px !important;
-          border-left: none;
+          font-weight: 500;
+          color: #69b1ff;
+          padding-left: 30px !important;
 
           .el-icon {
-            color: #7eb8e8;
-            font-size: 14px;
+            color: #69b1ff;
+            font-size: 13px;
           }
 
           &:hover {
-            background-color: #0d1e30 !important;
-            color: #d0e8ff !important;
+            background: linear-gradient(90deg, rgba(105, 177, 255, 0.12), transparent 80%) !important;
+            color: #91caff !important;
           }
         }
 
         // ── 二级菜单项（无三级子项，如"历史数据"）──
         :deep(.level-2-item) {
           font-size: 13px;
-          font-weight: 500;
-          color: #a8c4e0;
-          padding-left: 32px !important;
+          font-weight: 400;
+          color: #69b1ff;
+          padding-left: 30px !important;
 
           &:hover {
-            background-color: #1890ff !important;
+            background: linear-gradient(90deg, rgba(24, 144, 255, 0.25), transparent 80%) !important;
             color: #ffffff !important;
           }
 
           &.is-active {
-            background-color: #1890ff !important;
-            color: #ffffff !important;
+            background: linear-gradient(90deg, rgba(24, 144, 255, 0.35), transparent 85%) !important;
+            color: #91caff !important;
             font-weight: 600;
           }
         }
@@ -375,34 +398,34 @@ const handleCommand = (command) => {
         :deep(.level-3-item) {
           font-size: 12.5px;
           font-weight: 400;
-          color: #7ba8cc;
-          padding-left: 52px !important;
+          color: #91caff;
+          padding-left: 48px !important;
 
           &:hover {
-            background-color: #1890ff !important;
+            background: linear-gradient(90deg, rgba(54, 207, 201, 0.2), transparent 80%) !important;
             color: #ffffff !important;
           }
 
           &.is-active {
-            background-color: #1890ff !important;
-            color: #ffffff !important;
+            background: linear-gradient(90deg, rgba(54, 207, 201, 0.28), transparent 85%) !important;
+            color: #b5f5ec !important;
             font-weight: 600;
           }
         }
 
-        // ── 通用箭头颜色 ──
+        // ── 箭头颜色 ──
         :deep(.el-sub-menu__icon-arrow) {
-          color: #7ba8cc;
+          color: #4d8fcc;
         }
 
         // ── 二级展开背景 ──
         :deep(.el-menu--inline) {
-          background-color: #000c17;
+          background: linear-gradient(180deg, #001428 0%, #000b1a 100%);
         }
 
-        // ── 三级展开背景（更深）──
+        // ── 三级展开背景 ──
         :deep(.el-menu--inline .el-menu--inline) {
-          background-color: #00070f;
+          background: linear-gradient(180deg, #000a14 0%, #00060e 100%);
         }
       }
     }
