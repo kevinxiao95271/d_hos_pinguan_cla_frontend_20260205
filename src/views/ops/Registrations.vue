@@ -403,8 +403,9 @@
             {{ formatDate(row.uploadedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80" align="center">
+        <el-table-column label="操作" width="130" align="center">
           <template #default="{ row }">
+            <el-button v-if="canPreview(row.fileName)" type="success" size="small" link @click="previewFile(row)">预览</el-button>
             <el-button type="primary" size="small" link @click="downloadProof(row)">下载</el-button>
           </template>
         </el-table-column>
