@@ -3,118 +3,179 @@
     <!-- 赛事进度条 -->
     <StageProgress :stages="stagesList" />
 
-    <!-- 入围策略配置 -->
+    <!-- 书审/面谈重叠时：切换入围操作场景（快照维度） -->
+    <el-card class="shortlist-context-card" shadow="hover">
+      <div class="context-switch-wrap">
+        <div class="context-switch-head">
+          <span class="context-switch-title">入围操作场景</span>
+          <el-tag type="info" effect="plain" size="small">书审与面谈阶段切换</el-tag>
+        </div>
+        <el-radio-group
+          v-model="rankStage"
+          size="large"
+          class="context-radio-group"
+          @change="onRankStageChange"
+        >
+          <el-radio-button value="BOOK">书审入围</el-radio-button>
+          <el-radio-button value="INTERVIEW">面谈入围</el-radio-button>
+          <!-- 决赛入围暂不上线 -->
+        </el-radio-group>
+        <p class="context-hint">
+          下方列表、统计、「计算排名」及增补/取消均针对<strong>当前场景</strong>的排名快照；
+          书审入围与面谈入围数据相互独立，请分别计算、分别维护。
+        </p>
+      </div>
+    </el-card>
+
+    <!-- 入围规则与快照 -->
     <el-card class="config-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="card-title">入围策略配置</span>
-          <el-tag type="info">综合书审和面谈排名</el-tag>
+          <span class="card-title">入围规则与排名快照（{{ stageShortlistTitle }}）</span>
+          <el-tag type="warning">coefficient 调整需先「计算排名」</el-tag>
         </div>
       </template>
 
       <el-form label-width="120px">
-        <!-- 评分权重 -->
-        <el-form-item label="评分权重">
-          <el-alert
-            title="说明：基层组和综合组仅书审评分，进阶组为书审+面谈加权平均"
-            type="info"
-            :closable="false"
-            style="margin-bottom: 15px"
-          />
-          <div class="weight-config">
-            <span style="margin-right: 10px">书审权重:</span>
-            <el-input-number
-              v-model="config.bookWeight"
-              :min="0"
-              :max="100"
-              :step="5"
-              style="width: 120px"
-            />
-            <span style="margin: 0 20px 0 5px">%</span>
-            
-            <span style="margin-right: 10px">面谈权重:</span>
-            <el-input-number
-              v-model="config.interviewWeight"
-              :min="0"
-              :max="100"
-              :step="5"
-              style="width: 120px"
-            />
-            <span style="margin: 0 20px 0 5px">%</span>
-            
-            <el-button
-              type="primary"
-              @click="applyWeight"
-              :disabled="config.bookWeight + config.interviewWeight !== 100"
-            >
-              应用权重
-            </el-button>
-            
-            <el-tag
-              v-if="config.bookWeight + config.interviewWeight !== 100"
-              type="warning"
-              style="margin-left: 10px"
-            >
-              权重总和必须为100%
-            </el-tag>
-          </div>
-        </el-form-item>
-
-        <!-- 入围比例 -->
-        <el-form-item label="入围比例">
-          <el-radio-group v-model="config.ratioType" @change="handleRatioChange">
-            <el-radio value="30">前30%</el-radio>
-            <el-radio value="40">前40%</el-radio>
-            <el-radio value="50">前50%</el-radio>
-            <el-radio value="custom">自定义</el-radio>
-          </el-radio-group>
-          <el-input-number
-            v-if="config.ratioType === 'custom'"
-            v-model="config.customRatio"
-            :min="1"
-            :max="100"
-            style="width: 120px; margin-left: 10px"
-            @change="handleRatioChange"
+        <el-form-item label="当前场景">
+          <span class="scene-current-value">{{ stageShortlistTitle }}</span>
+          <el-button
+            type="primary"
+            :loading="computing"
+            style="margin-left: 16px"
+            @click="handleComputeRanking"
           >
-            <template #suffix>%</template>
-          </el-input-number>
-        </el-form-item>
-
-        <!-- 最低分数线 -->
-        <el-form-item label="最低分数线">
-          <el-input-number
-            v-model="config.minScore"
-            :min="0"
-            :max="100"
-            :precision="1"
-            style="width: 150px"
-          />
-          <span style="margin-left: 10px">分</span>
-          <el-text type="info" style="margin-left: 20px" size="small">
-            低于此分数的项目将自动排除
+            计算当前场景排名
+          </el-button>
+          <el-text type="info" style="margin-left: 12px" size="small">
+            仅写入「{{ stageLabel }}」阶段快照，不影响其他阶段
           </el-text>
         </el-form-item>
 
-        <!-- 操作按钮 -->
+        <el-form-item label="入围配置">
+          <el-table v-loading="configLoading" :data="serverConfig" border size="small" style="width: 100%; max-width: 800px">
+            <el-table-column label="组别" width="100">
+              <template #default="{ row }">
+                {{ getGroupTypeLabel(row.groupType) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="模式" width="150">
+              <template #default="{ row }">
+                <el-select v-model="row.mode" size="small" style="width: 130px">
+                  <el-option label="按比例 (RATIO)" value="RATIO" />
+                  <el-option label="取前N名 (COUNT)" value="COUNT" />
+                </el-select>
+              </template>
+            </el-table-column>
+            <el-table-column label="值" min-width="220">
+              <template #default="{ row }">
+                <el-input-number
+                  v-model="row.value"
+                  :min="0"
+                  :max="row.mode === 'RATIO' ? 1 : 9999"
+                  :step="row.mode === 'RATIO' ? 0.01 : 1"
+                  :precision="row.mode === 'RATIO' ? 2 : 0"
+                  size="small"
+                  style="width: 140px"
+                />
+                <span v-if="row.mode === 'RATIO'" style="margin-left: 8px; color: #909399; font-size: 12px">
+                  如 0.55 表示 55%
+                </span>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="100" align="center">
+              <template #default="{ row }">
+                <el-button type="primary" link size="small" @click="saveGroupConfig(row)">保存</el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-text type="info" size="small" style="display: block; margin-top: 8px; line-height: 1.6">
+            「取前 N 名」需对<strong>基层组、综合组、进阶组</strong>分别选 COUNT 并保存（例如基层前 3 名保存一行，综合前 3 名再保存一行）。
+            保存后点<strong>刷新数据</strong>即可按新规则看到入围线；一般<strong>不必</strong>再点「计算排名」——除非尚未生成过调整分快照。
+            「计算排名」会一次性计算当前阶段下<strong>各组别</strong>的调整分与排名快照（不传单组参数）。
+          </el-text>
+        </el-form-item>
+
+        <el-form-item label="进阶组合分">
+          <div v-loading="advancedConfigLoading" class="advanced-ranking-box">
+            <p class="advanced-ranking-lead">
+              面谈阶段<strong>进阶组</strong>合分：书审调整分与面谈调整分按权重合并。请先在此保存权重与模式，再按顺序计算书审快照 → 面谈快照。
+            </p>
+            <el-row :gutter="16" align="middle">
+              <el-col :xs="24" :sm="8">
+                <span class="inline-label">书审权重</span>
+                <el-input-number
+                  v-model="advancedRankingForm.bookWeight"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  :precision="2"
+                  style="width: 140px"
+                />
+              </el-col>
+              <el-col :xs="24" :sm="8">
+                <span class="inline-label">面谈权重</span>
+                <el-input-number
+                  v-model="advancedRankingForm.interviewWeight"
+                  :min="0"
+                  :max="1"
+                  :step="0.05"
+                  :precision="2"
+                  style="width: 140px"
+                />
+              </el-col>
+              <el-col :xs="24" :sm="8">
+                <span class="inline-label">合分模式</span>
+                <el-select v-model="advancedRankingForm.rankingMode" style="width: 100%; min-width: 200px">
+                  <el-option
+                    label="先调整后加权 ADJUST_THEN_WEIGHT（推荐）"
+                    value="ADJUST_THEN_WEIGHT"
+                  />
+                  <el-option
+                    label="先加权后整体调整 WEIGHT_THEN_ADJUST"
+                    value="WEIGHT_THEN_ADJUST"
+                  />
+                </el-select>
+              </el-col>
+            </el-row>
+            <div class="advanced-ranking-actions">
+              <el-button
+                type="primary"
+                :loading="advancedConfigSaving"
+                @click="handleSaveAdvancedRankingConfig"
+              >
+                保存进阶组合分配置
+              </el-button>
+              <el-text v-if="advancedWeightSumOk" type="success" size="small" style="margin-left: 12px">
+                权重合计 = 1
+              </el-text>
+              <el-text v-else type="warning" size="small" style="margin-left: 12px">
+                书审 + 面谈权重应等于 1
+              </el-text>
+            </div>
+            <ol class="advanced-flow-ol">
+              <li>保存本配置（PUT advanced-ranking-config）</li>
+              <li>「书审入围」场景下「计算排名」stage=BOOK（先有书审调整分快照）</li>
+              <li>切换到「面谈入围」并「计算排名」stage=INTERVIEW（进阶组合权分写入快照）</li>
+              <li>在入围配置中为进阶组设 COUNT/RATIO 并保存</li>
+              <li>GET shortlist stage=INTERVIEW 查看 withinLine / shortlisted</li>
+            </ol>
+            <el-text type="info" size="small" class="advanced-flow-note">
+              若未先完成书审快照就算面谈，合分可能缺少书审调整分（后台可能回退，以日志为准）。
+            </el-text>
+          </div>
+        </el-form-item>
+
+        <el-alert
+          title="基层/综合组可主要使用「书审入围」；进阶组在面谈进行时可切换到「面谈入围」单独操作。阶段重叠时请用顶部场景切换，避免误改另一阶段数据。"
+          type="info"
+          :closable="false"
+          style="margin-bottom: 16px"
+        />
+
         <el-form-item>
-          <el-button type="primary" @click="loadData" :loading="loading" icon="Refresh">
-            刷新数据
-          </el-button>
-          <el-button
-            type="success"
-            @click="batchSetShortlist"
-            :disabled="eligibleProjects.length === 0"
-            icon="Select"
-          >
-            批量设置入围（按当前配置）
-          </el-button>
-          <el-button
-            @click="exportList"
-            :disabled="projects.length === 0"
-            icon="Download"
-          >
-            导出入围名单
-          </el-button>
+          <el-button type="primary" :loading="loading" icon="Refresh" @click="loadData">刷新数据</el-button>
+          <el-button :disabled="projects.length === 0" icon="Download" @click="exportList">导出入围名单</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -128,6 +189,7 @@
             placeholder="全部组别"
             clearable
             style="width: 150px"
+            @change="loadData"
           >
             <el-option label="基层组" value="BASIC" />
             <el-option label="进阶组" value="ADVANCED" />
@@ -163,48 +225,142 @@
       </el-form>
     </el-card>
 
-    <!-- 统计信息 -->
+    <!-- 统计信息：按组别分框 -->
     <el-card class="stats-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span class="card-title">入围统计（按组别）</span>
+          <el-text v-if="snapshotTimeText" type="info" size="small">
+            最近快照：{{ snapshotTimeText }}
+          </el-text>
+        </div>
+      </template>
+
       <el-row :gutter="20">
-        <el-col :span="4">
-          <el-statistic title="总项目数" :value="projects.length" />
+        <el-col :xs="24" :lg="12">
+          <div class="stats-segment-box stats-segment--plain">
+            <div class="stats-segment-title">基层组 + 综合组</div>
+            <div class="stat-grid">
+              <div class="stat-cell">
+                <div class="stat-label">总项目数</div>
+                <div class="stat-value">{{ statsNonAdvanced.total }}</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">总入围数 & 比例</div>
+                <div class="stat-value">
+                  {{ statsNonAdvanced.shortlistedCount }}
+                  <span class="stat-sub">({{ statsNonAdvanced.ratio }}%)</span>
+                </div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">增补入围</div>
+                <div class="stat-value accent">{{ statsNonAdvanced.includeShortlistedCount }}</div>
+                <div class="stat-hint">线内且曾强制增补</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">手动增补</div>
+                <div class="stat-value warn">{{ statsNonAdvanced.manualAddCount }}</div>
+                <div class="stat-hint">INCLUDE</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">手动取消</div>
+                <div class="stat-value danger">{{ statsNonAdvanced.manualRemoveCount }}</div>
+                <div class="stat-hint">EXCLUDE</div>
+              </div>
+            </div>
+            <div class="stats-segment-foot">
+              书审完成参考：{{ statsNonAdvanced.bookDone }} / {{ statsNonAdvanced.total }}
+            </div>
+          </div>
         </el-col>
-        <el-col :span="4">
-          <el-statistic title="已完成书审" :value="completedBookCount" />
-        </el-col>
-        <el-col :span="4">
-          <el-statistic title="已完成面谈" :value="completedInterviewCount" />
-        </el-col>
-        <el-col :span="4">
-          <el-statistic title="当前入围数" :value="shortlistedCount">
-            <template #suffix>
-              <span style="font-size: 14px; color: #909399">
-                ({{ shortlistRatio }}%)
-              </span>
-            </template>
-          </el-statistic>
-        </el-col>
-        <el-col :span="4">
-          <el-statistic title="手动增补" :value="manualAddCount" suffix="项" />
-        </el-col>
-        <el-col :span="4">
-          <el-statistic title="手动取消" :value="manualRemoveCount" suffix="项" />
+
+        <el-col :xs="24" :lg="12">
+          <div class="stats-segment-box stats-segment--advanced">
+            <div class="stats-segment-title">进阶组</div>
+            <div class="stat-grid">
+              <div class="stat-cell">
+                <div class="stat-label">总项目数</div>
+                <div class="stat-value">{{ statsAdvanced.total }}</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">总入围数 & 比例</div>
+                <div class="stat-value">
+                  {{ statsAdvanced.shortlistedCount }}
+                  <span class="stat-sub">({{ statsAdvanced.ratio }}%)</span>
+                </div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">增补入围</div>
+                <div class="stat-value accent">{{ statsAdvanced.includeShortlistedCount }}</div>
+                <div class="stat-hint">线内且曾强制增补</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">手动增补</div>
+                <div class="stat-value warn">{{ statsAdvanced.manualAddCount }}</div>
+                <div class="stat-hint">INCLUDE</div>
+              </div>
+              <div class="stat-cell">
+                <div class="stat-label">手动取消</div>
+                <div class="stat-value danger">{{ statsAdvanced.manualRemoveCount }}</div>
+                <div class="stat-hint">EXCLUDE</div>
+              </div>
+            </div>
+            <div class="stats-segment-foot">
+              书审 / 面谈完成参考：{{ statsAdvanced.bookDone }} / {{ statsAdvanced.interviewDone }} /
+              {{ statsAdvanced.total }}
+            </div>
+          </div>
         </el-col>
       </el-row>
     </el-card>
+
+    <!-- 算法与业务规则（页内可见，不必仅依赖导出文件） -->
+    <el-collapse v-model="ruleCollapseActive" class="rule-collapse-card">
+      <el-collapse-item name="rules">
+        <template #title>
+          <span class="rule-collapse-title">评分调整与入围规则说明（An / B / Cn / D）</span>
+          <el-tag size="small" type="success" effect="plain" style="margin-left: 8px">与下列列表列对应</el-tag>
+        </template>
+        <div class="rule-doc">
+          <p class="rule-lead">
+            为减少专家间差异、使不同小组项目可公平比较，大赛对<strong>专家打分后的项目平均分</strong>做系数调整后再排名、定入围。您可在<strong>本页列表</strong>直接看到原始分、系数与调整分；导出文件便于留档，并非唯一查看途径。
+          </p>
+          <ol class="rule-ol">
+            <li>评分要求：专家以 <strong>80 分</strong>为基准，按标准上下加减分。</li>
+            <li>
+              以综合组为例：项目按约 25～30 个一组分为 N 个小组，每组由 2 位专家打分。在<strong>同一组别内</strong>：
+              <ul class="rule-ul">
+                <li>（1）<strong>An</strong>：该小组内各项目专家打分的平均分（小组均分）。</li>
+                <li>（2）<strong>B</strong>：该<strong>组别内全部项目</strong>专家打分的平均分（全组均分）。</li>
+                <li>（3）<strong>Cn = An ÷ B</strong>：该小组的系数（本页「系数」列）。</li>
+                <li>
+                  （4）<strong>D</strong>：某项目两位专家打分后的<strong>平均分</strong>除以该项目所在小组的 <strong>Cn</strong>，得到<strong>调整分</strong>（本页「调整分」）。再按 <strong>D</strong> 在该组别内排名，并结合入围比例确定入围名单。
+                </li>
+              </ul>
+            </li>
+            <li>
+              <strong>去极值</strong>：计算 An、B 时，会去掉 <strong>65 分以下</strong>与 <strong>95 分以上</strong>的分数，减轻极端分对系数与调整分的影响（由后台在计算快照时执行）。
+            </li>
+          </ol>
+          <p class="rule-map-title">本页列表列与符号对应：</p>
+          <ul class="rule-map">
+            <li><strong>原始均分</strong>：专家打分后的项目平均（参与调整前的量）。</li>
+            <li><strong>调整分（D）</strong>：用于排名与入围线判断的调整后分数。</li>
+            <li><strong>Cn</strong>：小组系数；<strong>小组/全组</strong>：An 与 B 的展示（An / B）。</li>
+            <li><strong>排名</strong>：按当前阶段快照中调整分排序得到。</li>
+            <li><strong>入围配置</strong>：下方各组比例或名额与后台规则共同决定入围范围（如 50%～60% 等，以实际配置为准）。</li>
+          </ul>
+        </div>
+      </el-collapse-item>
+    </el-collapse>
 
     <!-- 项目列表 -->
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="card-title">综合排名列表</span>
+          <span class="card-title">{{ stageShortlistTitle }} · 调整分与操作</span>
           <div>
-            <el-tag type="success" style="margin-right: 10px">
-              基层组/综合组：仅书审
-            </el-tag>
-            <el-tag type="info">
-              进阶组：书审{{ config.bookWeight }}% + 面谈{{ config.interviewWeight }}%
-            </el-tag>
+            <el-tag type="info">快照阶段：{{ stageLabel }}</el-tag>
           </div>
         </div>
       </template>
@@ -217,44 +373,113 @@
         :row-class-name="getRowClassName"
         style="width: 100%"
       >
-        <!-- 综合排名 -->
-        <el-table-column prop="rank" label="综合排名" width="100" align="center" fixed>
+        <!-- 排名 irank -->
+        <el-table-column width="90" align="center" fixed>
+          <template #header>
+            <span>排名</span>
+            <el-tooltip
+              placement="top"
+              content="按当前阶段快照中的调整分（D）排序；需先「计算当前场景排名」生成快照。"
+            >
+              <el-icon class="col-header-tip"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <el-tag
-              v-if="row.rank && row.rank <= 3"
-              :type="getRankTagType(row.rank)"
+              v-if="row.irank && row.irank <= 3"
+              :type="getRankTagType(row.irank)"
               effect="dark"
               size="large"
             >
-              🏅 {{ row.rank }}
+              🏅 {{ row.irank }}
             </el-tag>
-            <span v-else-if="row.rank" style="font-weight: bold; font-size: 16px">
-              {{ row.rank }}
+            <span v-else-if="row.irank != null" style="font-weight: bold; font-size: 16px">
+              {{ row.irank }}
             </span>
             <span v-else style="color: #909399">-</span>
           </template>
         </el-table-column>
 
-        <!-- 得分详情 -->
-        <el-table-column label="得分详情" width="160" align="center">
+        <el-table-column width="150" align="center">
+          <template #header>
+            <span>原始/调整分</span>
+            <el-tooltip placement="top">
+              <template #content>
+                <div style="max-width: 280px; line-height: 1.5">
+                  <div>原始均分：专家对该项目的打分平均。</div>
+                  <div>调整分（D）：原始均分 ÷ 小组系数 Cn，用于公平比较与排名。</div>
+                </div>
+              </template>
+              <el-icon class="col-header-tip"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <div class="score-detail">
               <div class="score-item">
-                <span class="score-label">书审:</span>
+                <span class="score-label">原始均分</span>
+                <span class="score-value" :style="{ color: getScoreColor(row.rawAvg) }">
+                  {{ row.rawAvg != null ? Number(row.rawAvg).toFixed(1) : '-' }}
+                </span>
+              </div>
+              <div class="score-item">
+                <span class="score-label">调整分</span>
+                <span class="score-value" :style="{ color: getScoreColor(row.adjustedScore) }">
+                  {{ row.adjustedScore != null ? Number(row.adjustedScore).toFixed(1) : '-' }}
+                </span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <el-table-column width="150" align="center">
+          <template #header>
+            <span>系数/均值</span>
+            <el-tooltip placement="top">
+              <template #content>
+                <div style="max-width: 300px; line-height: 1.5">
+                  <div>Cn：小组系数，Cn = An÷B。</div>
+                  <div>An：该小组均分；B：该组别全组均分（计算 An、B 时去掉 65 以下与 95 以上）。</div>
+                </div>
+              </template>
+              <el-icon class="col-header-tip"><QuestionFilled /></el-icon>
+            </el-tooltip>
+          </template>
+          <template #default="{ row }">
+            <div class="score-detail">
+              <div class="score-item">
+                <span class="score-label">Cn</span>
+                <span class="score-value">{{ row.coefficient != null ? Number(row.coefficient).toFixed(4) : '-' }}</span>
+              </div>
+              <div class="score-item">
+                <span class="score-label">小组/全组</span>
+                <span class="score-value" style="font-size: 12px">
+                  {{ formatAnB(row.groupAvg, row.overallAvg) }}
+                </span>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+
+        <!-- 书审/面谈参考（跨阶段汇总） -->
+        <el-table-column label="书审/面谈" width="130" align="center">
+          <template #default="{ row }">
+            <div class="score-detail">
+              <div class="score-item">
+                <span class="score-label">书审</span>
                 <span
                   class="score-value"
                   :style="{ color: getScoreColor(row.bookScore) }"
                 >
-                  {{ row.bookScore !== null ? row.bookScore.toFixed(1) : '-' }}
+                  {{ row.bookScore != null ? row.bookScore.toFixed(1) : '-' }}
                 </span>
               </div>
               <div class="score-item">
-                <span class="score-label">面谈:</span>
+                <span class="score-label">面谈</span>
                 <span
                   class="score-value"
                   :style="{ color: getScoreColor(row.interviewScore) }"
                 >
-                  {{ row.interviewScore !== null ? row.interviewScore.toFixed(1) : '-' }}
+                  {{ row.interviewScore != null ? row.interviewScore.toFixed(1) : '-' }}
                 </span>
               </div>
             </div>
@@ -296,21 +521,11 @@
           </template>
         </el-table-column>
 
-        <!-- 综合得分 -->
-        <el-table-column prop="compositeScore" label="综合得分" width="120" align="center">
+        <el-table-column label="入围线内" width="100" align="center">
           <template #default="{ row }">
-            <span
-              v-if="row.compositeScore !== null"
-              :style="{
-                color: getScoreColor(row.compositeScore),
-                fontWeight: 'bold',
-                fontSize: '16px'
-              }"
-            >
-              {{ row.compositeScore.toFixed(1) }}
-            </span>
-            <el-tag v-else-if="row.groupType === 'ADVANCED'" type="warning">待面谈</el-tag>
-            <el-tag v-else type="info">待评分</el-tag>
+            <el-tag v-if="row.withinLine === true" type="success" size="small">是</el-tag>
+            <el-tag v-else-if="row.withinLine === false" type="info" size="small">否</el-tag>
+            <span v-else style="color: #909399">-</span>
           </template>
         </el-table-column>
 
@@ -324,17 +539,23 @@
         </el-table-column>
 
         <!-- 操作 -->
-        <el-table-column label="操作" width="220" align="center" fixed="right">
+        <el-table-column label="操作" width="260" align="center" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="viewDetail(row)" icon="View">
-              查看详情
+            <el-button size="small" @click="viewDetail(row)" icon="View">查看详情</el-button>
+            <el-button
+              v-if="row.shortlistOverride"
+              size="small"
+              type="info"
+              link
+              @click="clearOverride(row)"
+            >
+              撤销人工
             </el-button>
             <el-button
-              v-if="row.isShortlisted"
+              v-if="row.shortlisted"
               size="small"
               type="warning"
               @click="toggleShortlist(row, false)"
-              icon="CircleClose"
             >
               取消入围
             </el-button>
@@ -343,8 +564,6 @@
               size="small"
               type="success"
               @click="toggleShortlist(row, true)"
-              icon="CircleCheck"
-              :disabled="row.compositeScore === null"
             >
               增补入围
             </el-button>
@@ -364,30 +583,27 @@
         <h3 style="margin-bottom: 20px">{{ selectedProject.projectName }}</h3>
         
         <el-descriptions :column="2" border style="margin-bottom: 30px">
-          <el-descriptions-item label="综合排名" label-class-name="detail-label">
+          <el-descriptions-item label="排名" label-class-name="detail-label">
             <el-tag
-              v-if="selectedProject.rank && selectedProject.rank <= 3"
-              :type="getRankTagType(selectedProject.rank)"
+              v-if="displayRank(selectedProject) && displayRank(selectedProject) <= 3"
+              :type="getRankTagType(displayRank(selectedProject))"
               size="large"
             >
-              第 {{ selectedProject.rank }} 名
+              第 {{ displayRank(selectedProject) }} 名
             </el-tag>
-            <span v-else-if="selectedProject.rank" style="font-size: 16px; font-weight: bold">
-              第 {{ selectedProject.rank }} 名
+            <span v-else-if="displayRank(selectedProject)" style="font-size: 16px; font-weight: bold">
+              第 {{ displayRank(selectedProject) }} 名
             </span>
-            <span v-else>待面谈</span>
+            <span v-else style="color: #909399">-</span>
           </el-descriptions-item>
-          <el-descriptions-item label="综合得分" label-class-name="detail-label">
+          <el-descriptions-item label="调整分" label-class-name="detail-label">
             <span
-              v-if="selectedProject.compositeScore !== null"
+              v-if="selectedProject.adjustedScore != null"
               style="color: #409eff; font-size: 20px; font-weight: bold"
             >
-              {{ selectedProject.compositeScore.toFixed(1) }} 分
+              {{ Number(selectedProject.adjustedScore).toFixed(1) }} 分
             </span>
-            <span v-else-if="selectedProject.groupType === 'ADVANCED'" style="color: #909399">
-              待面谈
-            </span>
-            <span v-else style="color: #909399">待评分</span>
+            <span v-else style="color: #909399">暂无快照</span>
           </el-descriptions-item>
           <el-descriptions-item label="书审得分" label-class-name="detail-label">
             <span style="font-size: 16px">
@@ -680,40 +896,61 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
+import { Search, QuestionFilled } from '@element-plus/icons-vue'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
-import { getRankings } from '@/api/shortlist'
+import {
+  getRankings,
+  getAdminShortlist,
+  getShortlistConfig,
+  getAdvancedRankingConfig,
+  saveAdvancedRankingConfig,
+  saveShortlistConfig,
+  computeRanking,
+  setShortlistOverride,
+  deleteShortlistOverride
+} from '@/api/shortlist'
 import { getRegistrationReviewDetails } from '@/api/registration'
 import { getAdminReviewTasks } from '@/api/admin'
 import { getReviewScore } from '@/api/review'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 
-// 赛事ID
 const competitionId = ref(getCurrentCompetitionIdSync())
-
-// 赛事阶段信息
 const { stagesList } = useCompetitionStages()
 
-// 配置
-const config = ref({
-  bookWeight: 50,
-  interviewWeight: 50,
-  ratioType: '30',
-  customRatio: 30,
-  minScore: null
+/** 规则说明折叠面板，默认展开 */
+const ruleCollapseActive = ref(['rules'])
+
+/** 排名快照阶段：与后台 stage 一致 */
+const rankStage = ref('BOOK')
+const computing = ref(false)
+const configLoading = ref(false)
+const serverConfig = ref([])
+
+/** 进阶组合分：与 GET/PUT advanced-ranking-config 对齐 */
+const advancedConfigLoading = ref(false)
+const advancedConfigSaving = ref(false)
+const advancedRankingForm = reactive({
+  bookWeight: 0.4,
+  interviewWeight: 0.6,
+  rankingMode: 'ADJUST_THEN_WEIGHT'
 })
 
-// 筛选
+const advancedWeightSumOk = computed(() => {
+  const s =
+    Number(advancedRankingForm.bookWeight) +
+    Number(advancedRankingForm.interviewWeight)
+  return Math.abs(s - 1) <= 0.001
+})
+
 const filters = ref({
   groupType: '',
   projectName: '',
   shortlistStatus: ''
 })
 
-// 数据
 const projects = ref([])
 const loading = ref(false)
 
@@ -727,7 +964,36 @@ const interviewReviewers = ref([])  // 面谈评委详细评分
 const detailLoading = ref(false)
 const activeTab = ref('BOOK')
 
-// 计算属性 - 筛选后的项目列表
+const stageLabel = computed(() => {
+  const m = { BOOK: '书审', INTERVIEW: '面谈', FINAL: '决赛' }
+  return m[rankStage.value] || rankStage.value
+})
+
+/** 顶部场景与表头文案：与 rankStage 一致 */
+const stageShortlistTitle = computed(() => {
+  const m = {
+    BOOK: '书审入围',
+    INTERVIEW: '面谈入围',
+    FINAL: '决赛入围'
+  }
+  return m[rankStage.value] || '入围'
+})
+
+function onRankStageChange() {
+  loadData()
+}
+
+const snapshotTimeText = computed(() => {
+  const t = projects.value.map(p => p.calculatedAt).filter(Boolean)
+  if (!t.length) return ''
+  const latest = t.sort().slice(-1)[0]
+  try {
+    return new Date(latest).toLocaleString('zh-CN')
+  } catch {
+    return String(latest)
+  }
+})
+
 const filteredProjects = computed(() => {
   let list = projects.value
 
@@ -737,76 +1003,255 @@ const filteredProjects = computed(() => {
 
   if (filters.value.projectName) {
     const keyword = filters.value.projectName.toLowerCase()
-    list = list.filter(p => p.projectName.toLowerCase().includes(keyword))
+    list = list.filter(p => (p.projectName || '').toLowerCase().includes(keyword))
   }
 
   if (filters.value.shortlistStatus) {
     if (filters.value.shortlistStatus === 'shortlisted') {
-      list = list.filter(p => p.isShortlisted)
+      list = list.filter(p => p.shortlisted)
     } else if (filters.value.shortlistStatus === 'not-shortlisted') {
-      list = list.filter(p => !p.isShortlisted && p.compositeScore !== null)
+      list = list.filter(p => !p.shortlisted && p.adjustedScore != null)
     } else if (filters.value.shortlistStatus === 'pending-interview') {
-      list = list.filter(p => p.compositeScore === null)
+      list = list.filter(p => p.adjustedScore == null && p.rawAvg == null)
     }
   }
 
   return list
 })
 
-// 计算属性 - 有综合得分的项目（已完成书审和面谈）
-const eligibleProjects = computed(() => {
-  return projects.value.filter(p => p.compositeScore !== null)
+function buildSegmentStats(list) {
+  const eligible = list.filter(p => p.adjustedScore != null)
+  const shortlisted = list.filter(p => p.shortlisted)
+  const manualAdd = list.filter(p => p.shortlistOverride === 'INCLUDE')
+  const manualRemove = list.filter(p => p.shortlistOverride === 'EXCLUDE')
+  const includeShortlisted = list.filter(
+    p => p.shortlisted && p.shortlistOverride === 'INCLUDE'
+  )
+  const ratio =
+    eligible.length > 0
+      ? ((shortlisted.length / eligible.length) * 100).toFixed(1)
+      : '0'
+  return {
+    total: list.length,
+    shortlistedCount: shortlisted.length,
+    ratio,
+    includeShortlistedCount: includeShortlisted.length,
+    manualAddCount: manualAdd.length,
+    manualRemoveCount: manualRemove.length,
+    bookDone: list.filter(p => p.bookScore != null).length,
+    interviewDone: list.filter(p => p.interviewScore != null).length
+  }
+}
+
+const statsNonAdvanced = computed(() => {
+  const list = projects.value.filter(
+    p => p.groupType === 'BASIC' || p.groupType === 'COMPREHENSIVE'
+  )
+  return buildSegmentStats(list)
 })
 
-// 计算属性 - 统计信息
-const completedBookCount = computed(() => {
-  return projects.value.filter(p => p.bookScore !== null).length
+const statsAdvanced = computed(() => {
+  const list = projects.value.filter(p => p.groupType === 'ADVANCED')
+  return buildSegmentStats(list)
 })
 
-const completedInterviewCount = computed(() => {
-  return projects.value.filter(p => p.interviewScore !== null).length
-})
+function formatAnB(an, b) {
+  if (an == null && b == null) return '-'
+  const a = an != null ? Number(an).toFixed(1) : '-'
+  const bb = b != null ? Number(b).toFixed(1) : '-'
+  return `${a} / ${bb}`
+}
 
-const shortlistedCount = computed(() => {
-  return projects.value.filter(p => p.isShortlisted).length
-})
+function displayRank(project) {
+  if (!project) return null
+  return project.irank != null ? project.irank : project.rank
+}
 
-const shortlistRatio = computed(() => {
-  if (eligibleProjects.value.length === 0) return 0
-  return ((shortlistedCount.value / eligibleProjects.value.length) * 100).toFixed(1)
-})
+async function loadShortlistConfig() {
+  configLoading.value = true
+  try {
+    const res = await getShortlistConfig()
+    if (res.success && Array.isArray(res.data)) {
+      serverConfig.value = res.data.map(r => ({ ...r }))
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    configLoading.value = false
+  }
+}
 
-const manualAddCount = computed(() => {
-  return projects.value.filter(p => p.shortlistType === 'manual_add').length
-})
+async function loadAdvancedRankingConfig() {
+  advancedConfigLoading.value = true
+  try {
+    const res = await getAdvancedRankingConfig()
+    if (res.success && res.data) {
+      const d = res.data
+      if (d.bookWeight != null) {
+        advancedRankingForm.bookWeight = Number(d.bookWeight)
+      }
+      if (d.interviewWeight != null) {
+        advancedRankingForm.interviewWeight = Number(d.interviewWeight)
+      }
+      if (d.rankingMode) {
+        advancedRankingForm.rankingMode = d.rankingMode
+      }
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    advancedConfigLoading.value = false
+  }
+}
 
-const manualRemoveCount = computed(() => {
-  return projects.value.filter(p => p.shortlistType === 'manual_remove').length
-})
+async function handleSaveAdvancedRankingConfig() {
+  const { bookWeight, interviewWeight, rankingMode } = advancedRankingForm
+  if (
+    bookWeight == null ||
+    interviewWeight == null ||
+    rankingMode == null ||
+    rankingMode === ''
+  ) {
+    ElMessage.warning('书审权重、面谈权重、合分模式均为必填')
+    return
+  }
+  if (Math.abs(Number(bookWeight) + Number(interviewWeight) - 1) > 0.001) {
+    ElMessage.warning('书审权重与面谈权重之和应为 1')
+    return
+  }
+  advancedConfigSaving.value = true
+  try {
+    const res = await saveAdvancedRankingConfig({
+      bookWeight: Number(bookWeight),
+      interviewWeight: Number(interviewWeight),
+      rankingMode
+    })
+    if (res.success) {
+      ElMessage.success('进阶组合分配置已保存')
+      await loadAdvancedRankingConfig()
+    } else {
+      ElMessage.error(res.message || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    advancedConfigSaving.value = false
+  }
+}
 
-// 加载数据
+async function saveGroupConfig(row) {
+  try {
+    const res = await saveShortlistConfig({
+      groupType: row.groupType,
+      mode: row.mode,
+      value: row.value
+    })
+    if (res.success) {
+      ElMessage.success('入围配置已保存，已刷新列表')
+      await loadShortlistConfig()
+      await loadData()
+    } else {
+      ElMessage.error(res.message || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  }
+}
+
+async function handleComputeRanking() {
+  computing.value = true
+  try {
+    // 与后台约定：不传 groupType，一次计算当前 stage 下各组（如书审下基层+综合+进阶）的调整分与快照
+    const body = {
+      competitionId: competitionId.value,
+      stage: rankStage.value
+    }
+    const res = await computeRanking(body)
+    if (res.success) {
+      ElMessage.success(
+        typeof res.data === 'number'
+          ? `排名计算完成，已写入 ${res.data} 条快照`
+          : '排名计算完成'
+      )
+      await loadData()
+    } else {
+      ElMessage.error(res.message || '计算失败')
+    }
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('计算排名失败')
+  } finally {
+    computing.value = false
+  }
+}
+
+function normalizeRow(item, bookMap, interviewMap) {
+  const bookScore = bookMap.get(item.registrationId)
+  const interviewScore = interviewMap.get(item.registrationId)
+  let status = 'normal'
+  if (bookScore == null && interviewScore == null) status = 'pending_book_review'
+  else if (item.groupType === 'ADVANCED' && interviewScore == null) status = 'pending_interview'
+
+  return {
+    ...item,
+    institutionLevel: item.institutionLevel,
+    bookScore: bookScore ?? null,
+    interviewScore: interviewScore ?? null,
+    shortlistType:
+      item.shortlistOverride === 'INCLUDE'
+        ? 'manual_add'
+        : item.shortlistOverride === 'EXCLUDE'
+          ? 'manual_remove'
+          : item.shortlisted
+            ? 'auto'
+            : null,
+    status
+  }
+}
+
 async function loadData() {
   loading.value = true
-
   try {
-    // 1. 获取书审排名
-    const bookRes = await getRankings({
+    const params = {
       competitionId: competitionId.value,
-      stage: 'BOOK'
-    })
+      stage: rankStage.value
+    }
+    if (filters.value.groupType) {
+      params.groupType = filters.value.groupType
+    }
 
-    // 2. 获取面谈排名
-    const interviewRes = await getRankings({
-      competitionId: competitionId.value,
-      stage: 'INTERVIEW'
-    })
+    const [slRes, bookRes, intRes] = await Promise.all([
+      getAdminShortlist(params),
+      getRankings({ competitionId: competitionId.value, stage: 'BOOK' }),
+      getRankings({ competitionId: competitionId.value, stage: 'INTERVIEW' })
+    ])
 
-    if (bookRes.success && interviewRes.success) {
-      // 3. 合并数据
-      projects.value = mergeAndRank(bookRes.data || [], interviewRes.data || [])
-      ElMessage.success(`加载成功，共 ${projects.value.length} 个项目`)
+    const bookMap = new Map()
+    if (bookRes.success && Array.isArray(bookRes.data)) {
+      bookRes.data.forEach(r => {
+        bookMap.set(r.registrationId, r.avgTotal != null ? Number(r.avgTotal) : null)
+      })
+    }
+    const interviewMap = new Map()
+    if (intRes.success && Array.isArray(intRes.data)) {
+      intRes.data.forEach(r => {
+        interviewMap.set(r.registrationId, r.avgTotal != null ? Number(r.avgTotal) : null)
+      })
+    }
+
+    if (!slRes.success) {
+      ElMessage.error(slRes.message || '加载入围名单失败')
+      projects.value = []
+      return
+    }
+
+    const rows = Array.isArray(slRes.data) ? slRes.data : []
+    projects.value = rows.map(item => normalizeRow(item, bookMap, interviewMap))
+
+    if (rows.length === 0) {
+      ElMessage.warning('暂无入围快照数据，请先点击「计算排名」')
     } else {
-      ElMessage.error('加载数据失败')
+      ElMessage.success(`加载成功，共 ${projects.value.length} 条`)
     }
   } catch (error) {
     console.error('加载数据失败:', error)
@@ -816,219 +1261,58 @@ async function loadData() {
   }
 }
 
-// 合并书审和面谈数据，计算综合得分和排名
-function mergeAndRank(bookData, interviewData) {
-  // 创建项目映射
-  const projectMap = new Map()
-
-  // 添加书审数据
-  bookData.forEach(item => {
-    projectMap.set(item.registrationId, {
-      registrationId: item.registrationId,
-      projectName: item.projectName,
-      institutionName: item.institutionName,
-      groupType: item.groupType,
-      bookScore: item.avgTotal,
-      bookRank: item.rank,
-      interviewScore: null,
-      interviewRank: null,
-      compositeScore: null,
-      isShortlisted: false,
-      shortlistType: null,
-      rank: null
-    })
-  })
-
-  // 添加面谈数据
-  interviewData.forEach(item => {
-    if (projectMap.has(item.registrationId)) {
-      const project = projectMap.get(item.registrationId)
-      project.interviewScore = item.avgTotal
-      project.interviewRank = item.rank
-    } else {
-      // 只有面谈没有书审（理论上不应该发生）
-      projectMap.set(item.registrationId, {
-        registrationId: item.registrationId,
-        projectName: item.projectName,
-        institutionName: item.institutionName,
-        groupType: item.groupType,
-        bookScore: null,
-        bookRank: null,
-        interviewScore: item.avgTotal,
-        interviewRank: item.rank,
-        compositeScore: null,
-        isShortlisted: false,
-        shortlistType: null,
-        rank: null
-      })
-    }
-  })
-
-  // 计算综合得分和状态
-  const projectsList = Array.from(projectMap.values())
-  projectsList.forEach(p => {
-    // 情况1: 无书审，无面谈 -> 待书审
-    if (p.bookScore === null && p.interviewScore === null) {
-      p.compositeScore = null
-      p.status = 'pending_book_review'
-    }
-    // 情况2: 有书审，无面谈
-    else if (p.bookScore !== null && p.interviewScore === null) {
-      // 基层组和综合组：只需书审
-      if (p.groupType === 'BASIC' || p.groupType === 'COMPREHENSIVE') {
-        p.compositeScore = p.bookScore
-        p.status = 'completed'
-      }
-      // 进阶组：需要面谈
-      else {
-        p.compositeScore = null
-        p.status = 'pending_interview'
-      }
-    }
-    // 情况3: 有书审，有面谈 -> 计算综合得分
-    else if (p.bookScore !== null && p.interviewScore !== null) {
-      if (p.groupType === 'BASIC' || p.groupType === 'COMPREHENSIVE') {
-        p.compositeScore = p.bookScore // 这些组不应该有面谈分
-      } else {
-        p.compositeScore =
-          (p.bookScore * config.value.bookWeight / 100) +
-          (p.interviewScore * config.value.interviewWeight / 100)
-      }
-      p.status = 'completed'
-    }
-    // 情况4: 无书审，有面谈 -> 待书审（异常情况）
-    else if (p.bookScore === null && p.interviewScore !== null) {
-      p.compositeScore = null
-      p.status = 'pending_book_review'
-    }
-  })
-
-  // 排序（综合得分降序，待面谈的排在后面）
-  projectsList.sort((a, b) => {
-    if (a.compositeScore === null && b.compositeScore === null) return 0
-    if (a.compositeScore === null) return 1
-    if (b.compositeScore === null) return -1
-    return b.compositeScore - a.compositeScore
-  })
-
-  // 分配排名
-  projectsList.forEach((p, index) => {
-    if (p.compositeScore !== null) {
-      p.rank = index + 1
-    }
-  })
-
-  return projectsList
-}
-
-// 应用权重
-function applyWeight() {
-  if (config.value.bookWeight + config.value.interviewWeight !== 100) {
-    ElMessage.warning('权重总和必须为100%')
-    return
-  }
-
-  // 重新计算综合得分
-  projects.value.forEach(p => {
-    // 基层组和综合组：只需书审，不需面谈
-    if (p.groupType === 'BASIC' || p.groupType === 'COMPREHENSIVE') {
-      if (p.bookScore !== null) {
-        p.compositeScore = p.bookScore
-      }
-    }
-    // 进阶组：需要书审+面谈的加权平均
-    else if (p.groupType === 'ADVANCED') {
-      if (p.bookScore !== null && p.interviewScore !== null) {
-        p.compositeScore =
-          (p.bookScore * config.value.bookWeight / 100) +
-          (p.interviewScore * config.value.interviewWeight / 100)
-      }
-    }
-  })
-
-  // 重新排序
-  projects.value.sort((a, b) => {
-    if (a.compositeScore === null && b.compositeScore === null) return 0
-    if (a.compositeScore === null) return 1
-    if (b.compositeScore === null) return -1
-    return b.compositeScore - a.compositeScore
-  })
-
-  // 重新分配排名
-  projects.value.forEach((p, index) => {
-    if (p.compositeScore !== null) {
-      p.rank = index + 1
-    }
-  })
-
-  ElMessage.success('权重已应用，排名已更新')
-}
-
-// 处理入围比例变化
-function handleRatioChange() {
-  // 仅触发，不自动设置入围
-}
-
-// 批量设置入围
-function batchSetShortlist() {
-  const ratio = config.value.ratioType === 'custom'
-    ? config.value.customRatio
-    : parseInt(config.value.ratioType)
-
-  let eligibleList = eligibleProjects.value
-
-  // 应用最低分数线
-  if (config.value.minScore !== null) {
-    eligibleList = eligibleList.filter(p => p.compositeScore >= config.value.minScore)
-  }
-
-  const shortlistCount = Math.ceil(eligibleList.length * ratio / 100)
-
-  ElMessageBox.confirm(
-    `将按照${ratio}%的比例设置入围，共${shortlistCount}个项目。${config.value.minScore !== null ? `（最低分数线：${config.value.minScore}分）` : ''}是否继续？`,
-    '确认批量设置入围',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+async function clearOverride(project) {
+  try {
+    await ElMessageBox.confirm('撤销后该项目按系统入围规则重新判定，是否继续？', '撤销人工干预', {
       type: 'warning'
-    }
-  ).then(() => {
-    // 重置所有入围状态
-    projects.value.forEach(p => {
-      p.isShortlisted = false
-      p.shortlistType = null
     })
-
-    // 按排名设置前N名入围
-    let count = 0
-    for (const project of projects.value) {
-      if (project.compositeScore !== null) {
-        // 检查是否在eligible列表中
-        if (eligibleList.includes(project) && count < shortlistCount) {
-          project.isShortlisted = true
-          project.shortlistType = 'auto'
-          count++
-        }
-      }
+    const res = await deleteShortlistOverride(project.registrationId)
+    if (res.success) {
+      ElMessage.success('已撤销')
+      await loadData()
+    } else {
+      ElMessage.error(res.message || '操作失败')
     }
-
-    ElMessage.success(`已设置前${shortlistCount}个项目入围`)
-  }).catch(() => {
-    ElMessage.info('已取消')
-  })
+  } catch {
+    /* cancel */
+  }
 }
 
-// 切换入围状态（个别增补/取消）
-function toggleShortlist(project, isAdd) {
-  if (isAdd) {
-    project.isShortlisted = true
-    project.shortlistType = 'manual_add'
-    ElMessage.success(`已增补入围：${project.projectName}`)
-  } else {
-    const originalType = project.shortlistType
-    project.isShortlisted = false
-    project.shortlistType = originalType === 'auto' ? 'manual_remove' : null
-    ElMessage.info(`已取消入围：${project.projectName}`)
+async function toggleShortlist(project, isAdd) {
+  try {
+    if (isAdd) {
+      await ElMessageBox.confirm(`确认将「${project.projectName}」增补为入围？`, '增补入围', {
+        type: 'success'
+      })
+      const res = await setShortlistOverride({
+        registrationId: project.registrationId,
+        override: 'INCLUDE',
+        note: '组委会增补'
+      })
+      if (res.success) {
+        ElMessage.success('已增补')
+        await loadData()
+      } else {
+        ElMessage.error(res.message || '操作失败')
+      }
+    } else {
+      await ElMessageBox.confirm(`确认取消「${project.projectName}」的入围资格？`, '取消入围', {
+        type: 'warning'
+      })
+      const res = await setShortlistOverride({
+        registrationId: project.registrationId,
+        override: 'EXCLUDE',
+        note: '组委会取消'
+      })
+      if (res.success) {
+        ElMessage.success('已取消入围')
+        await loadData()
+      } else {
+        ElMessage.error(res.message || '操作失败')
+      }
+    }
+  } catch {
+    /* cancel */
   }
 }
 
@@ -1197,28 +1481,33 @@ async function viewDetail(project) {
   }
 }
 
-// 导出入围名单
 function exportList() {
   const csvContent = [
-    ['综合排名', '项目名称', '医疗机构', '组别', '书审得分', '面谈得分', '综合得分', '入围状态'].join(','),
-    ...projects.value.map(p => {
-      let compositeScoreText = '-'
-      if (p.compositeScore !== null) {
-        compositeScoreText = p.compositeScore.toFixed(1)
-      } else if (p.groupType === 'ADVANCED') {
-        compositeScoreText = '待面谈'
-      } else {
-        compositeScoreText = '待评分'
-      }
-      
+    [
+      '排名',
+      '项目名称',
+      '医疗机构',
+      '组别',
+      '原始均分',
+      '调整分',
+      '书审参考',
+      '面谈参考',
+      '入围线内',
+      '最终入围',
+      '状态说明'
+    ].join(','),
+    ...filteredProjects.value.map(p => {
       return [
-        p.rank || '-',
+        p.irank != null ? p.irank : '-',
         p.projectName,
         p.institutionName,
         getGroupTypeLabel(p.groupType),
-        p.bookScore !== null ? p.bookScore.toFixed(1) : '-',
-        p.interviewScore !== null ? p.interviewScore.toFixed(1) : '-',
-        compositeScoreText,
+        p.rawAvg != null ? Number(p.rawAvg).toFixed(1) : '-',
+        p.adjustedScore != null ? Number(p.adjustedScore).toFixed(1) : '-',
+        p.bookScore != null ? p.bookScore.toFixed(1) : '-',
+        p.interviewScore != null ? p.interviewScore.toFixed(1) : '-',
+        p.withinLine === true ? '是' : p.withinLine === false ? '否' : '-',
+        p.shortlisted ? '是' : '否',
         getShortlistLabel(p)
       ].join(',')
     })
@@ -1227,7 +1516,7 @@ function exportList() {
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `综合入围名单_${new Date().toISOString().slice(0, 10)}.csv`
+  link.download = `${stageShortlistTitle.value}_${rankStage.value}_${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
 
   ElMessage.success('导出成功')
@@ -1302,68 +1591,152 @@ function getInterviewEmptyText() {
   return '暂无面谈评分数据'
 }
 
-// 辅助函数 - 入围状态标签
 function getShortlistLabel(project) {
-  if (project.isShortlisted) {
-    if (project.shortlistType === 'manual_add') return '✅入围（增补）'
+  if (project.shortlisted) {
+    if (project.shortlistOverride === 'INCLUDE') return '✅入围（增补）'
     return '✅入围'
-  } else {
-    if (project.shortlistType === 'manual_remove') return '❌未入围（取消）'
-    
-    // 根据状态显示不同标签
-    if (project.status === 'pending_book_review') {
-      return '⚠️待书审'
-    }
-    if (project.status === 'pending_interview' && project.groupType === 'ADVANCED') {
-      return '⚠️待面谈'
-    }
-    
-    return '❌未入围'
   }
+  if (project.shortlistOverride === 'EXCLUDE') return '❌未入围（强制）'
+  if (project.status === 'pending_book_review') return '⚠️待书审'
+  if (project.status === 'pending_interview' && project.groupType === 'ADVANCED') {
+    return '⚠️待面谈'
+  }
+  return '❌未入围'
 }
 
-// 辅助函数 - 入围状态Tag类型
 function getShortlistTagType(project) {
-  if (project.isShortlisted) return 'success'
-  
-  // 根据状态显示不同的标签类型
+  if (project.shortlisted) return 'success'
+  if (project.shortlistOverride === 'EXCLUDE') return 'danger'
   if (project.status === 'pending_book_review' || project.status === 'pending_interview') {
     return 'warning'
   }
-  
   return 'info'
 }
 
-// 辅助函数 - 行样式
 function getRowClassName({ row }) {
-  if (row.isShortlisted) {
-    if (row.shortlistType === 'manual_add') return 'manual-add-row'
+  if (row.shortlisted) {
+    if (row.shortlistOverride === 'INCLUDE') return 'manual-add-row'
     return 'shortlisted-row'
   }
-  if (row.shortlistType === 'manual_remove') return 'manual-remove-row'
-  
-  // 根据状态显示不同的行样式
+  if (row.shortlistOverride === 'EXCLUDE') return 'manual-remove-row'
   if (row.status === 'pending_book_review') return 'pending-book-review-row'
   if (row.status === 'pending_interview') return 'pending-row'
-  
   return ''
 }
 
-// 初始化
 onMounted(async () => {
-  // 加载当前赛事ID
   const currentCompetitionId = await getCurrentCompetitionId()
   if (currentCompetitionId) {
     competitionId.value = currentCompetitionId
   }
-  
-  loadData()
+  await Promise.all([loadShortlistConfig(), loadAdvancedRankingConfig()])
+  await loadData()
 })
 </script>
 
 <style scoped>
 .shortlist-management {
   padding: 20px;
+}
+
+.shortlist-context-card {
+  margin-bottom: 20px;
+  border: 1px solid var(--el-color-primary-light-5);
+  background: linear-gradient(180deg, var(--el-color-primary-light-9) 0%, var(--el-bg-color) 48%);
+}
+
+.context-switch-wrap {
+  padding: 4px 4px 0;
+}
+
+.context-switch-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.context-switch-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.context-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.context-radio-group :deep(.el-radio-button__inner) {
+  min-width: 112px;
+}
+
+.context-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.6;
+}
+
+/* 「当前场景」与文案同一视觉层级，避免像按钮 */
+.scene-current-value {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--el-text-color-primary);
+  line-height: 22px;
+  vertical-align: middle;
+}
+
+.rule-collapse-card {
+  margin-bottom: 20px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  overflow: hidden;
+  --el-collapse-header-height: 48px;
+}
+
+.rule-collapse-title {
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.rule-doc {
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  line-height: 1.65;
+  padding: 4px 8px 12px;
+}
+
+.rule-lead {
+  margin: 0 0 12px;
+}
+
+.rule-ol {
+  margin: 0 0 12px 1.2em;
+  padding: 0;
+}
+
+.rule-ul {
+  margin: 8px 0 0 1em;
+}
+
+.rule-map-title {
+  font-weight: 600;
+  margin: 12px 0 8px;
+  color: var(--el-text-color-primary);
+}
+
+.rule-map {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.col-header-tip {
+  margin-left: 4px;
+  vertical-align: -2px;
+  cursor: help;
+  color: var(--el-text-color-secondary);
 }
 
 .config-card,
@@ -1419,6 +1792,146 @@ onMounted(async () => {
 
 .opinion-list li {
   margin-bottom: 10px;
+}
+
+/* 分组统计框 */
+.stats-segment-box {
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 10px;
+  padding: 14px 14px 10px;
+  background: var(--el-fill-color-blank);
+  height: 100%;
+}
+
+.stats-segment--plain {
+  border-left: 4px solid var(--el-color-primary);
+}
+
+.stats-segment--advanced {
+  border-left: 4px solid var(--el-color-success);
+}
+
+.stats-segment-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--el-text-color-primary);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 1200px) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stat-cell {
+  background: var(--el-fill-color-light);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  padding: 10px 8px;
+  text-align: center;
+  min-height: 76px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  line-height: 1.2;
+}
+
+.stat-value.accent {
+  color: var(--el-color-primary);
+}
+
+.stat-value.warn {
+  color: var(--el-color-warning);
+}
+
+.stat-value.danger {
+  color: var(--el-color-danger);
+}
+
+.stat-sub {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--el-text-color-secondary);
+  margin-left: 2px;
+}
+
+.stat-hint {
+  font-size: 11px;
+  color: var(--el-text-color-placeholder);
+  margin-top: 4px;
+  line-height: 1.2;
+}
+
+.stats-segment-foot {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.advanced-ranking-box {
+  width: 100%;
+  max-width: 960px;
+  padding: 12px 14px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.advanced-ranking-lead {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  line-height: 1.5;
+}
+
+.advanced-ranking-box .inline-label {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  vertical-align: middle;
+}
+
+.advanced-ranking-actions {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.advanced-flow-ol {
+  margin: 12px 0 6px;
+  padding-left: 1.25em;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.65;
+}
+
+.advanced-flow-note {
+  display: block;
+  margin-top: 4px;
 }
 
 /* 行样式 */

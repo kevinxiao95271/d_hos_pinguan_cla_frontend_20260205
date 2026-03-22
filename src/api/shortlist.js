@@ -1,15 +1,8 @@
 import request from '@/utils/request'
 
 /**
- * 入围管理相关API
- */
-
-/**
- * 获取排名列表（书审或面谈）
- * @param {Object} params - 查询参数
- * @param {Number} params.competitionId - 赛事ID
- * @param {String} params.stage - 阶段: BOOK | INTERVIEW
- * @param {String} params.groupType - 组别（可选）: BASIC | ADVANCED | COMPREHENSIVE
+ * 获取排名列表（优先读快照；需先 compute-ranking）
+ * @param {Object} params - competitionId, stage: BOOK|INTERVIEW|FINAL, groupType 可选
  */
 export function getRankings(params) {
   return request({
@@ -20,15 +13,99 @@ export function getRankings(params) {
 }
 
 /**
- * 获取入围名单（可选，可用rankings代替）
- * @param {Object} params - 查询参数
- * @param {Number} params.competitionId - 赛事ID
- * @param {String} params.stage - 阶段: BOOK | INTERVIEW
- * @param {String} params.groupType - 组别（可选）
- * @param {Number} params.limit - 限制数量（可选）
- * @param {Number} params.minAvgTotal - 最低分数线（可选）
+ * 触发系数调整排名计算并写入快照
+ * @param {Object} data - { competitionId, stage, groupType? }
  */
-export function getShortlist(params) {
+export function computeRanking(data) {
+  return request({
+    url: '/admin/reviews/compute-ranking',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 查询入围名单（含入围线、人工干预；依赖快照）
+ * @param {Object} params - competitionId, stage, groupType 可选
+ */
+export function getAdminShortlist(params) {
+  return request({
+    url: '/admin/shortlist',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 查询进阶组合分配置（书审/面谈权重与合分模式）
+ */
+export function getAdvancedRankingConfig() {
+  return request({
+    url: '/admin/shortlist/advanced-ranking-config',
+    method: 'get'
+  })
+}
+
+/**
+ * 保存进阶组合分配置（三个字段均必填）
+ * @param {Object} data - { bookWeight, interviewWeight, rankingMode }
+ */
+export function saveAdvancedRankingConfig(data) {
+  return request({
+    url: '/admin/shortlist/advanced-ranking-config',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 查询入围配置（三组各一条）
+ */
+export function getShortlistConfig() {
+  return request({
+    url: '/admin/shortlist/config',
+    method: 'get'
+  })
+}
+
+/**
+ * 保存入围配置（单组）
+ * @param {Object} data - { groupType, mode: RATIO|COUNT, value }
+ */
+export function saveShortlistConfig(data) {
+  return request({
+    url: '/admin/shortlist/config',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 人工干预入围
+ * @param {Object} data - { registrationId, override: INCLUDE|EXCLUDE, note? }
+ */
+export function setShortlistOverride(data) {
+  return request({
+    url: '/admin/shortlist/override',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 撤销人工干预
+ */
+export function deleteShortlistOverride(registrationId) {
+  return request({
+    url: `/admin/shortlist/override/${registrationId}`,
+    method: 'delete'
+  })
+}
+
+/**
+ * @deprecated 旧接口，请优先使用 getAdminShortlist
+ */
+export function getShortlistLegacy(params) {
   return request({
     url: '/admin/reviews/shortlist',
     method: 'get',
