@@ -44,6 +44,19 @@ export function updateCompetitionStage(id, data) {
 }
 
 /**
+ * 更新赛事配置（任意字段可选，可组合更新）
+ * @param {number|string} id
+ * @param {Object} data - stage, bookReviewStart, bookReviewEnd, interviewStart, interviewEnd 等
+ */
+export function updateCompetitionConfig(id, data) {
+  return request({
+    url: `/competitions/${id}/config`,
+    method: 'put',
+    data
+  })
+}
+
+/**
  * 上传赛事模板
  */
 export function uploadCompetitionTemplate(id, file, type) {

@@ -27,12 +27,37 @@ export function computeRanking(data) {
 /**
  * 查询入围名单（含入围线、人工干预；依赖快照）
  * @param {Object} params - competitionId, stage, groupType 可选
+ * @returns {Promise} success 时 data 可为：
+ *   - 新结构：{ stage, snapshotAt, totalCount, shortlistCount, shortlistRatio, scope?, unifiedMode?, unifiedValue?, unifiedCutoff?, groupConfigs?, items[] }
+ *   - 旧结构：items 数组（兼容）
  */
 export function getAdminShortlist(params) {
   return request({
     url: '/admin/shortlist',
     method: 'get',
     params
+  })
+}
+
+/**
+ * 查询书审入围范围模式（各组独立 / 基层+综合统一排序）
+ */
+export function getBookScope() {
+  return request({
+    url: '/admin/shortlist/book-scope',
+    method: 'get'
+  })
+}
+
+/**
+ * 切换书审入围范围
+ * @param {Object} data - PER_GROUP: { scope:'PER_GROUP' }；UNIFIED: { scope:'UNIFIED', unifiedMode:'RATIO'|'COUNT', unifiedValue }
+ */
+export function saveBookScope(data) {
+  return request({
+    url: '/admin/shortlist/book-scope',
+    method: 'put',
+    data
   })
 }
 

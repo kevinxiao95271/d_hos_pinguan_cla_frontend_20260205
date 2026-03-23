@@ -77,37 +77,40 @@ export function getReviewRankings(params) {
 }
 
 /**
- * 获取书审得分列表（组委会管理）
- * 使用 /admin/reviews/summary API，固定 stage=BOOK
+ * 组委会：按项目聚合的得分明细（含 reviewerScores）
+ * GET /api/admin/reviews/score-list?competitionId=&stage=BOOK|INTERVIEW
  */
-export function getBookScores(params) {
+export function getAdminScoreList(params) {
   return request({
-    url: '/admin/reviews/summary',
+    url: '/admin/reviews/score-list',
     method: 'get',
-    params: {
-      ...params,
-      stage: 'BOOK'  // 固定为书审阶段
-    }
+    params
   })
 }
 
 /**
- * 获取面谈得分列表（组委会管理）
- * 使用 /admin/reviews/summary API，固定 stage=INTERVIEW
+ * 书审得分列表：score-list + stage=BOOK
+ */
+export function getBookScores(params) {
+  return getAdminScoreList({
+    ...params,
+    stage: 'BOOK'
+  })
+}
+
+/**
+ * 面谈得分列表：score-list + stage=INTERVIEW
  */
 export function getInterviewScores(params) {
-  return request({
-    url: '/admin/reviews/summary',
-    method: 'get',
-    params: {
-      ...params,
-      stage: 'INTERVIEW'
-    }
+  return getAdminScoreList({
+    ...params,
+    stage: 'INTERVIEW'
   })
 }
 
 /**
  * 驳回评分
+ * @param {Object} data - { reviewTaskId, reason? }
  */
 export function returnScore(data) {
   return request({

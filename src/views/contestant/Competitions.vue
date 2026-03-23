@@ -128,20 +128,26 @@ const loadData = async () => {
 
 const getStageType = (stage) => {
   const map = {
-    'REGISTER': 'success',  // 修复：后端返回 REGISTER 而不是 REGISTRATION
-    'BOOK': 'warning',
-    'INTERVIEW': 'warning',
-    'FINAL': 'danger'
+    REGISTER: 'success',
+    REGISTRATION: 'success',
+    BOOK: 'warning',
+    BOOK_REVIEW: 'warning',
+    INTERVIEW: 'warning',
+    INTERVIEW_REVIEW: 'warning',
+    FINAL: 'danger'
   }
   return map[stage] || 'info'
 }
 
 const getStageText = (stage) => {
   const map = {
-    'REGISTER': '报名中',  // 修复：后端返回 REGISTER 而不是 REGISTRATION
-    'BOOK': '书审中',
-    'INTERVIEW': '面谈中',
-    'FINAL': '决赛中'
+    REGISTER: '报名中',
+    REGISTRATION: '报名中',
+    BOOK: '书审中',
+    BOOK_REVIEW: '书审中',
+    INTERVIEW: '面谈中',
+    INTERVIEW_REVIEW: '面谈中',
+    FINAL: '决赛中'
   }
   return map[stage] || stage
 }

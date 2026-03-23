@@ -31,6 +31,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { toProgressStageKey } from '@/utils/competitionStage'
 
 const props = defineProps({
   currentStage: {
@@ -49,7 +50,8 @@ const props = defineProps({
 })
 
 const activeStep = computed(() => {
-  const index = props.stages.findIndex(s => s.key === props.currentStage)
+  const key = toProgressStageKey(props.currentStage)
+  const index = props.stages.findIndex(s => s.key === key)
   return index >= 0 ? index : 0
 })
 

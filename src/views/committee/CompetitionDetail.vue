@@ -9,7 +9,7 @@
       
       <!-- 阶段进度 -->
       <stage-progress
-        :current-stage="competition.currentStage"
+        :current-stage="competition.stage || competition.currentStage"
         :stages="stagesList"
       />
       

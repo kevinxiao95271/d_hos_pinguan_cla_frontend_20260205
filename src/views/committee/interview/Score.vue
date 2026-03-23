@@ -1,6 +1,6 @@
 <template>
   <div class="score-page">
-    <stage-progress current-stage="INTERVIEW" :stages="stagesList" />
+    <stage-progress :current-stage="currentStageKey" :stages="stagesList" />
     
     <el-card>
       <template #header>
@@ -28,7 +28,7 @@
       <!-- 统计信息 -->
       <el-alert
         v-if="scores.length > 0"
-        :title="`共 ${scores.length} 条评分记录`"
+        :title="`共 ${scores.length} 条评委评分记录`"
         type="info"
         :closable="false"
         style="margin-bottom: 20px"
@@ -51,41 +51,39 @@
         <el-table-column prop="institutionLevel" label="机构等级" width="110" align="center" />
         
         <el-table-column prop="groupCode" label="分组" width="80" align="center" />
+
+        <el-table-column label="项目均分" width="88" align="center">
+          <template #default="{ row }">{{ formatScore1(row.avgTotal) }}</template>
+        </el-table-column>
+        <el-table-column label="评委进度" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.scoredCount != null ? row.scoredCount : '-' }} /
+            {{ row.totalReviewers != null ? row.totalReviewers : '-' }}
+          </template>
+        </el-table-column>
         
         <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
         
         <el-table-column prop="reviewerInstitutionName" label="评委机构" min-width="180" show-overflow-tooltip />
         
-        <el-table-column label="评分详情" width="400">
+        <el-table-column label="评分详情（面谈）" width="380">
           <template #default="{ row }">
             <div class="score-details">
               <div class="score-item">
-                <span class="label">计划:</span>
-                <span class="value">{{ row.plan.toFixed(1) }}</span>
+                <span class="label">主题:</span>
+                <span class="value">{{ formatScore1(row.topic) }}</span>
               </div>
               <div class="score-item">
-                <span class="label">问题:</span>
-                <span class="value">{{ row.problem.toFixed(1) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">行动:</span>
-                <span class="value">{{ row.action.toFixed(1) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">成效:</span>
-                <span class="value">{{ row.success.toFixed(1) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">回顾:</span>
-                <span class="value">{{ row.review.toFixed(1) }}</span>
+                <span class="label">过程:</span>
+                <span class="value">{{ formatScore1(row.process) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">运作:</span>
-                <span class="value">{{ row.operation.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.interviewOperation) }}</span>
               </div>
               <div class="score-item">
-                <span class="label">展示:</span>
-                <span class="value">{{ row.presentation.toFixed(1) }}</span>
+                <span class="label">成效:</span>
+                <span class="value">{{ formatScore1(row.result) }}</span>
               </div>
             </div>
           </template>
@@ -94,7 +92,7 @@
         <el-table-column prop="total" label="总分" width="90" align="center">
           <template #default="{ row }">
             <el-tag type="success" size="large">
-              {{ row.total.toFixed(1) }}
+              {{ formatScore1(row.total) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -138,7 +136,7 @@
         </el-form-item>
         
         <el-form-item label="总分">
-          <el-tag type="success">{{ currentScore?.total.toFixed(1) }} 分</el-tag>
+          <el-tag type="success">{{ formatScore1(currentScore?.total) }} 分</el-tag>
         </el-form-item>
         
         <el-form-item label="驳回原因" prop="reason">
@@ -170,9 +168,10 @@ import { getInterviewScores, returnScore } from '@/api/review'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
+import { flattenScoreListRows, filterScoreRows } from '@/utils/scoreListFlatten'
 import dayjs from 'dayjs'
 
-const { stagesList } = useCompetitionStages()
+const { stagesList, currentStageKey } = useCompetitionStages()
 
 const loading = ref(false)
 const scores = ref([])
@@ -220,7 +219,11 @@ const loadData = async () => {
     const res = await getInterviewScores(params)
     
     if (res.success) {
-      scores.value = res.data || []
+      const flat = flattenScoreListRows(res.data || [], 'INTERVIEW')
+      scores.value = filterScoreRows(flat, {
+        reviewerName: filters.reviewerName,
+        institutionName: filters.institutionName
+      })
     } else {
       ElMessage.error(res.message || '加载失败')
     }
@@ -258,10 +261,15 @@ const confirmReturn = async () => {
       }
     )
     
+    const taskId = currentScore.value.reviewTaskId
+    if (taskId == null) {
+      ElMessage.error('缺少 reviewTaskId，无法驳回')
+      return
+    }
+
     returning.value = true
-    
     const res = await returnScore({
-      scoreId: currentScore.value.scoreId,
+      reviewTaskId: taskId,
       reason: returnForm.reason
     })
     
@@ -285,6 +293,12 @@ const confirmReturn = async () => {
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
+}
+
+function formatScore1(v) {
+  if (v == null || v === '') return '-'
+  const n = Number(v)
+  return Number.isFinite(n) ? n.toFixed(1) : '-'
 }
 
 onMounted(() => {

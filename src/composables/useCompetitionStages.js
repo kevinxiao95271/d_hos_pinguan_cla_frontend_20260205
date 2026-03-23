@@ -1,6 +1,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { getCompetition } from '@/api/competition'
 import { getCurrentCompetitionId } from '@/utils/competition'
+import { toProgressStageKey } from '@/utils/competitionStage'
 
 /**
  * 获取赛事阶段信息的 composable
@@ -39,6 +40,13 @@ export function useCompetitionStages() {
     ]
   })
 
+  /** 供 StageProgress：兼容 BOOK_REVIEW 等与后端 stage 枚举 */
+  const currentStageKey = computed(() => {
+    const comp = competition.value
+    const raw = comp.stage ?? comp.currentStage
+    return toProgressStageKey(raw)
+  })
+
   const loadCompetition = async () => {
     const competitionId = await getCurrentCompetitionId()
     if (!competitionId) {
@@ -64,6 +72,7 @@ export function useCompetitionStages() {
   return {
     competition,
     stagesList,
+    currentStageKey,
     loadCompetition
   }
 }

@@ -1,7 +1,7 @@
 <template>
   <div class="shortlist-management">
     <!-- 赛事进度条 -->
-    <StageProgress :stages="stagesList" />
+    <StageProgress :current-stage="currentStageKey" :stages="stagesList" />
 
     <!-- 书审/面谈重叠时：切换入围操作场景（快照维度） -->
     <el-card class="shortlist-context-card" shadow="hover">
@@ -21,8 +21,7 @@
           <!-- 决赛入围暂不上线 -->
         </el-radio-group>
         <p class="context-hint">
-          下方列表、统计、「计算排名」及增补/取消均针对<strong>当前场景</strong>的排名快照；
-          书审入围与面谈入围数据相互独立，请分别计算、分别维护。
+          书审场景对应基层+综合；面谈场景对应进阶组。列表、统计与配置随场景切换。
         </p>
       </div>
     </el-card>
@@ -32,7 +31,7 @@
       <template #header>
         <div class="card-header">
           <span class="card-title">入围规则与排名快照（{{ stageShortlistTitle }}）</span>
-          <el-tag type="warning">coefficient 调整需先「计算排名」</el-tag>
+          <el-tag type="warning">需先「计算排名」</el-tag>
         </div>
       </template>
 
@@ -45,133 +44,207 @@
             style="margin-left: 16px"
             @click="handleComputeRanking"
           >
-            计算当前场景排名
+            计算排名
           </el-button>
           <el-text type="info" style="margin-left: 12px" size="small">
-            仅写入「{{ stageLabel }}」阶段快照，不影响其他阶段
+            仅写入「{{ stageLabel }}」快照
           </el-text>
         </el-form-item>
 
-        <el-form-item label="入围配置">
-          <el-table v-loading="configLoading" :data="serverConfig" border size="small" style="width: 100%; max-width: 800px">
-            <el-table-column label="组别" width="100">
-              <template #default="{ row }">
-                {{ getGroupTypeLabel(row.groupType) }}
-              </template>
-            </el-table-column>
-            <el-table-column label="模式" width="150">
-              <template #default="{ row }">
-                <el-select v-model="row.mode" size="small" style="width: 130px">
-                  <el-option label="按比例 (RATIO)" value="RATIO" />
-                  <el-option label="取前N名 (COUNT)" value="COUNT" />
-                </el-select>
-              </template>
-            </el-table-column>
-            <el-table-column label="值" min-width="220">
-              <template #default="{ row }">
-                <el-input-number
-                  v-model="row.value"
-                  :min="0"
-                  :max="row.mode === 'RATIO' ? 1 : 9999"
-                  :step="row.mode === 'RATIO' ? 0.01 : 1"
-                  :precision="row.mode === 'RATIO' ? 2 : 0"
-                  size="small"
-                  style="width: 140px"
-                />
-                <span v-if="row.mode === 'RATIO'" style="margin-left: 8px; color: #909399; font-size: 12px">
-                  如 0.55 表示 55%
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="100" align="center">
-              <template #default="{ row }">
-                <el-button type="primary" link size="small" @click="saveGroupConfig(row)">保存</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-text type="info" size="small" style="display: block; margin-top: 8px; line-height: 1.6">
-            「取前 N 名」需对<strong>基层组、综合组、进阶组</strong>分别选 COUNT 并保存（例如基层前 3 名保存一行，综合前 3 名再保存一行）。
-            保存后点<strong>刷新数据</strong>即可按新规则看到入围线；一般<strong>不必</strong>再点「计算排名」——除非尚未生成过调整分快照。
-            「计算排名」会一次性计算当前阶段下<strong>各组别</strong>的调整分与排名快照（不传单组参数）。
-          </el-text>
-        </el-form-item>
+        <!-- 书审：范围 + 仅「各组独立」时展示基层/综合配置 -->
+        <template v-if="rankStage === 'BOOK'">
+          <el-form-item label="书审范围">
+            <div v-loading="bookScopeLoading" class="book-scope-box book-scope-box--compact">
+              <div class="book-scope-row">
+                <el-radio-group v-model="bookScopeForm.scope" size="default">
+                  <el-radio value="PER_GROUP">各组独立</el-radio>
+                  <el-radio value="UNIFIED">统一入围</el-radio>
+                </el-radio-group>
+                <template v-if="bookScopeForm.scope === 'UNIFIED'">
+                  <el-select
+                    v-model="bookScopeForm.unifiedMode"
+                    style="width: 100px; margin-left: 8px"
+                  >
+                    <el-option label="比例" value="RATIO" />
+                    <el-option label="人数" value="COUNT" />
+                  </el-select>
+                  <el-input-number
+                    v-model="bookScopeForm.unifiedValue"
+                    :min="bookScopeForm.unifiedMode === 'RATIO' ? 0.01 : 1"
+                    :max="bookScopeForm.unifiedMode === 'RATIO' ? 1 : 99999"
+                    :step="bookScopeForm.unifiedMode === 'RATIO' ? 0.01 : 1"
+                    :precision="bookScopeForm.unifiedMode === 'RATIO' ? 2 : 0"
+                    style="width: 120px; margin-left: 8px"
+                  />
+                </template>
+                <el-button
+                  type="primary"
+                  :loading="bookScopeSaving"
+                  style="margin-left: 12px"
+                  @click="handleSaveBookScope"
+                >
+                  保存
+                </el-button>
+              </div>
+              <p v-if="bookScopeForm.scope === 'UNIFIED'" class="book-scope-one-line">
+                基层与综合组合并排序，按上值取线；无需再配分组行。
+              </p>
+            </div>
+          </el-form-item>
 
-        <el-form-item label="进阶组合分">
-          <div v-loading="advancedConfigLoading" class="advanced-ranking-box">
-            <p class="advanced-ranking-lead">
-              面谈阶段<strong>进阶组</strong>合分：书审调整分与面谈调整分按权重合并。请先在此保存权重与模式，再按顺序计算书审快照 → 面谈快照。
-            </p>
-            <el-row :gutter="16" align="middle">
-              <el-col :xs="24" :sm="8">
-                <span class="inline-label">书审权重</span>
+          <el-form-item v-if="bookScopeForm.scope === 'PER_GROUP'" label="分组入围">
+            <el-table
+              v-loading="configLoading"
+              :data="configRowsBookPerGroup"
+              border
+              size="small"
+              class="config-table"
+            >
+              <el-table-column label="组别" width="100">
+                <template #default="{ row }">
+                  {{ getGroupTypeLabel(row.groupType) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="模式" width="130">
+                <template #default="{ row }">
+                  <el-select v-model="row.mode" size="small" style="width: 118px">
+                    <el-option label="比例" value="RATIO" />
+                    <el-option label="前N名" value="COUNT" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="值" min-width="180">
+                <template #default="{ row }">
+                  <el-input-number
+                    v-model="row.value"
+                    :min="0"
+                    :max="row.mode === 'RATIO' ? 1 : 9999"
+                    :step="row.mode === 'RATIO' ? 0.01 : 1"
+                    :precision="row.mode === 'RATIO' ? 2 : 0"
+                    size="small"
+                    style="width: 120px"
+                  />
+                  <span v-if="row.mode === 'RATIO'" class="table-cell-hint">0～1</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="88" align="center">
+                <template #default="{ row }">
+                  <el-button type="primary" link size="small" @click="saveGroupConfig(row)">保存</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-text class="form-footnote" type="info" size="small">
+              基层、综合各保存一行；改后点下方「刷新数据」。
+            </el-text>
+          </el-form-item>
+        </template>
+
+        <!-- 面谈：仅进阶组；组合分与入围同一语境，避免与「统一入围」混淆 -->
+        <template v-else>
+          <el-form-item label="组合分">
+            <div v-loading="advancedConfigLoading" class="advanced-ranking-box advanced-ranking-box--compact">
+              <div class="interview-config-row">
+                <span class="inline-label">书审</span>
                 <el-input-number
                   v-model="advancedRankingForm.bookWeight"
                   :min="0"
                   :max="1"
                   :step="0.05"
                   :precision="2"
-                  style="width: 140px"
+                  size="small"
+                  style="width: 110px"
                 />
-              </el-col>
-              <el-col :xs="24" :sm="8">
-                <span class="inline-label">面谈权重</span>
+                <span class="inline-label">面谈</span>
                 <el-input-number
                   v-model="advancedRankingForm.interviewWeight"
                   :min="0"
                   :max="1"
                   :step="0.05"
                   :precision="2"
-                  style="width: 140px"
+                  size="small"
+                  style="width: 110px"
                 />
-              </el-col>
-              <el-col :xs="24" :sm="8">
-                <span class="inline-label">合分模式</span>
-                <el-select v-model="advancedRankingForm.rankingMode" style="width: 100%; min-width: 200px">
-                  <el-option
-                    label="先调整后加权 ADJUST_THEN_WEIGHT（推荐）"
-                    value="ADJUST_THEN_WEIGHT"
-                  />
-                  <el-option
-                    label="先加权后整体调整 WEIGHT_THEN_ADJUST"
-                    value="WEIGHT_THEN_ADJUST"
-                  />
+                <el-select
+                  v-model="advancedRankingForm.rankingMode"
+                  size="small"
+                  style="width: 200px; margin-left: 8px"
+                >
+                  <el-option label="先调整后加权（推荐）" value="ADJUST_THEN_WEIGHT" />
+                  <el-option label="先加权后调整" value="WEIGHT_THEN_ADJUST" />
                 </el-select>
-              </el-col>
-            </el-row>
-            <div class="advanced-ranking-actions">
-              <el-button
-                type="primary"
-                :loading="advancedConfigSaving"
-                @click="handleSaveAdvancedRankingConfig"
-              >
-                保存进阶组合分配置
-              </el-button>
-              <el-text v-if="advancedWeightSumOk" type="success" size="small" style="margin-left: 12px">
-                权重合计 = 1
-              </el-text>
-              <el-text v-else type="warning" size="small" style="margin-left: 12px">
-                书审 + 面谈权重应等于 1
-              </el-text>
+                <el-button
+                  type="primary"
+                  size="small"
+                  :loading="advancedConfigSaving"
+                  style="margin-left: 8px"
+                  @click="handleSaveAdvancedRankingConfig"
+                >
+                  保存
+                </el-button>
+                <el-text
+                  v-if="advancedWeightSumOk"
+                  type="success"
+                  size="small"
+                  style="margin-left: 8px"
+                >
+                  权重合计=1
+                </el-text>
+                <el-text v-else type="warning" size="small" style="margin-left: 8px">
+                  权重需合计为 1
+                </el-text>
+              </div>
+              <p class="advanced-one-line">
+                仅进阶组：先书审「计算排名」再面谈「计算排名」，再配下方入围线。
+              </p>
             </div>
-            <ol class="advanced-flow-ol">
-              <li>保存本配置（PUT advanced-ranking-config）</li>
-              <li>「书审入围」场景下「计算排名」stage=BOOK（先有书审调整分快照）</li>
-              <li>切换到「面谈入围」并「计算排名」stage=INTERVIEW（进阶组合权分写入快照）</li>
-              <li>在入围配置中为进阶组设 COUNT/RATIO 并保存</li>
-              <li>GET shortlist stage=INTERVIEW 查看 withinLine / shortlisted</li>
-            </ol>
-            <el-text type="info" size="small" class="advanced-flow-note">
-              若未先完成书审快照就算面谈，合分可能缺少书审调整分（后台可能回退，以日志为准）。
-            </el-text>
-          </div>
-        </el-form-item>
+          </el-form-item>
 
-        <el-alert
-          title="基层/综合组可主要使用「书审入围」；进阶组在面谈进行时可切换到「面谈入围」单独操作。阶段重叠时请用顶部场景切换，避免误改另一阶段数据。"
-          type="info"
-          :closable="false"
-          style="margin-bottom: 16px"
-        />
+          <el-form-item label="进阶入围">
+            <el-table
+              v-loading="configLoading"
+              :data="configRowsInterview"
+              border
+              size="small"
+              class="config-table"
+            >
+              <el-table-column label="组别" width="100">
+                <template #default="{ row }">
+                  {{ getGroupTypeLabel(row.groupType) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="模式" width="130">
+                <template #default="{ row }">
+                  <el-select v-model="row.mode" size="small" style="width: 118px">
+                    <el-option label="比例" value="RATIO" />
+                    <el-option label="前N名" value="COUNT" />
+                  </el-select>
+                </template>
+              </el-table-column>
+              <el-table-column label="值" min-width="180">
+                <template #default="{ row }">
+                  <el-input-number
+                    v-model="row.value"
+                    :min="0"
+                    :max="row.mode === 'RATIO' ? 1 : 9999"
+                    :step="row.mode === 'RATIO' ? 0.01 : 1"
+                    :precision="row.mode === 'RATIO' ? 2 : 0"
+                    size="small"
+                    style="width: 120px"
+                  />
+                  <span v-if="row.mode === 'RATIO'" class="table-cell-hint">0～1</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="88" align="center">
+                <template #default="{ row }">
+                  <el-button type="primary" link size="small" @click="saveGroupConfig(row)">保存</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <el-text class="form-footnote" type="info" size="small">
+              仅一条；保存后刷新列表。
+            </el-text>
+          </el-form-item>
+        </template>
 
         <el-form-item>
           <el-button type="primary" :loading="loading" icon="Refresh" @click="loadData">刷新数据</el-button>
@@ -191,9 +264,12 @@
             style="width: 150px"
             @change="loadData"
           >
-            <el-option label="基层组" value="BASIC" />
-            <el-option label="进阶组" value="ADVANCED" />
-            <el-option label="综合组" value="COMPREHENSIVE" />
+            <el-option
+              v-for="opt in groupFilterOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
           </el-select>
         </el-form-item>
 
@@ -228,16 +304,35 @@
     <!-- 统计信息：按组别分框 -->
     <el-card class="stats-card" shadow="hover">
       <template #header>
-        <div class="card-header">
-          <span class="card-title">入围统计（按组别）</span>
-          <el-text v-if="snapshotTimeText" type="info" size="small">
-            最近快照：{{ snapshotTimeText }}
-          </el-text>
+        <div class="card-header stats-card-header">
+          <div>
+            <span class="card-title">入围统计 · {{ rankStage === 'BOOK' ? '基层+综合' : '进阶组' }}</span>
+            <div v-if="shortlistSnapshotMeta" class="stats-snapshot-block">
+              <div class="stats-snapshot-line1">
+                <el-tag size="small" type="primary">{{ shortlistSnapshotStageLine }}</el-tag>
+                <span v-if="snapshotTimeText" class="stats-snapshot-time">快照 {{ snapshotTimeText }}</span>
+                <span v-if="shortlistSnapshotAggregateLine" class="stats-snapshot-agg">{{
+                  shortlistSnapshotAggregateLine
+                }}</span>
+              </div>
+              <div v-if="shortlistRuleSummaryText" class="stats-snapshot-line2">
+                {{ shortlistRuleSummaryText }}
+              </div>
+            </div>
+            <el-text
+              v-else-if="snapshotTimeText"
+              type="info"
+              size="small"
+              class="stats-snapshot-legacy"
+            >
+              最近快照：{{ snapshotTimeText }}
+            </el-text>
+          </div>
         </div>
       </template>
 
       <el-row :gutter="20">
-        <el-col :xs="24" :lg="12">
+        <el-col v-show="rankStage === 'BOOK'" :xs="24" :lg="24">
           <div class="stats-segment-box stats-segment--plain">
             <div class="stats-segment-title">基层组 + 综合组</div>
             <div class="stat-grid">
@@ -255,26 +350,26 @@
               <div class="stat-cell">
                 <div class="stat-label">增补入围</div>
                 <div class="stat-value accent">{{ statsNonAdvanced.includeShortlistedCount }}</div>
-                <div class="stat-hint">线内且曾强制增补</div>
+                <div class="stat-hint">线内增补</div>
               </div>
               <div class="stat-cell">
                 <div class="stat-label">手动增补</div>
                 <div class="stat-value warn">{{ statsNonAdvanced.manualAddCount }}</div>
-                <div class="stat-hint">INCLUDE</div>
+                <div class="stat-hint">人工</div>
               </div>
               <div class="stat-cell">
                 <div class="stat-label">手动取消</div>
                 <div class="stat-value danger">{{ statsNonAdvanced.manualRemoveCount }}</div>
-                <div class="stat-hint">EXCLUDE</div>
+                <div class="stat-hint">人工</div>
               </div>
             </div>
             <div class="stats-segment-foot">
-              书审完成参考：{{ statsNonAdvanced.bookDone }} / {{ statsNonAdvanced.total }}
+              书审进度：{{ statsNonAdvanced.bookDone }} / {{ statsNonAdvanced.total }}
             </div>
           </div>
         </el-col>
 
-        <el-col :xs="24" :lg="12">
+        <el-col v-show="rankStage === 'INTERVIEW'" :xs="24" :lg="24">
           <div class="stats-segment-box stats-segment--advanced">
             <div class="stats-segment-title">进阶组</div>
             <div class="stat-grid">
@@ -292,22 +387,21 @@
               <div class="stat-cell">
                 <div class="stat-label">增补入围</div>
                 <div class="stat-value accent">{{ statsAdvanced.includeShortlistedCount }}</div>
-                <div class="stat-hint">线内且曾强制增补</div>
+                <div class="stat-hint">线内增补</div>
               </div>
               <div class="stat-cell">
                 <div class="stat-label">手动增补</div>
                 <div class="stat-value warn">{{ statsAdvanced.manualAddCount }}</div>
-                <div class="stat-hint">INCLUDE</div>
+                <div class="stat-hint">人工</div>
               </div>
               <div class="stat-cell">
                 <div class="stat-label">手动取消</div>
                 <div class="stat-value danger">{{ statsAdvanced.manualRemoveCount }}</div>
-                <div class="stat-hint">EXCLUDE</div>
+                <div class="stat-hint">人工</div>
               </div>
             </div>
             <div class="stats-segment-foot">
-              书审 / 面谈完成参考：{{ statsAdvanced.bookDone }} / {{ statsAdvanced.interviewDone }} /
-              {{ statsAdvanced.total }}
+              书审/面谈：{{ statsAdvanced.bookDone }} / {{ statsAdvanced.interviewDone }} / {{ statsAdvanced.total }}
             </div>
           </div>
         </el-col>
@@ -319,36 +413,23 @@
       <el-collapse-item name="rules">
         <template #title>
           <span class="rule-collapse-title">评分调整与入围规则说明（An / B / Cn / D）</span>
-          <el-tag size="small" type="success" effect="plain" style="margin-left: 8px">与下列列表列对应</el-tag>
+          <el-tag size="small" type="success" effect="plain" style="margin-left: 8px">对照列表列</el-tag>
         </template>
         <div class="rule-doc">
           <p class="rule-lead">
-            为减少专家间差异、使不同小组项目可公平比较，大赛对<strong>专家打分后的项目平均分</strong>做系数调整后再排名、定入围。您可在<strong>本页列表</strong>直接看到原始分、系数与调整分；导出文件便于留档，并非唯一查看途径。
+            专家对项目打分后，系统按小组做系数调整得到<strong>调整分</strong>再排名；本页列表可直接查看，不必仅依赖导出。
           </p>
           <ol class="rule-ol">
-            <li>评分要求：专家以 <strong>80 分</strong>为基准，按标准上下加减分。</li>
+            <li>评分以 <strong>80 分</strong>为基准。</li>
             <li>
-              以综合组为例：项目按约 25～30 个一组分为 N 个小组，每组由 2 位专家打分。在<strong>同一组别内</strong>：
-              <ul class="rule-ul">
-                <li>（1）<strong>An</strong>：该小组内各项目专家打分的平均分（小组均分）。</li>
-                <li>（2）<strong>B</strong>：该<strong>组别内全部项目</strong>专家打分的平均分（全组均分）。</li>
-                <li>（3）<strong>Cn = An ÷ B</strong>：该小组的系数（本页「系数」列）。</li>
-                <li>
-                  （4）<strong>D</strong>：某项目两位专家打分后的<strong>平均分</strong>除以该项目所在小组的 <strong>Cn</strong>，得到<strong>调整分</strong>（本页「调整分」）。再按 <strong>D</strong> 在该组别内排名，并结合入围比例确定入围名单。
-                </li>
-              </ul>
+              同组别内：小组均分 <strong>An</strong>，全组均分 <strong>B</strong>，系数 <strong>Cn = An÷B</strong>，项目调整分 <strong>D</strong> = 项目均分÷Cn；按 D 排名并结合入围规则定线。
             </li>
-            <li>
-              <strong>去极值</strong>：计算 An、B 时，会去掉 <strong>65 分以下</strong>与 <strong>95 分以上</strong>的分数，减轻极端分对系数与调整分的影响（由后台在计算快照时执行）。
-            </li>
+            <li><strong>去极值</strong>：算 An、B 时去掉 65 分以下与 95 分以上（后台执行）。</li>
           </ol>
-          <p class="rule-map-title">本页列表列与符号对应：</p>
+          <p class="rule-map-title">列表列含义</p>
           <ul class="rule-map">
-            <li><strong>原始均分</strong>：专家打分后的项目平均（参与调整前的量）。</li>
-            <li><strong>调整分（D）</strong>：用于排名与入围线判断的调整后分数。</li>
-            <li><strong>Cn</strong>：小组系数；<strong>小组/全组</strong>：An 与 B 的展示（An / B）。</li>
-            <li><strong>排名</strong>：按当前阶段快照中调整分排序得到。</li>
-            <li><strong>入围配置</strong>：下方各组比例或名额与后台规则共同决定入围范围（如 50%～60% 等，以实际配置为准）。</li>
+            <li><strong>原始均分 / 调整分</strong>；<strong>Cn</strong>；<strong>小组/全组</strong>（An/B）；<strong>排名</strong>。</li>
+            <li>入围线由上方场景中的配置与后台规则共同决定。</li>
           </ul>
         </div>
       </el-collapse-item>
@@ -905,6 +986,8 @@ import {
   getRankings,
   getAdminShortlist,
   getShortlistConfig,
+  getBookScope,
+  saveBookScope,
   getAdvancedRankingConfig,
   saveAdvancedRankingConfig,
   saveShortlistConfig,
@@ -918,16 +1001,25 @@ import { getReviewScore } from '@/api/review'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 
 const competitionId = ref(getCurrentCompetitionIdSync())
-const { stagesList } = useCompetitionStages()
+const { stagesList, currentStageKey } = useCompetitionStages()
 
-/** 规则说明折叠面板，默认展开 */
-const ruleCollapseActive = ref(['rules'])
+/** 规则说明折叠，默认收起 */
+const ruleCollapseActive = ref([])
 
 /** 排名快照阶段：与后台 stage 一致 */
 const rankStage = ref('BOOK')
 const computing = ref(false)
 const configLoading = ref(false)
 const serverConfig = ref([])
+
+/** 书审入围范围：GET/PUT book-scope */
+const bookScopeLoading = ref(false)
+const bookScopeSaving = ref(false)
+const bookScopeForm = reactive({
+  scope: 'PER_GROUP',
+  unifiedMode: 'RATIO',
+  unifiedValue: 0.55
+})
 
 /** 进阶组合分：与 GET/PUT advanced-ranking-config 对齐 */
 const advancedConfigLoading = ref(false)
@@ -954,6 +1046,88 @@ const filters = ref({
 const projects = ref([])
 const loading = ref(false)
 
+/** GET /admin/shortlist 包装层元数据（与列表 items 同源） */
+const shortlistSnapshotMeta = ref(null)
+
+const GROUP_TYPE_LABEL = {
+  BASIC: '基层组',
+  COMPREHENSIVE: '综合组',
+  ADVANCED: '进阶组'
+}
+
+function parseShortlistResponse(raw) {
+  if (raw == null) {
+    return { items: [], meta: null }
+  }
+  if (Array.isArray(raw)) {
+    return { items: raw, meta: null }
+  }
+  if (typeof raw === 'object' && Array.isArray(raw.items)) {
+    return {
+      items: raw.items,
+      meta: {
+        stage: raw.stage,
+        snapshotAt: raw.snapshotAt,
+        totalCount: raw.totalCount,
+        shortlistCount: raw.shortlistCount,
+        shortlistRatio: raw.shortlistRatio,
+        scope: raw.scope,
+        unifiedMode: raw.unifiedMode,
+        unifiedValue: raw.unifiedValue,
+        unifiedCutoff: raw.unifiedCutoff,
+        groupConfigs: raw.groupConfigs
+      }
+    }
+  }
+  return { items: [], meta: null }
+}
+
+function formatShortlistRuleSummary(meta) {
+  if (!meta) return ''
+  if (meta.stage === 'BOOK') {
+    if (meta.scope === 'UNIFIED') {
+      const isRatio = meta.unifiedMode === 'RATIO'
+      const valStr = isRatio
+        ? `${(Number(meta.unifiedValue) * 100).toFixed(0)}%`
+        : `前 ${Math.round(Number(meta.unifiedValue))} 名`
+      const cut =
+        meta.unifiedCutoff != null ? ` · 截止名次 ${meta.unifiedCutoff}` : ''
+      return `统一 · ${isRatio ? '按比例' : '按人数'} ${valStr}${cut}`
+    }
+    if (meta.scope === 'PER_GROUP' && Array.isArray(meta.groupConfigs)) {
+      return meta.groupConfigs
+        .map(g => {
+          const name = GROUP_TYPE_LABEL[g.groupType] || g.groupType
+          const rule =
+            g.mode === 'RATIO'
+              ? `${(Number(g.value) * 100).toFixed(0)}%`
+              : `前 ${Math.round(Number(g.value))} 名`
+          const cut = g.cutoff != null ? ` 线${g.cutoff}` : ''
+          const w =
+            g.withinLineCount != null ? ` 规则内${g.withinLineCount}` : ''
+          return `${name} ${rule}${cut}${w}`
+        })
+        .join(' · ')
+    }
+  }
+  if (meta.stage === 'INTERVIEW' && Array.isArray(meta.groupConfigs)) {
+    return meta.groupConfigs
+      .map(g => {
+        const name = GROUP_TYPE_LABEL[g.groupType] || g.groupType
+        const rule =
+          g.mode === 'RATIO'
+            ? `${(Number(g.value) * 100).toFixed(0)}%`
+            : `前 ${Math.round(Number(g.value))} 名`
+        const cut = g.cutoff != null ? ` 线${g.cutoff}` : ''
+        const w =
+          g.withinLineCount != null ? ` 规则内${g.withinLineCount}` : ''
+        return `${name} ${rule}${cut}${w}`
+      })
+      .join(' · ')
+  }
+  return ''
+}
+
 // 详情
 const detailDialogVisible = ref(false)
 const selectedProject = ref(null)
@@ -979,11 +1153,48 @@ const stageShortlistTitle = computed(() => {
   return m[rankStage.value] || '入围'
 })
 
+const groupFilterOptions = computed(() => {
+  if (rankStage.value === 'BOOK') {
+    return [
+      { label: '基层组', value: 'BASIC' },
+      { label: '综合组', value: 'COMPREHENSIVE' }
+    ]
+  }
+  return [{ label: '进阶组', value: 'ADVANCED' }]
+})
+
+/** 书审·各组独立：仅基层+综合配置行 */
+const configRowsBookPerGroup = computed(() =>
+  serverConfig.value.filter(
+    r => r.groupType === 'BASIC' || r.groupType === 'COMPREHENSIVE'
+  )
+)
+
+/** 面谈：仅进阶组配置行 */
+const configRowsInterview = computed(() =>
+  serverConfig.value.filter(r => r.groupType === 'ADVANCED')
+)
+
 function onRankStageChange() {
+  const gt = filters.value.groupType
+  if (rankStage.value === 'BOOK' && gt === 'ADVANCED') {
+    filters.value.groupType = ''
+  }
+  if (rankStage.value === 'INTERVIEW' && gt && gt !== 'ADVANCED') {
+    filters.value.groupType = ''
+  }
   loadData()
 }
 
 const snapshotTimeText = computed(() => {
+  const m = shortlistSnapshotMeta.value
+  if (m?.snapshotAt) {
+    try {
+      return new Date(m.snapshotAt).toLocaleString('zh-CN')
+    } catch {
+      return String(m.snapshotAt)
+    }
+  }
   const t = projects.value.map(p => p.calculatedAt).filter(Boolean)
   if (!t.length) return ''
   const latest = t.sort().slice(-1)[0]
@@ -993,6 +1204,28 @@ const snapshotTimeText = computed(() => {
     return String(latest)
   }
 })
+
+const shortlistSnapshotStageLine = computed(() => {
+  const m = shortlistSnapshotMeta.value
+  const st = m?.stage || rankStage.value
+  if (st === 'BOOK') return '书审入围'
+  if (st === 'INTERVIEW') return '面谈入围'
+  return st || ''
+})
+
+const shortlistSnapshotAggregateLine = computed(() => {
+  const m = shortlistSnapshotMeta.value
+  if (!m || m.totalCount == null) return ''
+  const pct =
+    m.shortlistRatio != null
+      ? `（${(Number(m.shortlistRatio) * 100).toFixed(1)}%）`
+      : ''
+  return `共 ${m.totalCount} 项 · 规则内入围 ${m.shortlistCount ?? '-'}${pct}`
+})
+
+const shortlistRuleSummaryText = computed(() =>
+  formatShortlistRuleSummary(shortlistSnapshotMeta.value)
+)
 
 const filteredProjects = computed(() => {
   let list = projects.value
@@ -1078,6 +1311,85 @@ async function loadShortlistConfig() {
     console.error(e)
   } finally {
     configLoading.value = false
+  }
+}
+
+async function loadBookScope() {
+  bookScopeLoading.value = true
+  try {
+    const res = await getBookScope()
+    if (res.success && res.data) {
+      const d = res.data
+      if (d.scope) {
+        bookScopeForm.scope = d.scope
+      }
+      if (d.unifiedMode) {
+        bookScopeForm.unifiedMode = d.unifiedMode
+      }
+      if (d.unifiedValue != null) {
+        bookScopeForm.unifiedValue = Number(d.unifiedValue)
+      }
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    bookScopeLoading.value = false
+  }
+}
+
+async function handleSaveBookScope() {
+  if (bookScopeForm.scope === 'PER_GROUP') {
+    bookScopeSaving.value = true
+    try {
+      const res = await saveBookScope({ scope: 'PER_GROUP' })
+      if (res.success) {
+        ElMessage.success('书审入围范围已保存（各组独立）')
+        await loadBookScope()
+        await loadData()
+      } else {
+        ElMessage.error(res.message || '保存失败')
+      }
+    } catch (e) {
+      ElMessage.error('保存失败')
+    } finally {
+      bookScopeSaving.value = false
+    }
+    return
+  }
+
+  const { unifiedMode, unifiedValue } = bookScopeForm
+  if (!unifiedMode || unifiedValue == null) {
+    ElMessage.warning('统一模式下须选择比例/人数并填写数值')
+    return
+  }
+  const v = Number(unifiedValue)
+  if (unifiedMode === 'RATIO' && (v <= 0 || v > 1)) {
+    ElMessage.warning('比例须在 0～1 之间（如 0.55 表示 55%）')
+    return
+  }
+  if (unifiedMode === 'COUNT' && (v < 1 || !Number.isInteger(v))) {
+    ElMessage.warning('人数须为正整数')
+    return
+  }
+
+  bookScopeSaving.value = true
+  try {
+    const res = await saveBookScope({
+      scope: 'UNIFIED',
+      unifiedMode,
+      unifiedValue: v
+    })
+    if (res.success) {
+      ElMessage.success('书审入围范围已保存（统一入围）')
+      await loadBookScope()
+      await loadData()
+    } else {
+      ElMessage.error(res.message || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    bookScopeSaving.value = false
   }
 }
 
@@ -1242,16 +1554,20 @@ async function loadData() {
     if (!slRes.success) {
       ElMessage.error(slRes.message || '加载入围名单失败')
       projects.value = []
+      shortlistSnapshotMeta.value = null
       return
     }
 
-    const rows = Array.isArray(slRes.data) ? slRes.data : []
+    const { items: rows, meta } = parseShortlistResponse(slRes.data)
+    shortlistSnapshotMeta.value = meta
+
     projects.value = rows.map(item => normalizeRow(item, bookMap, interviewMap))
 
     if (rows.length === 0) {
       ElMessage.warning('暂无入围快照数据，请先点击「计算排名」')
     } else {
-      ElMessage.success(`加载成功，共 ${projects.value.length} 条`)
+      const n = meta?.totalCount ?? projects.value.length
+      ElMessage.success(`加载成功，共 ${n} 条`)
     }
   } catch (error) {
     console.error('加载数据失败:', error)
@@ -1629,7 +1945,11 @@ onMounted(async () => {
   if (currentCompetitionId) {
     competitionId.value = currentCompetitionId
   }
-  await Promise.all([loadShortlistConfig(), loadAdvancedRankingConfig()])
+  await Promise.all([
+    loadShortlistConfig(),
+    loadBookScope(),
+    loadAdvancedRankingConfig()
+  ])
   await loadData()
 })
 </script>
@@ -1749,6 +2069,43 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.stats-card-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  width: 100%;
+}
+
+.stats-snapshot-block {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.stats-snapshot-line1 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 13px;
+}
+
+.stats-snapshot-time,
+.stats-snapshot-agg {
+  color: var(--el-text-color-secondary);
+}
+
+.stats-snapshot-line2 {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  line-height: 1.5;
+}
+
+.stats-snapshot-legacy {
+  display: block;
+  margin-top: 6px;
 }
 
 .card-title {
@@ -1889,49 +2246,81 @@ onMounted(async () => {
   color: var(--el-text-color-secondary);
 }
 
-.advanced-ranking-box {
+.book-scope-box {
   width: 100%;
-  max-width: 960px;
-  padding: 12px 14px;
+  max-width: 720px;
+  padding: 10px 12px;
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
   background: var(--el-fill-color-blank);
 }
 
-.advanced-ranking-lead {
-  margin: 0 0 12px;
-  font-size: 13px;
-  color: var(--el-text-color-regular);
-  line-height: 1.5;
+.book-scope-box--compact {
+  padding-bottom: 8px;
 }
 
-.advanced-ranking-box .inline-label {
-  display: inline-block;
-  margin-right: 8px;
-  font-size: 13px;
-  color: var(--el-text-color-secondary);
-  vertical-align: middle;
-}
-
-.advanced-ranking-actions {
-  margin-top: 14px;
+.book-scope-row {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 4px 0;
 }
 
-.advanced-flow-ol {
-  margin: 12px 0 6px;
-  padding-left: 1.25em;
+.book-scope-one-line {
+  margin: 8px 0 0;
   font-size: 12px;
   color: var(--el-text-color-secondary);
-  line-height: 1.65;
+  line-height: 1.45;
 }
 
-.advanced-flow-note {
+.config-table {
+  width: 100%;
+  max-width: 640px;
+}
+
+.form-footnote {
   display: block;
-  margin-top: 4px;
+  margin-top: 8px;
+  line-height: 1.45;
+}
+
+.table-cell-hint {
+  margin-left: 6px;
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
+}
+
+.advanced-ranking-box {
+  width: 100%;
+  max-width: 900px;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 8px;
+  background: var(--el-fill-color-blank);
+}
+
+.advanced-ranking-box--compact {
+  padding-bottom: 6px;
+}
+
+.interview-config-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+}
+
+.interview-config-row .inline-label {
+  font-size: 13px;
+  color: var(--el-text-color-secondary);
+  margin-right: 2px;
+}
+
+.advanced-one-line {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.45;
 }
 
 /* 行样式 */

@@ -1,6 +1,6 @@
 <template>
   <div class="score-page">
-    <stage-progress current-stage="BOOK" :stages="stagesList" />
+    <stage-progress :current-stage="currentStageKey" :stages="stagesList" />
     
     <el-card>
       <template #header>
@@ -36,7 +36,7 @@
       <!-- 统计信息 -->
       <el-alert
         v-if="scores.length > 0"
-        :title="`共 ${scores.length} 条评分记录`"
+        :title="`共 ${scores.length} 条评委评分记录`"
         type="info"
         :closable="false"
         style="margin-bottom: 20px"
@@ -65,6 +65,16 @@
         </el-table-column>
         
         <el-table-column prop="groupCode" label="分组" width="80" align="center" />
+
+        <el-table-column label="项目均分" width="88" align="center">
+          <template #default="{ row }">{{ formatScore1(row.avgTotal) }}</template>
+        </el-table-column>
+        <el-table-column label="评委进度" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.scoredCount != null ? row.scoredCount : '-' }} /
+            {{ row.totalReviewers != null ? row.totalReviewers : '-' }}
+          </template>
+        </el-table-column>
         
         <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
         
@@ -75,31 +85,31 @@
             <div class="score-details">
               <div class="score-item">
                 <span class="label">计划:</span>
-                <span class="value">{{ row.plan.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.plan) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">问题:</span>
-                <span class="value">{{ row.problem.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.problem) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">行动:</span>
-                <span class="value">{{ row.action.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.action) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">成效:</span>
-                <span class="value">{{ row.success.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.success) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">回顾:</span>
-                <span class="value">{{ row.review.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.review) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">运作:</span>
-                <span class="value">{{ row.operation.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.operation) }}</span>
               </div>
               <div class="score-item">
                 <span class="label">展示:</span>
-                <span class="value">{{ row.presentation.toFixed(1) }}</span>
+                <span class="value">{{ formatScore1(row.presentation) }}</span>
               </div>
             </div>
           </template>
@@ -108,7 +118,7 @@
         <el-table-column prop="total" label="总分" width="90" align="center">
           <template #default="{ row }">
             <el-tag type="success" size="large">
-              {{ row.total.toFixed(1) }}
+              {{ formatScore1(row.total) }}
             </el-tag>
           </template>
         </el-table-column>
@@ -152,7 +162,7 @@
         </el-form-item>
         
         <el-form-item label="总分">
-          <el-tag type="success">{{ currentScore?.total.toFixed(1) }} 分</el-tag>
+          <el-tag type="success">{{ formatScore1(currentScore?.total) }} 分</el-tag>
         </el-form-item>
         
         <el-form-item label="驳回原因" prop="reason">
@@ -180,15 +190,14 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '@/stores/user'
 import { getBookScores, returnScore } from '@/api/review'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
+import { flattenScoreListRows, filterScoreRows } from '@/utils/scoreListFlatten'
 import dayjs from 'dayjs'
 
-const { stagesList } = useCompetitionStages()
-const userStore = useUserStore()
+const { stagesList, currentStageKey } = useCompetitionStages()
 
 const loading = ref(false)
 const scores = ref([])
@@ -239,7 +248,12 @@ const loadData = async () => {
     const res = await getBookScores(params)
     
     if (res.success) {
-      scores.value = res.data || []
+      const flat = flattenScoreListRows(res.data || [], 'BOOK')
+      scores.value = filterScoreRows(flat, {
+        reviewerName: filters.reviewerName,
+        institutionName: filters.institutionName,
+        groupType: filters.groupType || undefined
+      })
     } else {
       ElMessage.error(res.message || '加载失败')
     }
@@ -278,10 +292,15 @@ const confirmReturn = async () => {
       }
     )
     
+    const taskId = currentScore.value.reviewTaskId
+    if (taskId == null) {
+      ElMessage.error('缺少 reviewTaskId，无法驳回')
+      return
+    }
+
     returning.value = true
-    
     const res = await returnScore({
-      scoreId: currentScore.value.scoreId,
+      reviewTaskId: taskId,
       reason: returnForm.reason
     })
     
@@ -309,6 +328,13 @@ const getGroupTypeText = (type) => {
     'ADVANCED': '进阶组'
   }
   return map[type] || type
+}
+
+/** 分项/总分可能为 null，避免 toFixed 抛错 */
+function formatScore1(v) {
+  if (v == null || v === '') return '-'
+  const n = Number(v)
+  return Number.isFinite(n) ? n.toFixed(1) : '-'
 }
 
 const formatDate = (dateStr) => {
