@@ -416,6 +416,7 @@
                 :auto-upload="false"
                 :on-change="handleEvidenceChange"
                 :on-remove="handleEvidenceRemove"
+                :on-exceed="handleEvidenceExceed"
                 :file-list="form.materials.evidence"
                 :limit="5"
                 multiple
@@ -677,6 +678,79 @@ const loadTemplates = async () => {
   }
 }
 
+/** 与后端枚举对齐（兼容大小写差异） */
+const normalizeMaterialType = (type) => {
+  if (type == null || type === '') return ''
+  return String(type).trim().toUpperCase()
+}
+
+/**
+ * 将接口返回的材料列表写入表单与 tracked id（报名详情 / 材料专用接口共用）
+ */
+const applyMaterialsFromServerList = (materials) => {
+  form.materials.registrationFormDoc = []
+  form.materials.registrationFormPdf = []
+  form.materials.report = []
+  form.materials.evidence = []
+  trackedServerMaterialIds.value = new Set()
+  if (!Array.isArray(materials) || materials.length === 0) {
+    return
+  }
+  for (const m of materials) {
+    const uid = m.id != null ? Number(m.id) : Date.now() + Math.floor(Math.random() * 10000)
+    const item = {
+      name: m.fileName || '已上传文件',
+      url: m.fileUrl || undefined,
+      id: m.id,
+      uid,
+      status: 'success'
+    }
+    const t = normalizeMaterialType(m.type)
+    switch (t) {
+      case 'REGISTRATION_FORM_DOC':
+        form.materials.registrationFormDoc = [item]
+        break
+      case 'REGISTRATION_FORM_PDF':
+        form.materials.registrationFormPdf = [item]
+        break
+      case 'REPORT':
+        form.materials.report = [item]
+        break
+      case 'EVIDENCE':
+        // 同一报名可有多条 EVIDENCE，需全部回显（勿用 find 只取一条）
+        form.materials.evidence.push(item)
+        break
+      default:
+        break
+    }
+  }
+  form.materials.evidence.sort((a, b) => {
+    const ia = a.id != null ? Number(a.id) : Number.MAX_SAFE_INTEGER
+    const ib = b.id != null ? Number(b.id) : Number.MAX_SAFE_INTEGER
+    return ia - ib
+  })
+  trackedServerMaterialIds.value = new Set(
+    materials.map(m => m.id).filter(id => id != null).map(id => Number(id))
+  )
+  console.log('📎 材料列表已回显:', materials.length, '条')
+}
+
+/** 保存/删除后从报名详情拉取 materials（与 loadRegistrationDetail 一致；勿用 /materials/registration/{id}，部分环境未部署会 404） */
+const refreshMaterialsFromServer = async () => {
+  if (!registrationId.value) return
+  try {
+    const res = await getRegistrationDetail(registrationId.value)
+    if (!res?.success || !res.data) return
+    const data = res.data
+    const registration = data.registration || data
+    const rawMaterials = data.materials ?? registration.materials ?? []
+    const list = Array.isArray(rawMaterials) ? rawMaterials : []
+    applyMaterialsFromServerList(list)
+  } catch (e) {
+    console.warn('刷新材料列表失败:', e)
+  }
+}
+
 const downloadTemplateFile = async (template) => {
   try {
     const blob = await downloadTemplate(template.id)
@@ -735,45 +809,10 @@ const loadRegistrationDetail = async () => {
         console.log('📄 项目总结数据加载:', form.summary)
       }
 
-      // 已上传材料 → el-upload file-list（后端 GET /registrations/:id 的 data.materials）
-      form.materials.registrationFormDoc = []
-      form.materials.registrationFormPdf = []
-      form.materials.report = []
-      form.materials.evidence = []
-      trackedServerMaterialIds.value = new Set()
-      const materials = data.materials
-      if (Array.isArray(materials) && materials.length > 0) {
-        for (const m of materials) {
-          const uid = m.id != null ? Number(m.id) : Date.now() + Math.floor(Math.random() * 10000)
-          const item = {
-            name: m.fileName || '已上传文件',
-            url: m.fileUrl || undefined,
-            id: m.id,
-            uid,
-            status: 'success'
-          }
-          switch (m.type) {
-            case 'REGISTRATION_FORM_DOC':
-              form.materials.registrationFormDoc = [item]
-              break
-            case 'REGISTRATION_FORM_PDF':
-              form.materials.registrationFormPdf = [item]
-              break
-            case 'REPORT':
-              form.materials.report = [item]
-              break
-            case 'EVIDENCE':
-              form.materials.evidence.push(item)
-              break
-            default:
-              break
-          }
-        }
-        trackedServerMaterialIds.value = new Set(
-          materials.map(m => m.id).filter(id => id != null).map(id => Number(id))
-        )
-        console.log('📎 材料列表已回显:', materials.length, '条')
-      }
+      // 已上传材料：兼容 data.materials 与 registration.materials
+      const rawMaterials = data.materials ?? registration.materials ?? []
+      const materials = Array.isArray(rawMaterials) ? rawMaterials : []
+      applyMaterialsFromServerList(materials)
     }
   } catch (error) {
     console.error('加载报名详情失败:', error)
@@ -854,6 +893,11 @@ const handleEvidenceRemove = (file, fileList) => {
   form.materials.evidence = fileList
 }
 
+/** 佐证已达 5 个仍继续选择时（与后端「最多 5 个」一致） */
+const handleEvidenceExceed = () => {
+  ElMessage.warning('佐证材料最多上传 5 个文件')
+}
+
 const prevStep = () => {
   if (currentStep.value > 0) {
     currentStep.value--
@@ -891,6 +935,18 @@ const nextStep = async () => {
 const assertApiOk = (res, fallbackMsg) => {
   if (res && res.success === false) {
     throw new Error(res.message || fallbackMsg)
+  }
+}
+
+/** 上传材料接口返回（兼容 id / materialId、fileUrl / url） */
+const pickMaterialUploadResult = (d) => {
+  if (!d || typeof d !== 'object') return null
+  const rawId = d.id ?? d.materialId
+  if (rawId == null) return null
+  return {
+    id: Number(rawId),
+    fileName: d.fileName,
+    fileUrl: d.fileUrl ?? d.url
   }
 }
 
@@ -945,14 +1001,14 @@ const performMaterialUploads = async () => {
     formData.append('type', 'REGISTRATION_FORM_DOC')
     const res = await uploadMaterial(registrationId.value, formData)
     assertApiOk(res, '报名表 Word 上传失败')
-    const d = res.data
-    if (d?.id != null) {
-      const id = Number(d.id)
+    const picked = pickMaterialUploadResult(res.data)
+    if (picked) {
+      const { id } = picked
       trackedServerMaterialIds.value.add(id)
       form.materials.registrationFormDoc = [{
-        name: d.fileName || row.name || '已上传文件',
-        id: d.id,
-        url: d.fileUrl,
+        name: picked.fileName || row.name || '已上传文件',
+        id: picked.id,
+        url: picked.fileUrl,
         uid: id,
         status: 'success'
       }]
@@ -968,14 +1024,14 @@ const performMaterialUploads = async () => {
     formData.append('type', 'REGISTRATION_FORM_PDF')
     const res = await uploadMaterial(registrationId.value, formData)
     assertApiOk(res, '报名表 PDF 上传失败')
-    const d = res.data
-    if (d?.id != null) {
-      const id = Number(d.id)
+    const picked = pickMaterialUploadResult(res.data)
+    if (picked) {
+      const { id } = picked
       trackedServerMaterialIds.value.add(id)
       form.materials.registrationFormPdf = [{
-        name: d.fileName || row.name || '已上传文件',
-        id: d.id,
-        url: d.fileUrl,
+        name: picked.fileName || row.name || '已上传文件',
+        id: picked.id,
+        url: picked.fileUrl,
         uid: id,
         status: 'success'
       }]
@@ -992,14 +1048,14 @@ const performMaterialUploads = async () => {
     formData.append('contentType', file.type || 'application/octet-stream')
     const res = await uploadMaterial(registrationId.value, formData)
     assertApiOk(res, '成果报告书上传失败')
-    const d = res.data
-    if (d?.id != null) {
-      const id = Number(d.id)
+    const picked = pickMaterialUploadResult(res.data)
+    if (picked) {
+      const { id } = picked
       trackedServerMaterialIds.value.add(id)
       form.materials.report = [{
-        name: d.fileName || row.name || '已上传文件',
-        id: d.id,
-        url: d.fileUrl,
+        name: picked.fileName || row.name || '已上传文件',
+        id: picked.id,
+        url: picked.fileUrl,
         uid: id,
         status: 'success'
       }]
@@ -1007,9 +1063,15 @@ const performMaterialUploads = async () => {
     count++
   }
 
+  // 佐证：后端改为多条追加；仅把当前带 raw 的项按索引替换为服务端记录，不整表清空
+  const evidencePending = []
   for (let i = 0; i < form.materials.evidence.length; i++) {
+    if (form.materials.evidence[i]?.raw) {
+      evidencePending.push(i)
+    }
+  }
+  for (const i of evidencePending) {
     const evidence = form.materials.evidence[i]
-    if (!evidence.raw) continue
     const file = evidence.raw
     const formData = new FormData()
     formData.append('file', file)
@@ -1017,20 +1079,25 @@ const performMaterialUploads = async () => {
     formData.append('contentType', file.type || 'application/octet-stream')
     const res = await uploadMaterial(registrationId.value, formData)
     assertApiOk(res, '佐证材料上传失败')
-    const d = res.data
-    if (d?.id != null) {
-      const id = Number(d.id)
+    const picked = pickMaterialUploadResult(res.data)
+    if (picked) {
+      const { id } = picked
       trackedServerMaterialIds.value.add(id)
       form.materials.evidence[i] = {
-        name: d.fileName || evidence.name || '已上传文件',
-        id: d.id,
-        url: d.fileUrl,
+        name: picked.fileName || evidence.name || '已上传文件',
+        id: picked.id,
+        url: picked.fileUrl,
         uid: id,
         status: 'success'
       }
     }
     count++
   }
+  form.materials.evidence.sort((a, b) => {
+    const ia = a.id != null ? Number(a.id) : Number.MAX_SAFE_INTEGER
+    const ib = b.id != null ? Number(b.id) : Number.MAX_SAFE_INTEGER
+    return ia - ib
+  })
 
   return count
 }
@@ -1169,6 +1236,7 @@ const saveDraft = async () => {
         }
         const removed = await syncMaterialDeletionsFromServer()
         const n = await performMaterialUploads()
+        await refreshMaterialsFromServer()
         if (n === -1) {
           ElMessage.warning('请先保存基本信息')
         } else if (n === 0 && removed === 0) {
@@ -1181,7 +1249,10 @@ const saveDraft = async () => {
         }
       } catch (e) {
         console.error('保存草稿-材料同步失败:', e)
-        ElMessage.error(e.message || '材料保存失败，请重试')
+        // 4xx 时 request 拦截器已提示过，避免与后端 message 重复弹窗
+        if (!e.response?.data?.message) {
+          ElMessage.error(e.message || '材料保存失败，请重试')
+        }
       }
     }
   } finally {
@@ -1229,13 +1300,16 @@ const submitForm = async () => {
     try {
       await syncMaterialDeletionsFromServer()
       const uploaded = await performMaterialUploads()
+      await refreshMaterialsFromServer()
       if (uploaded === -1) {
         ElMessage.warning('请先保存基本信息')
         return
       }
     } catch (uploadError) {
       console.error('材料上传失败:', uploadError)
-      ElMessage.error(uploadError.message || '材料上传失败，请重试')
+      if (!uploadError.response?.data?.message) {
+        ElMessage.error(uploadError.message || '材料上传失败，请重试')
+      }
       return
     }
     
