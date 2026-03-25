@@ -473,7 +473,7 @@ import {
 import { getCompetitions } from '@/api/competition'
 import { getDictionaries } from '@/api/dictionary'
 import { getActiveTemplates, downloadTemplate } from '@/api/systemTemplate'
-import { uploadMaterial } from '@/api/material'
+import { uploadMaterial, deleteMaterial } from '@/api/material'
 import { getInstitution } from '@/api/institution'
 
 const route = useRoute()
@@ -481,6 +481,8 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const registrationId = ref(route.params.id !== 'new' ? route.params.id : null)
+/** 详情加载 / 上传成功后跟踪的服务端材料 id，用于检测「从列表移除」并 DELETE */
+const trackedServerMaterialIds = ref(new Set())
 const currentStep = ref(0)
 const loading = ref(false)
 const saving = ref(false)
@@ -732,6 +734,46 @@ const loadRegistrationDetail = async () => {
         Object.assign(form.summary, data.projectSummary)
         console.log('📄 项目总结数据加载:', form.summary)
       }
+
+      // 已上传材料 → el-upload file-list（后端 GET /registrations/:id 的 data.materials）
+      form.materials.registrationFormDoc = []
+      form.materials.registrationFormPdf = []
+      form.materials.report = []
+      form.materials.evidence = []
+      trackedServerMaterialIds.value = new Set()
+      const materials = data.materials
+      if (Array.isArray(materials) && materials.length > 0) {
+        for (const m of materials) {
+          const uid = m.id != null ? Number(m.id) : Date.now() + Math.floor(Math.random() * 10000)
+          const item = {
+            name: m.fileName || '已上传文件',
+            url: m.fileUrl || undefined,
+            id: m.id,
+            uid,
+            status: 'success'
+          }
+          switch (m.type) {
+            case 'REGISTRATION_FORM_DOC':
+              form.materials.registrationFormDoc = [item]
+              break
+            case 'REGISTRATION_FORM_PDF':
+              form.materials.registrationFormPdf = [item]
+              break
+            case 'REPORT':
+              form.materials.report = [item]
+              break
+            case 'EVIDENCE':
+              form.materials.evidence.push(item)
+              break
+            default:
+              break
+          }
+        }
+        trackedServerMaterialIds.value = new Set(
+          materials.map(m => m.id).filter(id => id != null).map(id => Number(id))
+        )
+        console.log('📎 材料列表已回显:', materials.length, '条')
+      }
     }
   } catch (error) {
     console.error('加载报名详情失败:', error)
@@ -846,6 +888,153 @@ const nextStep = async () => {
   }
 }
 
+const assertApiOk = (res, fallbackMsg) => {
+  if (res && res.success === false) {
+    throw new Error(res.message || fallbackMsg)
+  }
+}
+
+/** 当前表单里仍保留的、已落库的材料 id */
+const collectMaterialIdsInForm = () => {
+  const ids = new Set()
+  const one = (arr) => {
+    const it = Array.isArray(arr) && arr[0]
+    if (it?.id != null) ids.add(Number(it.id))
+  }
+  one(form.materials.registrationFormDoc)
+  one(form.materials.registrationFormPdf)
+  one(form.materials.report)
+  for (const it of form.materials.evidence) {
+    if (it?.id != null) ids.add(Number(it.id))
+  }
+  return ids
+}
+
+/**
+ * 用户从上传列表移除的已保存文件 → 调 DELETE 与后端同步
+ * @returns {Promise<number>} 成功删除的条数
+ */
+const syncMaterialDeletionsFromServer = async () => {
+  const current = collectMaterialIdsInForm()
+  const toDelete = [...trackedServerMaterialIds.value].filter(mid => !current.has(mid))
+  let deleted = 0
+  for (const mid of toDelete) {
+    const res = await deleteMaterial(mid)
+    assertApiOk(res, '删除材料失败')
+    trackedServerMaterialIds.value.delete(mid)
+    deleted++
+  }
+  return deleted
+}
+
+/**
+ * 将当前表单中已选择本地文件的材料上传到服务器（不调用提交报名）
+ * @returns {Promise<number>} 实际上传的新文件个数；-1 表示无报名 ID，需由调用方提示
+ */
+const performMaterialUploads = async () => {
+  if (!registrationId.value) {
+    return -1
+  }
+  let count = 0
+
+  if (form.materials.registrationFormDoc.length > 0 && form.materials.registrationFormDoc[0].raw) {
+    const row = form.materials.registrationFormDoc[0]
+    const file = row.raw
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'REGISTRATION_FORM_DOC')
+    const res = await uploadMaterial(registrationId.value, formData)
+    assertApiOk(res, '报名表 Word 上传失败')
+    const d = res.data
+    if (d?.id != null) {
+      const id = Number(d.id)
+      trackedServerMaterialIds.value.add(id)
+      form.materials.registrationFormDoc = [{
+        name: d.fileName || row.name || '已上传文件',
+        id: d.id,
+        url: d.fileUrl,
+        uid: id,
+        status: 'success'
+      }]
+    }
+    count++
+  }
+
+  if (form.materials.registrationFormPdf.length > 0 && form.materials.registrationFormPdf[0].raw) {
+    const row = form.materials.registrationFormPdf[0]
+    const file = row.raw
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'REGISTRATION_FORM_PDF')
+    const res = await uploadMaterial(registrationId.value, formData)
+    assertApiOk(res, '报名表 PDF 上传失败')
+    const d = res.data
+    if (d?.id != null) {
+      const id = Number(d.id)
+      trackedServerMaterialIds.value.add(id)
+      form.materials.registrationFormPdf = [{
+        name: d.fileName || row.name || '已上传文件',
+        id: d.id,
+        url: d.fileUrl,
+        uid: id,
+        status: 'success'
+      }]
+    }
+    count++
+  }
+
+  if (form.materials.report.length > 0 && form.materials.report[0].raw) {
+    const row = form.materials.report[0]
+    const file = row.raw
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'REPORT')
+    formData.append('contentType', file.type || 'application/octet-stream')
+    const res = await uploadMaterial(registrationId.value, formData)
+    assertApiOk(res, '成果报告书上传失败')
+    const d = res.data
+    if (d?.id != null) {
+      const id = Number(d.id)
+      trackedServerMaterialIds.value.add(id)
+      form.materials.report = [{
+        name: d.fileName || row.name || '已上传文件',
+        id: d.id,
+        url: d.fileUrl,
+        uid: id,
+        status: 'success'
+      }]
+    }
+    count++
+  }
+
+  for (let i = 0; i < form.materials.evidence.length; i++) {
+    const evidence = form.materials.evidence[i]
+    if (!evidence.raw) continue
+    const file = evidence.raw
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('type', 'EVIDENCE')
+    formData.append('contentType', file.type || 'application/octet-stream')
+    const res = await uploadMaterial(registrationId.value, formData)
+    assertApiOk(res, '佐证材料上传失败')
+    const d = res.data
+    if (d?.id != null) {
+      const id = Number(d.id)
+      trackedServerMaterialIds.value.add(id)
+      form.materials.evidence[i] = {
+        name: d.fileName || evidence.name || '已上传文件',
+        id: d.id,
+        url: d.fileUrl,
+        uid: id,
+        status: 'success'
+      }
+    }
+    count++
+  }
+
+  return count
+}
+
 const saveBasicInfo = async () => {
   try {
     if (!registrationId.value) {
@@ -863,6 +1052,8 @@ const saveBasicInfo = async () => {
         
         return true
       }
+      ElMessage.error(res.message || '创建失败')
+      return false
     } else {
       // 更新基本信息
       const res = await updateRegistration(registrationId.value, form.basic)
@@ -870,6 +1061,8 @@ const saveBasicInfo = async () => {
         ElMessage.success('保存成功')
         return true
       }
+      ElMessage.error(res.message || '保存失败')
+      return false
     }
   } catch (error) {
     console.error('保存基本信息失败:', error)
@@ -895,6 +1088,8 @@ const saveMembers = async () => {
       ElMessage.success('保存成功')
       return true
     }
+    ElMessage.error(res.message || '保存失败')
+    return false
   } catch (error) {
     console.error('保存成员信息失败:', error)
     ElMessage.error('保存成员信息失败')
@@ -914,6 +1109,8 @@ const saveActivity = async () => {
       ElMessage.success('保存成功')
       return true
     }
+    ElMessage.error(res.message || '保存失败')
+    return false
   } catch (error) {
     console.error('保存活动说明失败:', error)
     ElMessage.error('保存活动说明失败')
@@ -938,6 +1135,8 @@ const saveSummary = async () => {
       ElMessage.success('保存成功')
       return true
     }
+    ElMessage.error(res.message || '保存失败')
+    return false
   } catch (error) {
     console.error('保存项目总结失败:', error)
     console.error('❌ 错误详情:', {
@@ -962,6 +1161,28 @@ const saveDraft = async () => {
       await saveActivity()
     } else if (currentStep.value === 3) {
       await saveSummary()
+    } else if (currentStep.value === 4) {
+      try {
+        if (!registrationId.value) {
+          ElMessage.warning('请先保存基本信息')
+          return
+        }
+        const removed = await syncMaterialDeletionsFromServer()
+        const n = await performMaterialUploads()
+        if (n === -1) {
+          ElMessage.warning('请先保存基本信息')
+        } else if (n === 0 && removed === 0) {
+          ElMessage.info('当前没有材料变更（未上传新文件、也未删除已保存文件）。')
+        } else {
+          const parts = []
+          if (removed > 0) parts.push(`已删除 ${removed} 个材料`)
+          if (n > 0) parts.push(`已上传 ${n} 个材料`)
+          ElMessage.success(`${parts.join('，')}，草稿已保存`)
+        }
+      } catch (e) {
+        console.error('保存草稿-材料同步失败:', e)
+        ElMessage.error(e.message || '材料保存失败，请重试')
+      }
     }
   } finally {
     saving.value = false
@@ -1004,52 +1225,17 @@ const submitForm = async () => {
     
     submitting.value = true
     
-    // 上传材料文件
+    // 同步删除 + 上传材料（与「保存草稿」第 4 步一致）
     try {
-      // 上传报名表 Word
-      if (form.materials.registrationFormDoc.length > 0 && form.materials.registrationFormDoc[0].raw) {
-        const file = form.materials.registrationFormDoc[0].raw
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('type', 'REGISTRATION_FORM_DOC')
-        await uploadMaterial(registrationId.value, formData)
+      await syncMaterialDeletionsFromServer()
+      const uploaded = await performMaterialUploads()
+      if (uploaded === -1) {
+        ElMessage.warning('请先保存基本信息')
+        return
       }
-
-      // 上传报名表 PDF
-      if (form.materials.registrationFormPdf.length > 0 && form.materials.registrationFormPdf[0].raw) {
-        const file = form.materials.registrationFormPdf[0].raw
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('type', 'REGISTRATION_FORM_PDF')
-        await uploadMaterial(registrationId.value, formData)
-      }
-      
-      // 上传成果报告书
-      if (form.materials.report.length > 0 && form.materials.report[0].raw) {
-        const file = form.materials.report[0].raw
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('type', 'REPORT')
-        formData.append('contentType', file.type || 'application/octet-stream')
-        await uploadMaterial(registrationId.value, formData)
-        console.log('✅ 成果报告书上传成功')
-      }
-      
-      // 上传佐证材料
-      for (const evidence of form.materials.evidence) {
-        if (evidence.raw) {
-          const file = evidence.raw
-          const formData = new FormData()
-          formData.append('file', file)
-          formData.append('type', 'EVIDENCE')
-          formData.append('contentType', file.type || 'application/octet-stream')
-          await uploadMaterial(registrationId.value, formData)
-        }
-      }
-      console.log('✅ 佐证材料上传成功')
     } catch (uploadError) {
       console.error('材料上传失败:', uploadError)
-      ElMessage.error('材料上传失败，请重试')
+      ElMessage.error(uploadError.message || '材料上传失败，请重试')
       return
     }
     
