@@ -75,6 +75,8 @@ export function uploadRegistrationMaterial(id, file, type) {
     url: `/registrations/${id}/materials?type=${type}`,
     method: 'post',
     data: formData,
+    timeout: 300000,
+    retry: 0,
     headers: {
       'Content-Type': 'multipart/form-data'
     }

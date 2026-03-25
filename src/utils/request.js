@@ -47,11 +47,13 @@ request.interceptors.response.use(
   async error => {
     const config = error.config
     
-    // 如果是超时错误且还有重试次数，则重试
+    // 如果是超时错误且还有重试次数，则重试（config.retry 为 0 时必须显式传入数字，不能用 || 默认值）
     if (error.code === 'ECONNABORTED' && config && !config.__retryCount) {
       config.__retryCount = config.__retryCount || 0
-      
-      if (config.__retryCount < (config.retry || request.defaults.retry || 0)) {
+
+      const maxRetry = typeof config.retry === 'number' ? config.retry : (request.defaults.retry ?? 0)
+
+      if (config.__retryCount < maxRetry) {
         config.__retryCount += 1
         
         const delay = config.retryDelay || request.defaults.retryDelay || 1000

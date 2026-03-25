@@ -1,5 +1,8 @@
 import request from '@/utils/request'
 
+/** 大文件上传（含 MinIO）可能超过默认 30s，单独放宽；不重试以免重复传整包 */
+const MATERIAL_UPLOAD_TIMEOUT_MS = 300000
+
 /**
  * 上传材料文件
  * @param {number} registrationId - 报名ID
@@ -10,6 +13,8 @@ export function uploadMaterial(registrationId, formData) {
     url: `/registrations/${registrationId}/materials`,
     method: 'post',
     data: formData,
+    timeout: MATERIAL_UPLOAD_TIMEOUT_MS,
+    retry: 0,
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -25,7 +30,8 @@ export function downloadMaterial(materialId) {
   return request({
     url: `/materials/${materialId}/download`,
     method: 'get',
-    responseType: 'blob'
+    responseType: 'blob',
+    timeout: MATERIAL_UPLOAD_TIMEOUT_MS
   })
 }
 

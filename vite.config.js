@@ -19,7 +19,9 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: 'http://localhost:6031',
           changeOrigin: true,
-          timeout: 60000
+          // 大文件上传走代理时，较短超时会导致 ERR_EMPTY_RESPONSE；开发环境放宽
+          timeout: 0,
+          proxyTimeout: 0
         }
       }
     }
