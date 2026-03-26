@@ -344,6 +344,28 @@ const rules = {
   ]
 }
 
+/** 合并报名详情中的材料列表：支持多条 EVIDENCE；兼容 materials 在顶层或 registration 下 */
+function mergeMaterialsFromRegistrationDetail(data) {
+  const a = Array.isArray(data.materials) ? data.materials : []
+  const b = Array.isArray(data.registration?.materials) ? data.registration.materials : []
+  if (a.length === 0) return b
+  if (b.length === 0) return a
+  const byId = new Map()
+  for (const m of a) {
+    if (m && m.id != null) byId.set(Number(m.id), m)
+  }
+  const out = [...a]
+  for (const m of b) {
+    if (!m || m.id == null) continue
+    const id = Number(m.id)
+    if (!byId.has(id)) {
+      byId.set(id, m)
+      out.push(m)
+    }
+  }
+  return out
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -359,6 +381,7 @@ const loadData = async () => {
         const detailRes = await getRegistrationDetail(registrationId.value)
         if (detailRes.success && detailRes.data) {
           const data = detailRes.data
+          const materialsMerged = mergeMaterialsFromRegistrationDetail(data)
           
           // 保存完整项目详情
           projectDetail.value = {
@@ -366,7 +389,7 @@ const loadData = async () => {
             members: data.members || [],
             activityInfo: data.activityInfo,
             summary: data.projectSummary,  // 注意：后端返回的是 projectSummary
-            materials: data.materials || []
+            materials: materialsMerged
           }
           
           // 更新任务基本信息（从 registration 对象中提取，优先使用详情接口返回的数据）
@@ -577,18 +600,46 @@ const previewFile = async (material) => {
   }
 }
 
+/** 小体积 blob 可能是 JSON 错误体（HTTP 200 但正文为 JSON） */
+async function blobJsonErrorMessage(blob) {
+  if (!(blob instanceof Blob) || blob.size > 4096) return null
+  try {
+    const text = await blob.text()
+    const j = JSON.parse(text)
+    if (j && j.success === false) return j.message || '下载失败'
+  } catch {
+    /* 非 JSON 或为二进制小文件 */
+  }
+  return null
+}
+
 const downloadFile = async (material) => {
   try {
+    if (material?.id == null) {
+      ElMessage.error('材料缺少文件标识，无法下载')
+      return
+    }
     const blob = await downloadMaterial(material.id)
+    const errMsg = await blobJsonErrorMessage(blob)
+    if (errMsg) {
+      ElMessage.error(errMsg)
+      return
+    }
     const url = window.URL.createObjectURL(blob)
+    const name = material.fileName || '材料文件'
     const link = document.createElement('a')
     link.href = url
-    link.download = material.fileName || '材料文件'
+    link.download = name
+    link.rel = 'noopener'
+    link.style.display = 'none'
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-    ElMessage.success('下载成功')
+    // 大文件 / zip 在部分浏览器需延迟释放，否则下载未开始就 revoke 会失败
+    setTimeout(() => {
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    }, 800)
+    ElMessage.success('已开始下载')
   } catch (error) {
     console.error('下载文件失败:', error)
     ElMessage.error('下载失败')

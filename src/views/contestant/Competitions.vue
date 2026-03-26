@@ -55,13 +55,13 @@
 
         <!-- 资料下载区 -->
         <div class="score-history-link">
-          <el-link :underline="false" style="color: #67b3e8;" @click="showScorePdf = true">
+          <el-link underline="never" style="color: #67b3e8;" @click="showScorePdf = true">
             📄 浙江省医院品管大赛历年积分汇总情况
           </el-link>
-          <el-link :underline="false" style="color: #67b3e8;" @click="downloadFile(registrationTemplateUrl, '2026年浙江省医院品管大赛报名表、活动说明、摘要内容模版.docx')">
+          <el-link underline="never" style="color: #67b3e8;" @click="downloadFile(registrationTemplateUrl, '2026年浙江省医院品管大赛报名表、活动说明、摘要内容模版.docx')">
             📝 2026年浙江省医院品管大赛报名表、活动说明、摘要内容模版
           </el-link>
-          <el-link :underline="false" style="color: #67b3e8;" @click="downloadFile(resultReportGuideUrl, '成果报告书制作说明.docx')">
+          <el-link underline="never" style="color: #67b3e8;" @click="downloadFile(resultReportGuideUrl, '成果报告书制作说明.docx')">
             📝 成果报告书制作说明
           </el-link>
         </div>

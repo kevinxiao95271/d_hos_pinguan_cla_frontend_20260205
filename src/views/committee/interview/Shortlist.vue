@@ -46,6 +46,20 @@
           >
             计算排名
           </el-button>
+          <el-tooltip
+            :content="canExportScoreSheet ? '下载当前场景打分明细（.xlsx）' : '请先点击「计算排名」生成快照后再导出'"
+            placement="top"
+          >
+            <span style="margin-left: 8px; display: inline-block">
+              <el-button
+                :disabled="!canExportScoreSheet"
+                :loading="exportingScoreSheet"
+                @click="handleExportScoreSheet"
+              >
+                导出打分 Excel
+              </el-button>
+            </span>
+          </el-tooltip>
           <el-text type="info" style="margin-left: 12px" size="small">
             仅写入「{{ stageLabel }}」快照
           </el-text>
@@ -992,6 +1006,7 @@ import {
   saveAdvancedRankingConfig,
   saveShortlistConfig,
   computeRanking,
+  exportScoreSheet,
   setShortlistOverride,
   deleteShortlistOverride
 } from '@/api/shortlist'
@@ -1009,6 +1024,7 @@ const ruleCollapseActive = ref([])
 /** 排名快照阶段：与后台 stage 一致 */
 const rankStage = ref('BOOK')
 const computing = ref(false)
+const exportingScoreSheet = ref(false)
 const configLoading = ref(false)
 const serverConfig = ref([])
 
@@ -1048,6 +1064,12 @@ const loading = ref(false)
 
 /** GET /admin/shortlist 包装层元数据（与列表 items 同源） */
 const shortlistSnapshotMeta = ref(null)
+
+/** 有排名快照才可导出（与 GET /admin/shortlist 返回的 snapshotAt 一致；未计算排名则为空表） */
+const canExportScoreSheet = computed(() => {
+  const m = shortlistSnapshotMeta.value
+  return !!(m && m.snapshotAt)
+})
 
 const GROUP_TYPE_LABEL = {
   BASIC: '基层组',
@@ -1494,6 +1516,38 @@ async function handleComputeRanking() {
     ElMessage.error('计算排名失败')
   } finally {
     computing.value = false
+  }
+}
+
+async function handleExportScoreSheet() {
+  if (!canExportScoreSheet.value || !competitionId.value) return
+  exportingScoreSheet.value = true
+  const stage = rankStage.value
+  const fileName =
+    stage === 'BOOK' ? '打分数据-书审.xlsx' : '打分数据-面谈.xlsx'
+  try {
+    const blob = await exportScoreSheet({
+      competitionId: competitionId.value,
+      stage
+    })
+    if (!(blob instanceof Blob) || blob.size === 0) {
+      ElMessage.warning('导出文件为空，请先「计算排名」生成快照')
+      return
+    }
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('已开始下载')
+  } catch (e) {
+    console.error(e)
+    ElMessage.error(e?.response?.data?.message || '导出失败')
+  } finally {
+    exportingScoreSheet.value = false
   }
 }
 

@@ -33,15 +33,17 @@ request.interceptors.request.use(
 // 响应拦截器
 request.interceptors.response.use(
   response => {
-    const res = response.data
-    
-    // 后端统一返回格式: { success, data, message }
-    if (res.success === false) {
-      // 不自动弹出错误提示，由调用方决定
-      // ElMessage.error(res.message || '请求失败')
-      return res // 返回完整响应，让调用方处理
+    const rt = response.config?.responseType
+    if (rt === 'blob' || rt === 'arraybuffer') {
+      return response.data
     }
-    
+    const res = response.data
+
+    // 后端统一返回格式: { success, data, message }
+    if (res && typeof res === 'object' && res.success === false) {
+      return res
+    }
+
     return res
   },
   async error => {

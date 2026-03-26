@@ -25,6 +25,22 @@ export function computeRanking(data) {
 }
 
 /**
+ * 导出打分数据 Excel（依赖已生成的排名快照，需先 compute-ranking）
+ * GET /admin/reviews/score-export?competitionId=&stage=BOOK|INTERVIEW
+ * @returns {Promise<Blob>}
+ */
+export function exportScoreSheet(params) {
+  return request({
+    url: '/admin/reviews/score-export',
+    method: 'get',
+    params,
+    responseType: 'blob',
+    timeout: 120000,
+    retry: 0
+  })
+}
+
+/**
  * 查询入围名单（含入围线、人工干预；依赖快照）
  * @param {Object} params - competitionId, stage, groupType 可选
  * @returns {Promise} success 时 data 可为：

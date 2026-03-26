@@ -56,7 +56,7 @@
         </div>
 
         <div class="login-extra">
-          <el-link type="info" :underline="false" style="color: #67b3e8;" @click="showGuidePdf = true">
+          <el-link type="info" underline="never" style="color: #67b3e8;" @click="showGuidePdf = true">
             📄 报名系统操作说明
           </el-link>
         </div>
