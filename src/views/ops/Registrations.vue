@@ -332,6 +332,103 @@
           </el-table>
         </div>
         <el-empty v-else description="暂无材料文件" :image-size="80" />
+
+        <!-- 评审汇总（与 GET /registrations/{id}/review-details 对齐；面谈段为四维字段） -->
+        <template
+          v-if="reviewSegments.some(s => (s.stage === 'BOOK' && hasBookAggregate(s)) || (s.stage === 'INTERVIEW' && hasInterviewAggregate(s)))"
+        >
+          <el-divider content-position="left">评审汇总</el-divider>
+          <div v-for="seg in reviewSegments" :key="seg.stage" class="review-seg-block">
+            <template v-if="seg.stage === 'BOOK' && hasBookAggregate(seg)">
+              <h4 class="review-seg-title">书审（分项均分）</h4>
+              <el-table :data="[seg]" border size="small" style="margin-bottom: 16px">
+                <el-table-column label="计划" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgPlan) }}</template>
+                </el-table-column>
+                <el-table-column label="问题" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgProblem) }}</template>
+                </el-table-column>
+                <el-table-column label="行动" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgAction) }}</template>
+                </el-table-column>
+                <el-table-column label="成效" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgSuccess) }}</template>
+                </el-table-column>
+                <el-table-column label="回顾" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgReview) }}</template>
+                </el-table-column>
+                <el-table-column label="运作" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgOperation) }}</template>
+                </el-table-column>
+                <el-table-column label="展示" align="center" width="72">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgPresentation) }}</template>
+                </el-table-column>
+                <el-table-column label="总分" align="center" width="88">
+                  <template #default="{ row }">
+                    <strong style="color: #409eff">{{ fmtReviewNum(row.avgTotal) }}</strong>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <el-row v-if="(seg.highlights && seg.highlights.length) || (seg.weaknesses && seg.weaknesses.length)" :gutter="12" class="review-opinions">
+                <el-col v-if="seg.highlights && seg.highlights.length" :span="12">
+                  <el-card header="亮点" shadow="never">
+                    <ul class="opinion-ul">
+                      <li v-for="(h, i) in seg.highlights" :key="i">{{ h }}</li>
+                    </ul>
+                  </el-card>
+                </el-col>
+                <el-col v-if="seg.weaknesses && seg.weaknesses.length" :span="12">
+                  <el-card header="不足" shadow="never">
+                    <ul class="opinion-ul">
+                      <li v-for="(w, i) in seg.weaknesses" :key="i">{{ w }}</li>
+                    </ul>
+                  </el-card>
+                </el-col>
+              </el-row>
+            </template>
+            <template v-else-if="seg.stage === 'INTERVIEW' && hasInterviewAggregate(seg)">
+              <h4 class="review-seg-title">面谈（分项均分）</h4>
+              <p v-if="seg.taskCount != null" class="review-scored-hint">
+                {{ seg.scoredCount ?? 0 }} / {{ seg.taskCount }} 位评委已打分
+              </p>
+              <el-table :data="[seg]" border size="small" style="margin-bottom: 16px">
+                <el-table-column label="选题（满分10）" align="center" min-width="120">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgTopic) }}</template>
+                </el-table-column>
+                <el-table-column label="改善过程（满分40）" align="center" min-width="120">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgProcess) }}</template>
+                </el-table-column>
+                <el-table-column label="整体运作（满分20）" align="center" min-width="120">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgInterviewOperation) }}</template>
+                </el-table-column>
+                <el-table-column label="改善成果（满分30）" align="center" min-width="120">
+                  <template #default="{ row }">{{ fmtReviewNum(row.avgResult) }}</template>
+                </el-table-column>
+                <el-table-column label="合计" align="center" width="88">
+                  <template #default="{ row }">
+                    <strong style="color: #409eff">{{ fmtReviewNum(row.avgTotal) }}</strong>
+                  </template>
+                </el-table-column>
+              </el-table>
+              <el-row v-if="(seg.highlights && seg.highlights.length) || (seg.weaknesses && seg.weaknesses.length)" :gutter="12" class="review-opinions">
+                <el-col v-if="seg.highlights && seg.highlights.length" :span="12">
+                  <el-card header="亮点" shadow="never">
+                    <ul class="opinion-ul">
+                      <li v-for="(h, i) in seg.highlights" :key="i">{{ h }}</li>
+                    </ul>
+                  </el-card>
+                </el-col>
+                <el-col v-if="seg.weaknesses && seg.weaknesses.length" :span="12">
+                  <el-card header="不足" shadow="never">
+                    <ul class="opinion-ul">
+                      <li v-for="(w, i) in seg.weaknesses" :key="i">{{ w }}</li>
+                    </ul>
+                  </el-card>
+                </el-col>
+              </el-row>
+            </template>
+          </div>
+        </template>
       </div>
       
       <template #footer>
@@ -421,7 +518,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { filterRegistrations, deleteRegistration } from '@/api/admin'
-import { getRegistration, returnRegistration } from '@/api/registration'
+import { getRegistration, getRegistrationReviewDetails, returnRegistration } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import { getCompetitions } from '@/api/competition'
 import { getCurrentCompetitionId } from '@/utils/competition'
@@ -432,6 +529,7 @@ const detailLoading = ref(false)
 const registrations = ref([])
 const competitions = ref([])
 const currentDetail = ref(null)
+const reviewSegments = ref([])
 const detailDialogVisible = ref(false)
 const imagePreviewVisible = ref(false)
 const imagePreviewUrl = ref('')
@@ -529,10 +627,30 @@ const resetFilters = () => {
   loadRegistrations()
 }
 
+function fmtReviewNum(v) {
+  if (v === null || v === undefined || v === '') return '-'
+  return Number(v).toFixed(1)
+}
+
+function hasBookAggregate(seg) {
+  if (!seg || seg.stage !== 'BOOK') return false
+  if (seg.avgTotal != null && seg.avgTotal !== '') return true
+  return ['avgPlan', 'avgProblem', 'avgAction', 'avgSuccess', 'avgReview', 'avgOperation', 'avgPresentation'].some(
+    (k) => seg[k] != null && seg[k] !== ''
+  )
+}
+
+function hasInterviewAggregate(seg) {
+  if (!seg || seg.stage !== 'INTERVIEW') return false
+  if (seg.avgTotal != null && seg.avgTotal !== '') return true
+  return [seg.avgTopic, seg.avgProcess, seg.avgInterviewOperation, seg.avgResult].some((x) => x != null && x !== '')
+}
+
 const viewDetail = async (row) => {
   detailDialogVisible.value = true
   detailLoading.value = true
-  
+  reviewSegments.value = []
+
   try {
     const id = row.registrationId || row.id
     const res = await getRegistration(id)
@@ -541,6 +659,14 @@ const viewDetail = async (row) => {
       // 详情接口不含 applicantName，从列表行补充
       if (!currentDetail.value.applicantName && !currentDetail.value.registration?.applicantName) {
         currentDetail.value._applicantName = row.applicantName
+      }
+      try {
+        const rd = await getRegistrationReviewDetails(id)
+        if (rd.success && Array.isArray(rd.data)) {
+          reviewSegments.value = rd.data
+        }
+      } catch (e) {
+        console.warn('加载评审汇总失败:', e)
       }
     } else {
       ElMessage.error('加载详情失败')
@@ -807,6 +933,30 @@ onMounted(async () => {
       font-weight: 600;
       margin-right: 10px;
     }
+  }
+
+  .review-seg-block {
+    margin-bottom: 8px;
+  }
+  .review-seg-title {
+    margin: 0 0 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #303133;
+  }
+  .review-scored-hint {
+    margin: 0 0 10px;
+    font-size: 13px;
+    color: #606266;
+  }
+  .review-opinions {
+    margin-bottom: 8px;
+  }
+  .opinion-ul {
+    margin: 0;
+    padding-left: 18px;
+    line-height: 1.6;
+    font-size: 13px;
   }
 }
 </style>

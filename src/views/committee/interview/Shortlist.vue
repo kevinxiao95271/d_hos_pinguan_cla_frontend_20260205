@@ -796,12 +796,12 @@
                 </el-col>
               </el-row>
 
-              <!-- 评委详细评分 -->
+              <!-- 评委详细评分（含未打分：与 review-details 段 reviewerScores 对齐） -->
               <h4 style="margin-bottom: 15px">评委详细评分（共 {{ bookReviewers.length }} 位评委）</h4>
               <div v-if="bookReviewers.length > 0">
                 <el-card 
                   v-for="(reviewer, index) in bookReviewers" 
-                  :key="reviewer.reviewerId"
+                  :key="reviewer.reviewTaskId ?? `b-${reviewer.reviewerId}-${index}`"
                   shadow="hover" 
                   style="margin-bottom: 20px"
                 >
@@ -811,26 +811,31 @@
                         评委 {{ index + 1 }}: {{ reviewer.reviewerName }}
                       </span>
                       <div>
-                        <el-tag size="small" type="info">{{ reviewer.reviewerTitle }}</el-tag>
-                        <el-tag size="small" type="success" style="margin-left: 8px">{{ reviewer.reviewerInstitutionLevel }}</el-tag>
+                        <el-tag size="small" :type="reviewerStatusTag(reviewer.status).type" style="margin-right: 8px">
+                          {{ reviewerStatusTag(reviewer.status).label }}
+                        </el-tag>
+                        <el-tag v-if="reviewer.reviewerTitle && reviewer.reviewerTitle !== '-'" size="small" type="info">{{ reviewer.reviewerTitle }}</el-tag>
+                        <el-tag v-if="reviewer.reviewerInstitutionLevel && reviewer.reviewerInstitutionLevel !== '-'" size="small" type="success" style="margin-left: 8px">{{ reviewer.reviewerInstitutionLevel }}</el-tag>
                       </div>
                     </div>
                     <div style="color: #909399; font-size: 13px; margin-top: 5px">
-                      {{ reviewer.reviewerInstitutionName }} | 评审时间: {{ reviewer.submittedAt ? new Date(reviewer.submittedAt).toLocaleString('zh-CN') : '-' }}
+                      {{ reviewer.reviewerInstitutionName !== '-' ? reviewer.reviewerInstitutionName : '' }}
+                      {{ reviewer.reviewerInstitutionName !== '-' ? ' | ' : '' }}
+                      评审时间: {{ reviewer.submittedAt ? new Date(reviewer.submittedAt).toLocaleString('zh-CN') : '-' }}
                     </div>
                   </template>
                   
                   <!-- 分项评分 -->
                   <el-descriptions :column="4" border size="small" style="margin-bottom: 15px">
-                    <el-descriptions-item label="计划">{{ (reviewer.scores.plan || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="问题">{{ (reviewer.scores.problem || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="行动">{{ (reviewer.scores.action || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="成效">{{ (reviewer.scores.success || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="回顾">{{ (reviewer.scores.review || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="运作">{{ (reviewer.scores.operation || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="展示">{{ (reviewer.scores.presentation || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="计划">{{ formatScoreOrDashUnit(reviewer.scores.plan) }}</el-descriptions-item>
+                    <el-descriptions-item label="问题">{{ formatScoreOrDashUnit(reviewer.scores.problem) }}</el-descriptions-item>
+                    <el-descriptions-item label="行动">{{ formatScoreOrDashUnit(reviewer.scores.action) }}</el-descriptions-item>
+                    <el-descriptions-item label="成效">{{ formatScoreOrDashUnit(reviewer.scores.success) }}</el-descriptions-item>
+                    <el-descriptions-item label="回顾">{{ formatScoreOrDashUnit(reviewer.scores.review) }}</el-descriptions-item>
+                    <el-descriptions-item label="运作">{{ formatScoreOrDashUnit(reviewer.scores.operation) }}</el-descriptions-item>
+                    <el-descriptions-item label="展示">{{ formatScoreOrDashUnit(reviewer.scores.presentation) }}</el-descriptions-item>
                     <el-descriptions-item label="总分">
-                      <strong style="color: #409eff; font-size: 16px">{{ (reviewer.scores.total || 0).toFixed(1) }}分</strong>
+                      <strong style="color: #409eff; font-size: 16px">{{ formatScoreOrDashUnit(reviewer.scores.total) }}</strong>
                     </el-descriptions-item>
                   </el-descriptions>
                   
@@ -856,50 +861,41 @@
             <el-empty v-else :description="getBookReviewEmptyText()" :image-size="120" />
           </el-tab-pane>
 
-          <!-- 面谈评分 -->
+          <!-- 面谈评分（汇总来自 interview_scores，字段与书审段分离） -->
           <el-tab-pane label="面谈评分" name="INTERVIEW">
-            <div v-if="interviewDetail && interviewDetail.avgTotal !== null">
+            <div v-if="interviewDetail && hasInterviewAggregate(interviewDetail)">
+              <p
+                v-if="interviewDetail.taskCount != null"
+                style="margin-bottom: 12px; color: #606266; font-size: 14px"
+              >
+                {{ interviewDetail.scoredCount ?? 0 }} / {{ interviewDetail.taskCount }} 位评委已打分
+              </p>
               <h4 style="margin-bottom: 15px">分项得分</h4>
               <el-table :data="[interviewDetail]" border style="margin-bottom: 30px">
-                <el-table-column prop="avgPlan" label="计划" align="center" width="90">
+                <el-table-column label="选题（满分10）" align="center" min-width="200">
                   <template #default="{ row }">
-                    {{ row.avgPlan !== null ? row.avgPlan.toFixed(1) : '-' }}
+                    {{ formatAvgDim(row.avgTopic) }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="avgProblem" label="问题" align="center" width="90">
+                <el-table-column label="改善过程（满分40）" align="center" min-width="140">
                   <template #default="{ row }">
-                    {{ row.avgProblem !== null ? row.avgProblem.toFixed(1) : '-' }}
+                    {{ formatAvgDim(row.avgProcess) }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="avgAction" label="行动" align="center" width="90">
+                <el-table-column label="整体运作（满分20）" align="center" min-width="130">
                   <template #default="{ row }">
-                    {{ row.avgAction !== null ? row.avgAction.toFixed(1) : '-' }}
+                    {{ formatAvgDim(row.avgInterviewOperation) }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="avgSuccess" label="成效" align="center" width="90">
+                <el-table-column label="改善成果（满分30）" align="center" min-width="130">
                   <template #default="{ row }">
-                    {{ row.avgSuccess !== null ? row.avgSuccess.toFixed(1) : '-' }}
+                    {{ formatAvgDim(row.avgResult) }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="avgReview" label="回顾" align="center" width="90">
-                  <template #default="{ row }">
-                    {{ row.avgReview !== null ? row.avgReview.toFixed(1) : '-' }}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="avgOperation" label="运作" align="center" width="90">
-                  <template #default="{ row }">
-                    {{ row.avgOperation !== null ? row.avgOperation.toFixed(1) : '-' }}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="avgPresentation" label="展示" align="center" width="90">
-                  <template #default="{ row }">
-                    {{ row.avgPresentation !== null ? row.avgPresentation.toFixed(1) : '-' }}
-                  </template>
-                </el-table-column>
-                <el-table-column prop="avgTotal" label="总分" align="center" width="100">
+                <el-table-column label="合计" align="center" width="100">
                   <template #default="{ row }">
                     <strong style="color: #409eff; font-size: 16px">
-                      {{ row.avgTotal !== null ? row.avgTotal.toFixed(1) : '-' }}
+                      {{ formatAvgDim(row.avgTotal) }}
                     </strong>
                   </template>
                 </el-table-column>
@@ -925,12 +921,12 @@
                 </el-col>
               </el-row>
 
-              <!-- 评委详细评分 -->
+              <!-- 评委详细评分：N = reviewerScores.length（含 PENDING/RETURNED）；已打分数见 scoredCount -->
               <h4 style="margin-bottom: 15px">评委详细评分（共 {{ interviewReviewers.length }} 位评委）</h4>
               <div v-if="interviewReviewers.length > 0">
                 <el-card 
                   v-for="(reviewer, index) in interviewReviewers" 
-                  :key="reviewer.reviewerId"
+                  :key="reviewer.reviewTaskId ?? `i-${reviewer.reviewerId}-${index}`"
                   shadow="hover" 
                   style="margin-bottom: 20px"
                 >
@@ -940,26 +936,28 @@
                         评委 {{ index + 1 }}: {{ reviewer.reviewerName }}
                       </span>
                       <div>
-                        <el-tag size="small" type="info">{{ reviewer.reviewerTitle }}</el-tag>
-                        <el-tag size="small" type="success" style="margin-left: 8px">{{ reviewer.reviewerInstitutionLevel }}</el-tag>
+                        <el-tag size="small" :type="reviewerStatusTag(reviewer.status).type" style="margin-right: 8px">
+                          {{ reviewerStatusTag(reviewer.status).label }}
+                        </el-tag>
+                        <el-tag v-if="reviewer.reviewerTitle && reviewer.reviewerTitle !== '-'" size="small" type="info">{{ reviewer.reviewerTitle }}</el-tag>
+                        <el-tag v-if="reviewer.reviewerInstitutionLevel && reviewer.reviewerInstitutionLevel !== '-'" size="small" type="success" style="margin-left: 8px">{{ reviewer.reviewerInstitutionLevel }}</el-tag>
                       </div>
                     </div>
                     <div style="color: #909399; font-size: 13px; margin-top: 5px">
-                      {{ reviewer.reviewerInstitutionName }} | 评审时间: {{ reviewer.submittedAt ? new Date(reviewer.submittedAt).toLocaleString('zh-CN') : '-' }}
+                      {{ reviewer.reviewerInstitutionName !== '-' ? reviewer.reviewerInstitutionName : '' }}
+                      {{ reviewer.reviewerInstitutionName !== '-' ? ' | ' : '' }}
+                      评审时间: {{ reviewer.submittedAt ? new Date(reviewer.submittedAt).toLocaleString('zh-CN') : '-' }}
                     </div>
                   </template>
                   
-                  <!-- 分项评分 -->
+                  <!-- 分项评分（面谈四维；null 表示未打分） -->
                   <el-descriptions :column="4" border size="small" style="margin-bottom: 15px">
-                    <el-descriptions-item label="计划">{{ (reviewer.scores.plan || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="问题">{{ (reviewer.scores.problem || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="行动">{{ (reviewer.scores.action || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="成效">{{ (reviewer.scores.success || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="回顾">{{ (reviewer.scores.review || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="运作">{{ (reviewer.scores.operation || 0).toFixed(1) }}分</el-descriptions-item>
-                    <el-descriptions-item label="展示">{{ (reviewer.scores.presentation || 0).toFixed(1) }}分</el-descriptions-item>
+                    <el-descriptions-item label="选题（满分10）">{{ formatScoreOrDashUnit(reviewer.scores.topic) }}</el-descriptions-item>
+                    <el-descriptions-item label="改善过程（满分40）">{{ formatScoreOrDashUnit(reviewer.scores.process) }}</el-descriptions-item>
+                    <el-descriptions-item label="整体运作（满分20）">{{ formatScoreOrDashUnit(reviewer.scores.interviewOperation) }}</el-descriptions-item>
+                    <el-descriptions-item label="改善成果（满分30）">{{ formatScoreOrDashUnit(reviewer.scores.result) }}</el-descriptions-item>
                     <el-descriptions-item label="总分">
-                      <strong style="color: #409eff; font-size: 16px">{{ (reviewer.scores.total || 0).toFixed(1) }}分</strong>
+                      <strong style="color: #409eff; font-size: 16px">{{ formatScoreOrDashUnit(reviewer.scores.total) }}</strong>
                     </el-descriptions-item>
                   </el-descriptions>
                   
@@ -1686,112 +1684,131 @@ async function toggleShortlist(project, isAdd) {
   }
 }
 
-// 加载评委详细评分（通过任务列表+评分接口）
-async function loadReviewerScores(registrationId) {
+function taskMatchesRegistration(task, registrationId) {
+  const rid = task.registrationId ?? task.registration_id
+  return Number(rid) === Number(registrationId)
+}
+
+/** 与 Dashboard/Tasks 一致：部分环境已评分任务为 COMPLETED 而非 SCORED */
+function isReviewTaskScored(task) {
+  return task.status === 'SCORED' || task.status === 'COMPLETED'
+}
+
+async function loadBookReviewersViaTasks(registrationId) {
+  const bookTasksRes = await getAdminReviewTasks({
+    competitionId: competitionId.value,
+    stage: 'BOOK'
+  })
+  if (!bookTasksRes.success || !bookTasksRes.data) return []
+  const projectBookTasks = bookTasksRes.data.filter(
+    (t) => taskMatchesRegistration(t, registrationId) && isReviewTaskScored(t)
+  )
+  const bookScoresPromises = projectBookTasks.map(async (task) => {
+    try {
+      const scoreRes = await getReviewScore(task.id)
+      if (scoreRes.success && scoreRes.data) {
+        const d = scoreRes.data
+        return {
+          reviewTaskId: task.id,
+          reviewerId: task.reviewerId,
+          reviewerName: task.reviewerName,
+          reviewerTitle: task.reviewerTitle,
+          reviewerInstitutionName: task.reviewerInstitutionName,
+          reviewerInstitutionLevel: task.institutionLevel || '-',
+          status: 'SCORED',
+          scores: {
+            plan: d.plan,
+            problem: d.problem,
+            action: d.action,
+            success: d.success,
+            review: d.review,
+            operation: d.operation,
+            presentation: d.presentation,
+            total: d.total
+          },
+          highlight: d.highlight,
+          weakness: d.weakness,
+          submittedAt: d.submittedAt
+        }
+      }
+    } catch (err) {
+      console.warn(`获取书审任务${task.id}的评分失败:`, err)
+    }
+    return null
+  })
+  return (await Promise.all(bookScoresPromises)).filter((s) => s !== null)
+}
+
+async function loadInterviewReviewersViaTasks(registrationId) {
+  const interviewTasksRes = await getAdminReviewTasks({
+    competitionId: competitionId.value,
+    stage: 'INTERVIEW'
+  })
+  if (!interviewTasksRes.success || !interviewTasksRes.data) return []
+  const projectInterviewTasks = interviewTasksRes.data.filter(
+    (t) => taskMatchesRegistration(t, registrationId) && isReviewTaskScored(t)
+  )
+  const interviewScoresPromises = projectInterviewTasks.map(async (task) => {
+    try {
+      const scoreRes = await getReviewScore(task.id)
+      if (scoreRes.success && scoreRes.data) {
+        const d = scoreRes.data
+        return {
+          reviewTaskId: task.id,
+          reviewerId: task.reviewerId,
+          reviewerName: task.reviewerName,
+          reviewerTitle: task.reviewerTitle,
+          reviewerInstitutionName: task.reviewerInstitutionName,
+          reviewerInstitutionLevel: task.institutionLevel || '-',
+          status: 'SCORED',
+          scores: {
+            topic: d.topic ?? d.plan,
+            process: d.process ?? d.problem,
+            interviewOperation: d.interviewOperation ?? d.operation,
+            result: d.result ?? d.success,
+            total: d.total
+          },
+          highlight: d.highlight,
+          weakness: d.weakness,
+          submittedAt: d.submittedAt
+        }
+      }
+    } catch (err) {
+      console.warn(`获取面谈任务${task.id}的评分失败:`, err)
+    }
+    return null
+  })
+  return (await Promise.all(interviewScoresPromises)).filter((s) => s !== null)
+}
+
+/**
+ * 评委明细：仅用 review-details 段内嵌 reviewerScores，或任务列表 + GET /reviews/scores/{taskId}。
+ * （不请求 GET /registrations/{id}/reviewer-scores，避免无此接口的环境反复 404）
+ */
+async function loadReviewerScores(
+  registrationId,
+  embeddedBook = [],
+  embeddedInterview = [],
+  options = {}
+) {
+  const { skipBookFallback = false, skipInterviewFallback = false } = options
   try {
-    // 1. 获取书审任务列表
-    const bookTasksRes = await getAdminReviewTasks({
-      competitionId: competitionId.value,
-      stage: 'BOOK'
-    })
-    
-    if (bookTasksRes.success && bookTasksRes.data) {
-      const allBookTasks = bookTasksRes.data
-      // 筛选出当前项目的任务
-      const projectBookTasks = allBookTasks.filter(t => t.registrationId === registrationId)
-      
-      // 2. 对每个已评分的任务，获取详细评分
-      const bookScoresPromises = projectBookTasks
-        .filter(task => task.status === 'SCORED')
-        .map(async (task) => {
-          try {
-            const scoreRes = await getReviewScore(task.id)
-            if (scoreRes.success && scoreRes.data) {
-              return {
-                reviewerId: task.reviewerId,
-                reviewerName: task.reviewerName,
-                reviewerTitle: task.reviewerTitle,
-                reviewerInstitutionName: task.reviewerInstitutionName,
-                reviewerInstitutionLevel: task.institutionLevel || '-',
-                scores: {
-                  plan: scoreRes.data.plan,
-                  problem: scoreRes.data.problem,
-                  action: scoreRes.data.action,
-                  success: scoreRes.data.success,
-                  review: scoreRes.data.review,
-                  operation: scoreRes.data.operation,
-                  presentation: scoreRes.data.presentation,
-                  total: scoreRes.data.total
-                },
-                highlight: scoreRes.data.highlight,
-                weakness: scoreRes.data.weakness,
-                submittedAt: scoreRes.data.submittedAt
-              }
-            }
-          } catch (err) {
-            console.warn(`获取任务${task.id}的评分失败:`, err)
-          }
-          return null
-        })
-      
-      const bookScores = await Promise.all(bookScoresPromises)
-      bookReviewers.value = bookScores.filter(s => s !== null)
-      console.log('✅ 加载书审评委详细评分:', bookReviewers.value.length, '位')
+    bookReviewers.value = embeddedBook.length ? [...embeddedBook] : []
+    interviewReviewers.value = embeddedInterview.length ? [...embeddedInterview] : []
+
+    if (bookReviewers.value.length === 0 && !skipBookFallback) {
+      bookReviewers.value = await loadBookReviewersViaTasks(registrationId)
     }
-    
-    // 3. 获取面谈任务列表
-    const interviewTasksRes = await getAdminReviewTasks({
-      competitionId: competitionId.value,
-      stage: 'INTERVIEW'
-    })
-    
-    if (interviewTasksRes.success && interviewTasksRes.data) {
-      const allInterviewTasks = interviewTasksRes.data
-      const projectInterviewTasks = allInterviewTasks.filter(t => t.registrationId === registrationId)
-      
-      // 4. 对每个已评分的任务，获取详细评分
-      const interviewScoresPromises = projectInterviewTasks
-        .filter(task => task.status === 'SCORED')
-        .map(async (task) => {
-          try {
-            const scoreRes = await getReviewScore(task.id)
-            if (scoreRes.success && scoreRes.data) {
-              return {
-                reviewerId: task.reviewerId,
-                reviewerName: task.reviewerName,
-                reviewerTitle: task.reviewerTitle,
-                reviewerInstitutionName: task.reviewerInstitutionName,
-                reviewerInstitutionLevel: task.institutionLevel || '-',
-                scores: {
-                  plan: scoreRes.data.plan,
-                  problem: scoreRes.data.problem,
-                  action: scoreRes.data.action,
-                  success: scoreRes.data.success,
-                  review: scoreRes.data.review,
-                  operation: scoreRes.data.operation,
-                  presentation: scoreRes.data.presentation,
-                  total: scoreRes.data.total
-                },
-                highlight: scoreRes.data.highlight,
-                weakness: scoreRes.data.weakness,
-                submittedAt: scoreRes.data.submittedAt
-              }
-            }
-          } catch (err) {
-            console.warn(`获取任务${task.id}的评分失败:`, err)
-          }
-          return null
-        })
-      
-      const interviewScores = await Promise.all(interviewScoresPromises)
-      interviewReviewers.value = interviewScores.filter(s => s !== null)
-      console.log('✅ 加载面谈评委详细评分:', interviewReviewers.value.length, '位')
+    if (interviewReviewers.value.length === 0 && !skipInterviewFallback) {
+      interviewReviewers.value = await loadInterviewReviewersViaTasks(registrationId)
     }
-    
+
+    console.log('✅ 书审评委详细评分:', bookReviewers.value.length, '位')
+    console.log('✅ 面谈评委详细评分:', interviewReviewers.value.length, '位')
   } catch (error) {
     console.error('❌ 加载评委详细评分失败:', error)
-    bookReviewers.value = []
-    interviewReviewers.value = []
+    bookReviewers.value = embeddedBook.length ? [...embeddedBook] : []
+    interviewReviewers.value = embeddedInterview.length ? [...embeddedInterview] : []
   }
 }
 
@@ -1801,17 +1818,26 @@ async function viewDetail(project) {
   detailDialogVisible.value = true
   detailLoading.value = true
   activeTab.value = 'BOOK'
+  bookReviewers.value = []
+  interviewReviewers.value = []
 
   try {
-    // 调用评审详情API获取汇总平均分
+    // 调用评审详情API获取汇总平均分（INTERVIEW/BOOK 段可含 reviewerScores[]）
     const detailsResponse = await getRegistrationReviewDetails(project.registrationId)
+
+    let embeddedBookReviewers = []
+    let embeddedInterviewReviewers = []
+    let skipBookFallback = false
+    let skipInterviewFallback = false
 
     // 处理汇总平均分
     if (detailsResponse.success && detailsResponse.data) {
       const details = detailsResponse.data // data是一个数组
-      
-      // 查找书审和面谈的详情
-      bookDetail.value = details.find(d => d.stage === 'BOOK') || {
+
+      const bookSeg = details.find(d => d.stage === 'BOOK')
+      const intSeg = details.find(d => d.stage === 'INTERVIEW')
+
+      bookDetail.value = bookSeg || {
         stage: 'BOOK',
         avgTotal: project.bookScore || 0,
         avgPlan: null,
@@ -1824,24 +1850,34 @@ async function viewDetail(project) {
         highlights: [],
         weaknesses: []
       }
-      
-      interviewDetail.value = details.find(d => d.stage === 'INTERVIEW') || {
+
+      interviewDetail.value = intSeg || {
         stage: 'INTERVIEW',
-        avgTotal: project.interviewScore || 0,
-        avgPlan: null,
-        avgProblem: null,
-        avgAction: null,
-        avgSuccess: null,
-        avgReview: null,
-        avgOperation: null,
-        avgPresentation: null,
+        avgTotal: project.interviewScore ?? null,
+        avgTopic: null,
+        avgProcess: null,
+        avgInterviewOperation: null,
+        avgResult: null,
+        taskCount: null,
+        scoredCount: null,
         highlights: [],
         weaknesses: []
       }
+
+      if (Array.isArray(bookSeg?.reviewerScores)) {
+        embeddedBookReviewers = bookSeg.reviewerScores.map(mapBookReviewerFromReviewDetailsRow)
+        skipBookFallback = true
+      }
+      if (Array.isArray(intSeg?.reviewerScores)) {
+        embeddedInterviewReviewers = intSeg.reviewerScores.map(mapInterviewReviewerFromReviewDetailsRow)
+        skipInterviewFallback = true
+      }
     }
 
-    // 获取评委详细评分（通过任务列表）
-    await loadReviewerScores(project.registrationId)
+    await loadReviewerScores(project.registrationId, embeddedBookReviewers, embeddedInterviewReviewers, {
+      skipBookFallback,
+      skipInterviewFallback
+    })
 
   } catch (error) {
     console.error('加载详情失败:', error)
@@ -1927,6 +1963,85 @@ function getRankTagType(rank) {
   if (rank === 2) return 'warning'
   if (rank === 3) return 'success'
   return ''
+}
+
+/** 面谈汇总行是否有可展示数据（兼容仅分项或仅总分） */
+function hasInterviewAggregate(item) {
+  if (!item) return false
+  if (item.avgTotal != null && item.avgTotal !== '') return true
+  return [item.avgTopic, item.avgProcess, item.avgInterviewOperation, item.avgResult].some(
+    (x) => x != null && x !== ''
+  )
+}
+
+function formatAvgDim(v) {
+  if (v === null || v === undefined || v === '') return '-'
+  return Number(v).toFixed(1)
+}
+
+/** 评委行分项：null/未填显示为「-」，已打分显示「x.x分」 */
+function formatScoreOrDashUnit(v) {
+  if (v === null || v === undefined || v === '') return '-'
+  return `${Number(v).toFixed(1)}分`
+}
+
+function reviewerStatusTag(status) {
+  const s = status || 'PENDING'
+  const map = {
+    SCORED: { type: 'success', label: '已打分' },
+    COMPLETED: { type: 'success', label: '已打分' },
+    PENDING: { type: 'warning', label: '待打分' },
+    RETURNED: { type: 'danger', label: '已退回' }
+  }
+  return map[s] || { type: 'info', label: String(s) }
+}
+
+/** GET review-details 段内嵌 reviewerScores（扁平字段）→ 组件内统一结构 */
+function mapBookReviewerFromReviewDetailsRow(r) {
+  return {
+    reviewTaskId: r.reviewTaskId,
+    reviewerId: r.reviewerId,
+    reviewerName: r.reviewerName,
+    reviewerTitle: r.reviewerTitle || '-',
+    reviewerInstitutionName: r.reviewerInstitutionName || '-',
+    reviewerInstitutionLevel: r.reviewerInstitutionLevel || '-',
+    status: r.status != null ? r.status : 'SCORED',
+    scores: {
+      plan: r.plan,
+      problem: r.problem,
+      action: r.action,
+      success: r.success,
+      review: r.review,
+      operation: r.operation,
+      presentation: r.presentation,
+      total: r.total
+    },
+    highlight: r.highlight,
+    weakness: r.weakness,
+    submittedAt: r.submittedAt
+  }
+}
+
+function mapInterviewReviewerFromReviewDetailsRow(r) {
+  return {
+    reviewTaskId: r.reviewTaskId,
+    reviewerId: r.reviewerId,
+    reviewerName: r.reviewerName,
+    reviewerTitle: r.reviewerTitle || '-',
+    reviewerInstitutionName: r.reviewerInstitutionName || '-',
+    reviewerInstitutionLevel: r.reviewerInstitutionLevel || '-',
+    status: r.status != null ? r.status : 'SCORED',
+    scores: {
+      topic: r.topic,
+      process: r.process,
+      interviewOperation: r.interviewOperation,
+      result: r.result,
+      total: r.total
+    },
+    highlight: r.highlight,
+    weakness: r.weakness,
+    submittedAt: r.submittedAt
+  }
 }
 
 // 辅助函数 - 书审评分空状态提示
