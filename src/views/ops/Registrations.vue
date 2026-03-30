@@ -712,32 +712,29 @@ const downloadProof = async (material) => {
   }
 }
 
-// 判断文件是否可以预览（仅图片，PDF 统一走下载）
 const canPreview = (fileName) => {
   if (!fileName) return false
   const lowerName = fileName.toLowerCase()
-  return lowerName.endsWith('.jpg') || 
-         lowerName.endsWith('.jpeg') || 
-         lowerName.endsWith('.png') || 
-         lowerName.endsWith('.gif')
+  return lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') ||
+         lowerName.endsWith('.png') || lowerName.endsWith('.gif') ||
+         lowerName.endsWith('.pdf')
 }
 
 // 预览文件
 const previewFile = async (material) => {
   try {
-    const blob = await downloadMaterial(material.id)
+    const rawBlob = await downloadMaterial(material.id)
+    const ext = (material.fileName || '').toLowerCase()
+    const mime = ext.endsWith('.pdf') ? 'application/pdf'
+      : ext.endsWith('.png') ? 'image/png'
+      : ext.endsWith('.gif') ? 'image/gif'
+      : 'image/jpeg'
+    const blob = new Blob([rawBlob], { type: mime })
     const url = window.URL.createObjectURL(blob)
-    const fileName = material.fileName.toLowerCase()
-    
-    if (fileName.endsWith('.pdf')) {
-      // PDF在新窗口打开
+    if (ext.endsWith('.pdf')) {
       window.open(url, '_blank')
-      // 延迟释放URL
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url)
-      }, 60000)
-    } else if (['jpg', 'jpeg', 'png', 'gif'].some(ext => fileName.endsWith(ext))) {
-      // 图片在弹窗中显示
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+    } else {
       imagePreviewUrl.value = url
       imagePreviewVisible.value = true
     }

@@ -367,11 +367,10 @@
                 {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="100">
+            <el-table-column label="操作" width="150">
               <template #default="{ row }">
-                <el-button type="primary" size="small" @click="downloadFile(row)">
-                  下载
-                </el-button>
+                <el-button v-if="canPreview(row.fileName)" type="success" size="small" @click="previewFile(row)">预览</el-button>
+                <el-button type="primary" size="small" @click="downloadFile(row)">下载</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -381,6 +380,13 @@
       <template #footer>
         <el-button @click="detailDialogVisible = false">关闭</el-button>
       </template>
+    </el-dialog>
+
+    <!-- 图片预览弹窗 -->
+    <el-dialog v-model="imagePreviewVisible" title="图片预览" width="80%" append-to-body>
+      <div style="text-align: center;">
+        <img :src="imagePreviewUrl" style="max-width: 100%; max-height: 70vh;" />
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -616,6 +622,39 @@ const getMaterialTypeLabel = (type) => {
     'payment_proof': '缴费凭证'
   }
   return map[type] || type
+}
+
+const imagePreviewVisible = ref(false)
+const imagePreviewUrl = ref('')
+
+const canPreview = (fileName) => {
+  if (!fileName) return false
+  const ext = fileName.toLowerCase()
+  return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') ||
+         ext.endsWith('.gif') || ext.endsWith('.pdf')
+}
+
+const previewFile = async (material) => {
+  try {
+    const rawBlob = await downloadMaterial(material.id)
+    const ext = (material.fileName || '').toLowerCase()
+    const mime = ext.endsWith('.pdf') ? 'application/pdf'
+      : ext.endsWith('.png') ? 'image/png'
+      : ext.endsWith('.gif') ? 'image/gif'
+      : 'image/jpeg'
+    const blob = new Blob([rawBlob], { type: mime })
+    const url = window.URL.createObjectURL(blob)
+    if (ext.endsWith('.pdf')) {
+      window.open(url, '_blank')
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+    } else {
+      imagePreviewUrl.value = url
+      imagePreviewVisible.value = true
+    }
+  } catch (error) {
+    console.error('预览失败:', error)
+    ElMessage.error('预览失败，请尝试下载')
+  }
 }
 
 // 下载材料文件

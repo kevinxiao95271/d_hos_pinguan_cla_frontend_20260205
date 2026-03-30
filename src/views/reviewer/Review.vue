@@ -585,15 +585,27 @@ const imagePreviewUrl = ref('')
 const canPreview = (fileName) => {
   if (!fileName) return false
   const ext = fileName.toLowerCase()
-  return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') || ext.endsWith('.gif')
+  return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') ||
+         ext.endsWith('.gif') || ext.endsWith('.pdf')
 }
 
 const previewFile = async (material) => {
   try {
-    const blob = await downloadMaterial(material.id)
+    const rawBlob = await downloadMaterial(material.id)
+    const ext = (material.fileName || '').toLowerCase()
+    const mime = ext.endsWith('.pdf') ? 'application/pdf'
+      : ext.endsWith('.png') ? 'image/png'
+      : ext.endsWith('.gif') ? 'image/gif'
+      : 'image/jpeg'
+    const blob = new Blob([rawBlob], { type: mime })
     const url = window.URL.createObjectURL(blob)
-    imagePreviewUrl.value = url
-    imagePreviewVisible.value = true
+    if (ext.endsWith('.pdf')) {
+      window.open(url, '_blank')
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+    } else {
+      imagePreviewUrl.value = url
+      imagePreviewVisible.value = true
+    }
   } catch (error) {
     console.error('预览失败:', error)
     ElMessage.error('预览失败，请尝试下载')
