@@ -35,6 +35,7 @@ export function downloadMaterial(materialId) {
   })
 }
 
+
 /**
  * 获取报名的所有材料列表
  * @param {number} registrationId - 报名ID

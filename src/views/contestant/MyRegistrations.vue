@@ -156,12 +156,12 @@
       </template>
     </el-dialog>
 
-    <!-- 图片预览弹窗 -->
-    <el-dialog v-model="imagePreviewVisible" title="图片预览" width="80%" append-to-body>
-      <div style="text-align: center;">
-        <img :src="imagePreviewUrl" style="max-width: 100%; max-height: 70vh;" />
-      </div>
-    </el-dialog>
+    <!-- 文件预览 -->
+    <FilePreviewDialog
+      v-model="filePreviewVisible"
+      :material-id="previewMaterialId"
+      :file-name="previewFileName"
+    />
   </div>
 </template>
 
@@ -172,6 +172,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
 import { getMyRegistrations, submitRegistration as submitReg, getRegistration, uploadRegistrationMaterial, getRegistrationCountByInstitution } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
+import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import dayjs from 'dayjs'
 
 const PAYMENT_URL = 'https://mm.sciconf.cn/cn/minisite/index/35899'
@@ -306,37 +307,20 @@ const viewProof = async (row) => {
   }
 }
 
-const imagePreviewVisible = ref(false)
-const imagePreviewUrl = ref('')
+const filePreviewVisible = ref(false)
+const previewMaterialId = ref(null)
+const previewFileName = ref('')
 
 const canPreview = (fileName) => {
   if (!fileName) return false
-  const ext = fileName.toLowerCase()
-  return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') ||
-         ext.endsWith('.gif') || ext.endsWith('.pdf')
+  const ext = fileName.split('.').pop().toLowerCase()
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'docx', 'xlsx', 'xls'].includes(ext)
 }
 
-const previewProof = async (material) => {
-  try {
-    const rawBlob = await downloadMaterial(material.id)
-    const ext = (material.fileName || '').toLowerCase()
-    const mime = ext.endsWith('.pdf') ? 'application/pdf'
-      : ext.endsWith('.png') ? 'image/png'
-      : ext.endsWith('.gif') ? 'image/gif'
-      : 'image/jpeg'
-    const blob = new Blob([rawBlob], { type: mime })
-    const url = window.URL.createObjectURL(blob)
-    if (ext.endsWith('.pdf')) {
-      window.open(url, '_blank')
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000)
-    } else {
-      imagePreviewUrl.value = url
-      imagePreviewVisible.value = true
-    }
-  } catch (error) {
-    console.error('预览失败:', error)
-    ElMessage.error('预览失败，请尝试下载')
-  }
+const previewProof = (material) => {
+  previewMaterialId.value = material.id
+  previewFileName.value = material.fileName || '文件预览'
+  filePreviewVisible.value = true
 }
 
 const downloadProof = async (material) => {
