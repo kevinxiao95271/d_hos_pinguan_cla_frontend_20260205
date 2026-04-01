@@ -60,9 +60,10 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" align="center" fixed="right">
+        <el-table-column label="操作" width="220" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button type="info" size="small" @click="openDetail(row)">详情</el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -124,15 +125,203 @@
         <el-button type="primary" @click="submitForm" :loading="submitting">确定</el-button>
       </template>
     </el-dialog>
+
+    <!-- 详情抽屉 -->
+    <el-drawer
+      v-model="drawerVisible"
+      :title="drawerTitle"
+      direction="rtl"
+      size="640px"
+      @close="drawerTab = 'basic'"
+    >
+      <el-tabs v-model="drawerTab" style="height: 100%">
+        <!-- Tab 1: 基本信息（只读） -->
+        <el-tab-pane label="基本信息" name="basic">
+          <el-descriptions :column="2" border size="small" style="margin-top: 8px">
+            <el-descriptions-item label="ID">{{ drawerRow.id }}</el-descriptions-item>
+            <el-descriptions-item label="手机号">{{ drawerRow.phone }}</el-descriptions-item>
+            <el-descriptions-item label="姓名">{{ drawerRow.name }}</el-descriptions-item>
+            <el-descriptions-item label="职称">{{ drawerRow.title || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="所属机构" :span="2">{{ drawerRow.institutionName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="当前负荷">{{ drawerRow.currentLoad ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="专家背景" :span="2">{{ drawerRow.expertBackground || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+
+        <!-- Tab 2: 扩展档案 -->
+        <el-tab-pane label="扩展档案" name="profile" lazy>
+          <div v-loading="profileLoading" style="padding: 4px 0">
+            <el-form
+              ref="profileFormRef"
+              :model="profileForm"
+              :rules="profileRules"
+              label-width="130px"
+            >
+              <el-divider content-position="left">基本信息</el-divider>
+
+              <el-form-item label="性别">
+                <el-radio-group v-model="profileForm.gender">
+                  <el-radio value="MALE">男</el-radio>
+                  <el-radio value="FEMALE">女</el-radio>
+                  <el-radio value="UNKNOWN">保密</el-radio>
+                </el-radio-group>
+              </el-form-item>
+
+              <el-form-item label="职务">
+                <el-input v-model="profileForm.position" placeholder="请输入职务" maxlength="100" style="width: 280px" />
+              </el-form-item>
+
+              <el-divider content-position="left">证件信息</el-divider>
+
+              <el-form-item label="身份证号" prop="idNumber">
+                <el-input
+                  v-model="profileForm.idNumber"
+                  placeholder="请输入身份证号"
+                  maxlength="18"
+                  style="width: 280px"
+                  @input="profileAutoMaskId"
+                />
+                <span v-if="profileForm.idNumberMasked" style="margin-left: 12px; color: #909399; font-size: 12px">
+                  {{ profileForm.idNumberMasked }}
+                </span>
+              </el-form-item>
+
+              <el-form-item label="身份证正面">
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <el-image
+                    v-if="profileForm.idCardFrontUrl"
+                    :src="profileForm.idCardFrontUrl"
+                    style="width: 130px; height: 80px; border-radius: 4px; border: 1px solid #eee"
+                    fit="cover"
+                    :preview-src-list="[profileForm.idCardFrontUrl]"
+                  />
+                  <el-input v-model="profileForm.idCardFrontUrl" placeholder="图片 URL" style="width: 240px" clearable />
+                </div>
+              </el-form-item>
+
+              <el-form-item label="身份证反面">
+                <div style="display: flex; align-items: center; gap: 10px">
+                  <el-image
+                    v-if="profileForm.idCardBackUrl"
+                    :src="profileForm.idCardBackUrl"
+                    style="width: 130px; height: 80px; border-radius: 4px; border: 1px solid #eee"
+                    fit="cover"
+                    :preview-src-list="[profileForm.idCardBackUrl]"
+                  />
+                  <el-input v-model="profileForm.idCardBackUrl" placeholder="图片 URL" style="width: 240px" clearable />
+                </div>
+              </el-form-item>
+
+              <el-divider content-position="left">银行卡信息</el-divider>
+
+              <el-form-item label="开户银行">
+                <el-input v-model="profileForm.bankName" placeholder="请输入开户银行" maxlength="100" style="width: 280px" />
+              </el-form-item>
+
+              <el-form-item label="银行卡号">
+                <el-input
+                  v-model="profileForm.bankCardNo"
+                  placeholder="请输入银行卡号"
+                  maxlength="25"
+                  style="width: 280px"
+                  @input="profileAutoMaskBank"
+                />
+                <span v-if="profileForm.bankCardNoMasked" style="margin-left: 12px; color: #909399; font-size: 12px">
+                  {{ profileForm.bankCardNoMasked }}
+                </span>
+              </el-form-item>
+
+              <el-divider content-position="left">专业背景与能力</el-divider>
+
+              <el-form-item label="专业背景">
+                <el-checkbox-group v-model="profileForm.backgrounds">
+                  <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">
+                    {{ item.label }}
+                  </el-checkbox>
+                </el-checkbox-group>
+              </el-form-item>
+
+              <el-form-item label="擅长工具">
+                <el-checkbox-group v-model="profileForm.tools">
+                  <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">
+                    {{ item.label }}
+                  </el-checkbox>
+                </el-checkbox-group>
+              </el-form-item>
+
+              <el-form-item label="擅长主题">
+                <el-checkbox-group v-model="profileForm.topics">
+                  <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">
+                    {{ item.label }}
+                  </el-checkbox>
+                </el-checkbox-group>
+              </el-form-item>
+
+              <el-form-item>
+                <el-button type="primary" :loading="profileSaving" @click="saveProfile">保存扩展档案</el-button>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-drawer>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getReviewers, createReviewer, updateReviewer, deleteReviewer } from '@/api/review'
 import { autocomplete } from '@/api/institution'
+import { getReviewerProfile, updateReviewerProfile } from '@/api/reviewerProfile'
+
+// ── 枚举（与 Profile.vue 保持一致） ─────────────────────────────────
+const BACKGROUND_OPTIONS = [
+  { value: 'MANAGEMENT', label: '医院管理' },
+  { value: 'MEDICAL', label: '医疗' },
+  { value: 'NURSING', label: '护理' },
+  { value: 'QUALITY_MANAGEMENT', label: '质量管理' },
+  { value: 'PHARMACY', label: '药学' },
+  { value: 'MEDICAL_TECH', label: '医技' },
+  { value: 'MEDICAL_RECORD', label: '病案' },
+  { value: 'INFECTION_CONTROL', label: '院感' },
+  { value: 'OTHER', label: '其他' }
+]
+const TOOL_OPTIONS = [
+  { value: 'PDCA', label: 'PDCA' },
+  { value: 'FOCUS_PDCA', label: 'FOCUS-PDCA' },
+  { value: 'QFD', label: 'QFD' },
+  { value: 'QCC_PROBLEM_SOLVING', label: 'QCC问题解决型' },
+  { value: 'QCC_TOPIC_ACHIEVEMENT', label: 'QCC课题达成型' },
+  { value: 'PROJECT_IMPROVEMENT', label: '专案改善' },
+  { value: 'RCA', label: 'RCA' },
+  { value: 'FMEA', label: 'FMEA' },
+  { value: 'BENCHMARKING', label: '标杆管理' },
+  { value: 'S6', label: '6S' },
+  { value: 'LEAN', label: '精益管理' },
+  { value: 'SIX_SIGMA', label: '六西格玛' },
+  { value: 'EBM', label: '循证管理' },
+  { value: 'BSC', label: 'BSC' },
+  { value: 'QUALITY_REPORT_CARD', label: '品质报告卡' },
+  { value: 'TRM', label: 'TRM' },
+  { value: 'PROCESS_REDESIGN', label: '流程再造' },
+  { value: 'OTHER', label: '其他' }
+]
+const TOPIC_OPTIONS = [
+  { value: 'PATIENT_CARE', label: '患者照护' },
+  { value: 'MEDICAL_RECORD_QUALITY', label: '病历质量' },
+  { value: 'TIME_EFFICIENCY', label: '效率提升' },
+  { value: 'COST_EFFECTIVENESS', label: '成本效益' },
+  { value: 'SAFETY_ENVIRONMENT', label: '安全环境' },
+  { value: 'SATISFACTION', label: '满意度' },
+  { value: 'EDUCATION_TRAINING', label: '教育培训' },
+  { value: 'MEDICAL_INFORMATION', label: '医疗信息化' },
+  { value: 'MEDICAL_QUALITY_SAFETY', label: '医疗质量与安全' },
+  { value: 'PROCESS_REDESIGN', label: '流程再造' },
+  { value: 'DIGITAL_AI', label: '数字化/AI' },
+  { value: 'OTHER', label: '其他' }
+]
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -352,6 +541,151 @@ const resetForm = () => {
     formRef.value.resetFields()
   }
 }
+
+// ── 详情抽屉 ─────────────────────────────────────────────────────────
+const drawerVisible = ref(false)
+const drawerTab = ref('basic')
+const drawerTitle = ref('')
+const drawerRow = ref({})
+
+// 扩展档案状态
+const profileLoading = ref(false)
+const profileSaving = ref(false)
+const profileFormRef = ref(null)
+const profileForm = reactive({
+  gender: 'UNKNOWN',
+  position: '',
+  idNumber: '',
+  idNumberMasked: '',
+  idCardFrontUrl: '',
+  idCardBackUrl: '',
+  bankName: '',
+  bankCardNo: '',
+  bankCardNoMasked: '',
+  backgrounds: [],
+  tools: [],
+  topics: []
+})
+const profileRules = {
+  idNumber: [
+    {
+      validator: (rule, value, callback) => {
+        if (value && !/^\d{17}[\dXx]$/.test(value)) callback(new Error('身份证号格式不正确'))
+        else callback()
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+function safeJsonParse(str) {
+  if (!str) return []
+  try { return JSON.parse(str) } catch { return [] }
+}
+function maskIdNumber(v) {
+  if (!v || v.length < 10) return ''
+  return v.slice(0, 6) + '********' + v.slice(-4)
+}
+function maskBankCard(v) {
+  if (!v || v.length < 8) return ''
+  return v.slice(0, 4) + ' **** **** ' + v.slice(-4)
+}
+function profileAutoMaskId() {
+  profileForm.idNumberMasked = maskIdNumber(profileForm.idNumber)
+}
+function profileAutoMaskBank() {
+  profileForm.bankCardNoMasked = maskBankCard(profileForm.bankCardNo)
+}
+
+function apiToProfileForm(data) {
+  profileForm.gender = data.gender || 'UNKNOWN'
+  profileForm.position = data.position || ''
+  profileForm.idNumber = data.idNumber || ''
+  profileForm.idNumberMasked = data.idNumberMasked || maskIdNumber(data.idNumber || '')
+  profileForm.idCardFrontUrl = data.idCardFrontUrl || ''
+  profileForm.idCardBackUrl = data.idCardBackUrl || ''
+  profileForm.bankName = data.bankName || ''
+  profileForm.bankCardNo = data.bankCardNo || ''
+  profileForm.bankCardNoMasked = data.bankCardNoMasked || maskBankCard(data.bankCardNo || '')
+  profileForm.backgrounds = safeJsonParse(data.backgroundsJson)
+  profileForm.tools = safeJsonParse(data.toolsJson)
+  profileForm.topics = safeJsonParse(data.topicsJson)
+}
+
+function resetProfileForm() {
+  profileForm.gender = 'UNKNOWN'
+  profileForm.position = ''
+  profileForm.idNumber = ''
+  profileForm.idNumberMasked = ''
+  profileForm.idCardFrontUrl = ''
+  profileForm.idCardBackUrl = ''
+  profileForm.bankName = ''
+  profileForm.bankCardNo = ''
+  profileForm.bankCardNoMasked = ''
+  profileForm.backgrounds = []
+  profileForm.tools = []
+  profileForm.topics = []
+}
+
+async function loadProfile(id) {
+  profileLoading.value = true
+  resetProfileForm()
+  try {
+    const res = await getReviewerProfile(id)
+    if (res.success && res.data) apiToProfileForm(res.data)
+  } catch (e) {
+    console.warn('获取扩展档案失败:', e)
+  } finally {
+    profileLoading.value = false
+  }
+}
+
+async function saveProfile() {
+  try {
+    await profileFormRef.value.validate()
+    profileSaving.value = true
+    const payload = {
+      gender: profileForm.gender,
+      position: profileForm.position || null,
+      idNumber: profileForm.idNumber || null,
+      idNumberMasked: maskIdNumber(profileForm.idNumber),
+      idCardFrontUrl: profileForm.idCardFrontUrl || null,
+      idCardBackUrl: profileForm.idCardBackUrl || null,
+      bankName: profileForm.bankName || null,
+      bankCardNo: profileForm.bankCardNo || null,
+      bankCardNoMasked: maskBankCard(profileForm.bankCardNo),
+      backgroundsJson: JSON.stringify(profileForm.backgrounds),
+      toolsJson: JSON.stringify(profileForm.tools),
+      topicsJson: JSON.stringify(profileForm.topics)
+    }
+    const res = await updateReviewerProfile(drawerRow.value.id, payload)
+    if (res.success) {
+      ElMessage.success('扩展档案已保存')
+    } else {
+      ElMessage.error(res.message || '保存失败')
+    }
+  } catch (e) {
+    if (e !== false) {
+      ElMessage.error(e?.response?.data?.message || e?.message || '保存失败')
+    }
+  } finally {
+    profileSaving.value = false
+  }
+}
+
+function openDetail(row) {
+  drawerRow.value = row
+  drawerTitle.value = `评委详情 — ${row.name}`
+  drawerTab.value = 'basic'
+  drawerVisible.value = true
+}
+
+// 切换到扩展档案 Tab 时自动加载
+watch(drawerTab, (tab) => {
+  if (tab === 'profile' && drawerRow.value.id) {
+    loadProfile(drawerRow.value.id)
+  }
+})
 
 onMounted(() => {
   loadData()

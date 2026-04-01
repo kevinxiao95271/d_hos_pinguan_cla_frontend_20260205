@@ -120,7 +120,8 @@ const menuItems = computed(() => {
   if (role === 'REVIEWER') {
     return [
       { path: '/reviewer/dashboard', title: '评审首页', icon: 'House' },
-      { path: '/reviewer/tasks', title: '评审任务', icon: 'Document' }
+      { path: '/reviewer/tasks', title: '评审任务', icon: 'Document' },
+      { path: '/reviewer/profile', title: '我的档案', icon: 'User' }
     ]
   }
   

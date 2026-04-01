@@ -85,6 +85,12 @@ const routes = [
         name: 'Review',
         component: () => import('@/views/reviewer/Review.vue'),
         meta: { title: '评分' }
+      },
+      {
+        path: 'profile',
+        name: 'ReviewerProfile',
+        component: () => import('@/views/reviewer/Profile.vue'),
+        meta: { title: '我的档案' }
       }
     ]
   },
