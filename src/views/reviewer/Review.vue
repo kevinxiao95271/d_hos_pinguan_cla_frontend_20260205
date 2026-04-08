@@ -245,12 +245,12 @@
         </div>
     </el-card>
 
-    <!-- 图片预览弹窗 -->
-    <el-dialog v-model="imagePreviewVisible" title="图片预览" width="80%" append-to-body>
-      <div style="text-align: center;">
-        <img :src="imagePreviewUrl" style="max-width: 100%; max-height: 70vh;" />
-      </div>
-    </el-dialog>
+    <!-- 文件预览 -->
+    <FilePreviewDialog
+      v-model="filePreviewVisible"
+      :material-id="previewMaterialId"
+      :file-name="previewFileName"
+    />
   </div>
 </template>
 
@@ -261,6 +261,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { submitReviewScore, getReviewScore } from '@/api/review'
 import { getRegistrationDetail } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
+import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -344,28 +345,6 @@ const rules = {
   ]
 }
 
-/** 合并报名详情中的材料列表：支持多条 EVIDENCE；兼容 materials 在顶层或 registration 下 */
-function mergeMaterialsFromRegistrationDetail(data) {
-  const a = Array.isArray(data.materials) ? data.materials : []
-  const b = Array.isArray(data.registration?.materials) ? data.registration.materials : []
-  if (a.length === 0) return b
-  if (b.length === 0) return a
-  const byId = new Map()
-  for (const m of a) {
-    if (m && m.id != null) byId.set(Number(m.id), m)
-  }
-  const out = [...a]
-  for (const m of b) {
-    if (!m || m.id == null) continue
-    const id = Number(m.id)
-    if (!byId.has(id)) {
-      byId.set(id, m)
-      out.push(m)
-    }
-  }
-  return out
-}
-
 const loadData = async () => {
   loading.value = true
   try {
@@ -381,7 +360,6 @@ const loadData = async () => {
         const detailRes = await getRegistrationDetail(registrationId.value)
         if (detailRes.success && detailRes.data) {
           const data = detailRes.data
-          const materialsMerged = mergeMaterialsFromRegistrationDetail(data)
           
           // 保存完整项目详情
           projectDetail.value = {
@@ -389,7 +367,7 @@ const loadData = async () => {
             members: data.members || [],
             activityInfo: data.activityInfo,
             summary: data.projectSummary,  // 注意：后端返回的是 projectSummary
-            materials: materialsMerged
+            materials: data.materials || []
           }
           
           // 更新任务基本信息（从 registration 对象中提取，优先使用详情接口返回的数据）
@@ -579,79 +557,34 @@ const getMaterialTypeLabel = (type) => {
   return map[type] || type
 }
 
-const imagePreviewVisible = ref(false)
-const imagePreviewUrl = ref('')
+const filePreviewVisible = ref(false)
+const previewMaterialId = ref(null)
+const previewFileName = ref('')
 
 const canPreview = (fileName) => {
   if (!fileName) return false
-  const ext = fileName.toLowerCase()
-  return ext.endsWith('.jpg') || ext.endsWith('.jpeg') || ext.endsWith('.png') ||
-         ext.endsWith('.gif') || ext.endsWith('.pdf')
+  const ext = fileName.split('.').pop().toLowerCase()
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'docx', 'xlsx', 'xls'].includes(ext)
 }
 
-const previewFile = async (material) => {
-  try {
-    const rawBlob = await downloadMaterial(material.id)
-    const ext = (material.fileName || '').toLowerCase()
-    const mime = ext.endsWith('.pdf') ? 'application/pdf'
-      : ext.endsWith('.png') ? 'image/png'
-      : ext.endsWith('.gif') ? 'image/gif'
-      : 'image/jpeg'
-    const blob = new Blob([rawBlob], { type: mime })
-    const url = window.URL.createObjectURL(blob)
-    if (ext.endsWith('.pdf')) {
-      window.open(url, '_blank')
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000)
-    } else {
-      imagePreviewUrl.value = url
-      imagePreviewVisible.value = true
-    }
-  } catch (error) {
-    console.error('预览失败:', error)
-    ElMessage.error('预览失败，请尝试下载')
-  }
-}
-
-/** 小体积 blob 可能是 JSON 错误体（HTTP 200 但正文为 JSON） */
-async function blobJsonErrorMessage(blob) {
-  if (!(blob instanceof Blob) || blob.size > 4096) return null
-  try {
-    const text = await blob.text()
-    const j = JSON.parse(text)
-    if (j && j.success === false) return j.message || '下载失败'
-  } catch {
-    /* 非 JSON 或为二进制小文件 */
-  }
-  return null
+const previewFile = (material) => {
+  previewMaterialId.value = material.id
+  previewFileName.value = material.fileName || '文件预览'
+  filePreviewVisible.value = true
 }
 
 const downloadFile = async (material) => {
   try {
-    if (material?.id == null) {
-      ElMessage.error('材料缺少文件标识，无法下载')
-      return
-    }
     const blob = await downloadMaterial(material.id)
-    const errMsg = await blobJsonErrorMessage(blob)
-    if (errMsg) {
-      ElMessage.error(errMsg)
-      return
-    }
     const url = window.URL.createObjectURL(blob)
-    const name = material.fileName || '材料文件'
     const link = document.createElement('a')
     link.href = url
-    link.download = name
-    link.rel = 'noopener'
-    link.style.display = 'none'
+    link.download = material.fileName || '材料文件'
     document.body.appendChild(link)
     link.click()
-    // 大文件 / zip 在部分浏览器需延迟释放，否则下载未开始就 revoke 会失败
-    setTimeout(() => {
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    }, 800)
-    ElMessage.success('已开始下载')
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    ElMessage.success('下载成功')
   } catch (error) {
     console.error('下载文件失败:', error)
     ElMessage.error('下载失败')

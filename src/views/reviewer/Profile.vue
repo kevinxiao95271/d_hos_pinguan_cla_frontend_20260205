@@ -42,30 +42,54 @@
         </el-form-item>
 
         <el-form-item label="身份证正面">
-          <div style="display: flex; align-items: center; gap: 12px">
-            <el-image
-              v-if="form.idCardFrontUrl"
-              :src="form.idCardFrontUrl"
-              style="width: 160px; height: 100px; border-radius: 4px; border: 1px solid #eee; object-fit: cover"
-              fit="cover"
-              :preview-src-list="[form.idCardFrontUrl]"
+          <div style="display: flex; align-items: center; gap: 16px">
+            <div class="id-card-preview" @click="triggerIdCardInput('FRONT')">
+              <img v-if="idCardFrontBlobUrl" :src="idCardFrontBlobUrl" />
+              <div v-else-if="form.idCardFrontUrl" class="id-card-placeholder">图片加载中…</div>
+              <div v-else class="id-card-placeholder">
+                <el-icon :size="24"><Plus /></el-icon>
+                <span>上传正面</span>
+              </div>
+              <div v-if="uploadingFront" class="id-card-uploading">上传中…</div>
+            </div>
+            <div style="font-size: 12px; color: #909399; line-height: 1.8">
+              <div>点击图片区域选择文件上传</div>
+              <div>支持 jpg / png，建议小于 5MB</div>
+              <el-tag v-if="form.idCardFrontUrl" type="success" size="small" style="margin-top:4px">已上传</el-tag>
+            </div>
+            <input
+              ref="frontFileInput"
+              type="file"
+              accept="image/*"
+              style="display:none"
+              @change="(e) => handleIdCardUpload('FRONT', e)"
             />
-            <span v-else style="color: #c0c4cc; font-size: 13px">未上传</span>
-            <el-input v-model="form.idCardFrontUrl" placeholder="粘贴图片 URL" style="width: 280px" clearable />
           </div>
         </el-form-item>
 
         <el-form-item label="身份证反面">
-          <div style="display: flex; align-items: center; gap: 12px">
-            <el-image
-              v-if="form.idCardBackUrl"
-              :src="form.idCardBackUrl"
-              style="width: 160px; height: 100px; border-radius: 4px; border: 1px solid #eee; object-fit: cover"
-              fit="cover"
-              :preview-src-list="[form.idCardBackUrl]"
+          <div style="display: flex; align-items: center; gap: 16px">
+            <div class="id-card-preview" @click="triggerIdCardInput('BACK')">
+              <img v-if="idCardBackBlobUrl" :src="idCardBackBlobUrl" />
+              <div v-else-if="form.idCardBackUrl" class="id-card-placeholder">图片加载中…</div>
+              <div v-else class="id-card-placeholder">
+                <el-icon :size="24"><Plus /></el-icon>
+                <span>上传反面</span>
+              </div>
+              <div v-if="uploadingBack" class="id-card-uploading">上传中…</div>
+            </div>
+            <div style="font-size: 12px; color: #909399; line-height: 1.8">
+              <div>点击图片区域选择文件上传</div>
+              <div>支持 jpg / png，建议小于 5MB</div>
+              <el-tag v-if="form.idCardBackUrl" type="success" size="small" style="margin-top:4px">已上传</el-tag>
+            </div>
+            <input
+              ref="backFileInput"
+              type="file"
+              accept="image/*"
+              style="display:none"
+              @change="(e) => handleIdCardUpload('BACK', e)"
             />
-            <span v-else style="color: #c0c4cc; font-size: 13px">未上传</span>
-            <el-input v-model="form.idCardBackUrl" placeholder="粘贴图片 URL" style="width: 280px" clearable />
           </div>
         </el-form-item>
 
@@ -122,9 +146,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getMyProfile, updateMyProfile } from '@/api/reviewerProfile'
+import { Plus } from '@element-plus/icons-vue'
+import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream } from '@/api/reviewerProfile'
 
 // ── 枚举 ─────────────────────────────────────────────────────────────
 const BACKGROUND_OPTIONS = [
@@ -179,6 +204,14 @@ const TOPIC_OPTIONS = [
 const loading = ref(false)
 const saving = ref(false)
 const formRef = ref(null)
+
+// 身份证图片
+const idCardFrontBlobUrl = ref('')
+const idCardBackBlobUrl = ref('')
+const uploadingFront = ref(false)
+const uploadingBack = ref(false)
+const frontFileInput = ref(null)
+const backFileInput = ref(null)
 
 const form = reactive({
   gender: 'UNKNOWN',
@@ -268,17 +301,83 @@ function safeJsonParse(str) {
   try { return JSON.parse(str) } catch { return [] }
 }
 
+// ── 身份证图片 ────────────────────────────────────────────────────────
+function triggerIdCardInput(side) {
+  if (side === 'FRONT') frontFileInput.value?.click()
+  else backFileInput.value?.click()
+}
+
+async function loadIdCardImage(side) {
+  try {
+    const blob = await getMyIdCardStream(side)
+    const url = URL.createObjectURL(new Blob([blob], { type: 'image/jpeg' }))
+    if (side === 'FRONT') {
+      if (idCardFrontBlobUrl.value) URL.revokeObjectURL(idCardFrontBlobUrl.value)
+      idCardFrontBlobUrl.value = url
+    } else {
+      if (idCardBackBlobUrl.value) URL.revokeObjectURL(idCardBackBlobUrl.value)
+      idCardBackBlobUrl.value = url
+    }
+  } catch (e) {
+    // 404 表示未上传，忽略
+  }
+}
+
+async function handleIdCardUpload(side, event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+  if (side === 'FRONT') uploadingFront.value = true
+  else uploadingBack.value = true
+  try {
+    const res = await uploadMyIdCard(side, file)
+    if (res.success && res.data) {
+      // 后端返回更新后的档案 DTO，回填 URL（object key）
+      if (side === 'FRONT') {
+        form.idCardFrontUrl = res.data.idCardFrontUrl || ''
+      } else {
+        form.idCardBackUrl = res.data.idCardBackUrl || ''
+      }
+      // 重新加载展示图
+      await loadIdCardImage(side)
+      ElMessage.success('上传成功')
+    } else {
+      ElMessage.error(res.message || '上传失败')
+    }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '上传失败')
+  } finally {
+    if (side === 'FRONT') uploadingFront.value = false
+    else uploadingBack.value = false
+    // 清空 input 以允许再次选同一文件
+    event.target.value = ''
+  }
+}
+
 // ── 生命周期 ──────────────────────────────────────────────────────────
 onMounted(async () => {
   loading.value = true
   try {
     const res = await getMyProfile()
-    if (res.success && res.data) apiToForm(res.data)
+    if (res.success && res.data) {
+      apiToForm(res.data)
+      // 有 object key 则加载图片流
+      if (res.data.idCardFrontUrl) loadIdCardImage('FRONT')
+      if (res.data.idCardBackUrl) loadIdCardImage('BACK')
+    }
   } catch (e) {
     console.warn('获取档案失败:', e)
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  if (idCardFrontBlobUrl.value) URL.revokeObjectURL(idCardFrontBlobUrl.value)
+  if (idCardBackBlobUrl.value) URL.revokeObjectURL(idCardBackBlobUrl.value)
 })
 
 async function handleSave() {
@@ -310,5 +409,51 @@ async function handleSave() {
     margin-right: 12px;
     margin-bottom: 6px;
   }
+}
+
+.id-card-preview {
+  position: relative;
+  width: 200px;
+  height: 125px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #fafafa;
+  transition: border-color .2s;
+
+  &:hover {
+    border-color: #409eff;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.id-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #c0c4cc;
+  font-size: 12px;
+}
+
+.id-card-uploading {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  color: #fff;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
