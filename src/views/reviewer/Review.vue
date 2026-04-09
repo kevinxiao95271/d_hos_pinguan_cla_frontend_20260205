@@ -116,12 +116,14 @@
               </el-descriptions>
             </el-collapse-item>
 
-            <!-- 材料文件 -->
-            <el-collapse-item
-              v-if="projectDetail.materials && projectDetail.materials.length > 0"
-              :title="`材料文件（${projectDetail.materials.length}个）`"
-              name="materials"
-            >
+          </el-collapse>
+
+          <!-- 材料文件（不折叠，始终展示） -->
+          <div class="materials-section">
+            <div class="materials-title">
+              材料文件{{ projectDetail && projectDetail.materials && projectDetail.materials.length > 0 ? `（${projectDetail.materials.length}个）` : '' }}
+            </div>
+            <template v-if="projectDetail && projectDetail.materials && projectDetail.materials.length > 0">
               <el-table :data="projectDetail.materials" border size="small">
                 <el-table-column label="类型" width="160">
                   <template #default="{ row }">{{ getMaterialTypeLabel(row.type) }}</template>
@@ -132,15 +134,16 @@
                     {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="140">
+                <el-table-column label="操作" width="120">
                   <template #default="{ row }">
                     <el-button v-if="canPreview(row.fileName)" type="success" size="small" @click="previewFile(row)">预览</el-button>
-                    <el-button type="primary" size="small" @click="downloadFile(row)">下载</el-button>
+                    <el-button v-else type="primary" size="small" @click="downloadFile(row)">下载</el-button>
                   </template>
                 </el-table-column>
               </el-table>
-            </el-collapse-item>
-          </el-collapse>
+            </template>
+            <div v-else class="materials-empty">暂无上传附件</div>
+          </div>
           
           <el-divider content-position="left">评分</el-divider>
 
@@ -322,6 +325,7 @@
       v-model="filePreviewVisible"
       :material-id="previewMaterialId"
       :file-name="previewFileName"
+      :show-download="false"
     />
 
     <!-- 规避弹窗 -->
@@ -818,6 +822,35 @@ watch(() => route.query.registrationId, (newId, oldId) => {
   }
   
   /* ── Slider ── */
+  .materials-section {
+    margin: 0 0 20px 0;
+    padding: 14px 16px;
+    background: #fafafa;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+
+    .materials-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #303133;
+      margin-bottom: 10px;
+      padding-left: 8px;
+      border-left: 3px solid #409EFF;
+    }
+
+    .materials-empty {
+      color: #909399;
+      font-size: 13px;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .no-preview-tip {
+      font-size: 12px;
+      color: #c0c4cc;
+    }
+  }
+
   .score-slider-wrap {
     display: flex;
     align-items: center;

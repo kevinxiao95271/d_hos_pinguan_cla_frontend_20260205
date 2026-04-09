@@ -18,12 +18,12 @@
     <div v-else-if="error" class="preview-error">
       <el-icon :size="40" color="#f56c6c"><WarningFilled /></el-icon>
       <p>{{ error }}</p>
-      <el-button type="primary" @click="triggerDownload">下载文件</el-button>
+      <el-button v-if="showDownload" type="primary" @click="triggerDownload">下载文件</el-button>
     </div>
 
     <!-- PDF：iframe -->
     <div v-else-if="fileType === 'pdf'" class="preview-pdf">
-      <iframe :src="blobUrl" width="100%" height="100%" frameborder="0" />
+      <iframe :src="showDownload ? blobUrl : blobUrl + '#toolbar=0&navpanes=0'" width="100%" height="100%" frameborder="0" />
     </div>
 
     <!-- 图片 -->
@@ -54,12 +54,12 @@
       <el-icon :size="48" color="#909399"><Document /></el-icon>
       <p style="margin:12px 0 4px; font-weight:600">{{ fileName }}</p>
       <p style="color:#909399; font-size:13px">该格式暂不支持在线预览</p>
-      <el-button type="primary" style="margin-top:16px" @click="triggerDownload">下载文件</el-button>
+      <el-button v-if="showDownload" type="primary" style="margin-top:16px" @click="triggerDownload">下载文件</el-button>
     </div>
 
     <template #footer>
       <el-button @click="visible = false">关闭</el-button>
-      <el-button type="primary" :icon="Download" @click="triggerDownload">下载</el-button>
+      <el-button v-if="showDownload" type="primary" :icon="Download" @click="triggerDownload">下载</el-button>
     </template>
   </el-dialog>
 </template>
@@ -74,7 +74,8 @@ import { downloadMaterial } from '@/api/material'
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   materialId: { type: [Number, String], default: null },
-  fileName: { type: String, default: '文件预览' }
+  fileName: { type: String, default: '文件预览' },
+  showDownload: { type: Boolean, default: true }
 })
 
 const emit = defineEmits(['update:modelValue'])
