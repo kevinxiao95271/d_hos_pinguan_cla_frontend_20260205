@@ -45,26 +45,15 @@
           :loading="submittingAll"
           @click="submitAllDrafts"
         >
-          一键提交全部草稿（{{ draftTasks.length }}项）
+          一键提交全部评审项目（{{ draftTasks.length }}项）
         </el-button>
       </div>
     </transition>
 
-    <!-- 筛选栏 -->
-    <el-card shadow="never" style="margin-bottom: 16px;">
-      <el-form :inline="true" :model="filters">
-        <el-form-item label="评审阶段">
-          <el-select v-model="filters.stage" placeholder="全部" clearable style="width:120px">
-            <el-option label="书审" value="BOOK" />
-            <el-option label="面谈" value="INTERVIEW" />
-            <el-option label="决赛" value="FINAL" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadData">刷新</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <!-- 操作栏 -->
+    <div style="margin-bottom: 12px; text-align: right;">
+      <el-button type="primary" plain @click="loadData">刷新</el-button>
+    </div>
 
     <!-- 待评分区域 -->
     <el-card shadow="never" class="section-card" v-loading="loading">
@@ -214,7 +203,6 @@ const loading = ref(false)
 const submitting = ref(false)
 const submittingAll = ref(false)
 const taskStats = ref({})
-const filters = reactive({ stage: '' })
 const showThankYouDialog = ref(false)
 
 // 规避相关
@@ -237,15 +225,7 @@ const recuseRules = {
   ]
 }
 
-// 过滤后的任务（stage 做双重兜底：loadData 已做一次，这里再保一次）
-const filteredTasks = computed(() => {
-  const stage = filters.stage
-  if (!stage) return tasks.value
-  return tasks.value.filter(t => {
-    const taskStage = t.stage || 'BOOK'
-    return taskStage === stage
-  })
-})
+const filteredTasks = computed(() => tasks.value)
 
 
 // 排序由后端保证（DRAFT total倒序 → SCORED total倒序 → PENDING/CONFIRMED/RETURNED → RECUSED）
@@ -286,7 +266,7 @@ const submitAllDrafts = async () => {
   try {
     await ElMessageBox.confirm(
       `共 ${drafts.length} 项草稿评分将被正式提交，提交后不可修改。确认继续？`,
-      '一键提交全部草稿',
+      '一键提交全部评审项目',
       { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
     )
     submittingAll.value = true
@@ -371,7 +351,7 @@ const openRecuseDialog = async (row) => {
   if (recuseReasons.value.length === 0) {
     try {
       const res = await getRecuseReasons()
-      recuseReasons.value = res.success ? (res.data || []) : []
+      recuseReasons.value = res.success ? (res.data || []).filter(r => r.code !== 'KNOW_LEADER') : []
     } catch {
       recuseReasons.value = []
     }

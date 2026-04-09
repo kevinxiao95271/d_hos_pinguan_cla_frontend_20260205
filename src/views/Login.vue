@@ -89,7 +89,7 @@
   <!-- 诚信须知强制阅读弹窗 -->
   <el-dialog
     v-model="showNoticeDialog"
-    title="诚信须知"
+    title="浙江省医院品管大赛专家须知"
     width="82%"
     top="3vh"
     :close-on-click-modal="false"
@@ -97,7 +97,7 @@
     :show-close="false"
   >
     <div style="margin-bottom: 10px; color: #e6a23c; font-weight: 600;">
-      请认真阅读以下诚信须知，阅读完毕后方可继续使用系统。
+      请认真阅读以下专家须知，阅读完毕后方可继续使用系统。
     </div>
     <iframe
       :src="noticePdfUrl"

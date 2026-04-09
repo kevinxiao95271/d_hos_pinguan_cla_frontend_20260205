@@ -2,8 +2,7 @@
   <el-dialog
     v-model="visible"
     :title="title"
-    :width="dialogWidth"
-    top="4vh"
+    fullscreen
     destroy-on-close
     @open="onOpen"
     @close="onClose"
@@ -28,7 +27,7 @@
 
     <!-- 图片 -->
     <div v-else-if="fileType === 'image'" class="preview-image">
-      <img :src="blobUrl" style="max-width:100%; max-height:75vh; display:block; margin:0 auto;" />
+      <img :src="blobUrl" style="max-width:100%; max-height:calc(100vh - 130px); display:block; margin:0 auto; object-fit:contain;" />
     </div>
 
     <!-- DOCX：docx-preview 渲染 -->
@@ -243,12 +242,12 @@ function onClose() {
 }
 
 .preview-pdf {
-  height: 78vh;
+  height: calc(100vh - 120px);
   iframe { height: 100%; }
 }
 
 .preview-docx {
-  max-height: 78vh;
+  height: calc(100vh - 120px);
   overflow-y: auto;
   background: #f5f5f5;
   padding: 12px;
@@ -262,7 +261,7 @@ function onClose() {
 }
 
 .preview-excel {
-  max-height: 78vh;
+  height: calc(100vh - 120px);
   overflow: auto;
 
   .excel-table-wrap {

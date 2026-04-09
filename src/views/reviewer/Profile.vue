@@ -10,6 +10,12 @@
         <!-- 基本信息 -->
         <el-divider content-position="left">基本信息</el-divider>
 
+        <el-form-item label="职称" prop="title">
+          <el-radio-group v-model="form.title">
+            <el-radio-button v-for="t in TITLE_OPTIONS" :key="t" :value="t">{{ t }}</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+
         <el-form-item label="性别" prop="gender">
           <el-radio-group v-model="form.gender">
             <el-radio value="MALE">男</el-radio>
@@ -18,8 +24,8 @@
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item label="职务" prop="jobPosition">
-          <el-input v-model="form.jobPosition" placeholder="请输入职务" maxlength="100" style="width: 320px" />
+        <el-form-item label="职务" prop="position">
+          <el-input v-model="form.position" placeholder="请输入职务" maxlength="100" style="width: 320px" />
         </el-form-item>
 
         <el-form-item label="科室" prop="department">
@@ -137,7 +143,7 @@
               v-if="form.backgrounds.includes('OTHER')"
               v-model="form.backgroundsOther"
               placeholder="请填写其他专业背景"
-              maxlength="200"
+              maxlength="255"
               style="width: 400px; margin-top: 8px"
             />
           </div>
@@ -154,7 +160,7 @@
               v-if="form.tools.includes('OTHER')"
               v-model="form.toolsOther"
               placeholder="请填写其他擅长工具"
-              maxlength="200"
+              maxlength="255"
               style="width: 400px; margin-top: 8px"
             />
           </div>
@@ -171,10 +177,18 @@
               v-if="form.topics.includes('OTHER')"
               v-model="form.topicsOther"
               placeholder="请填写其他擅长主题"
-              maxlength="200"
+              maxlength="255"
               style="width: 400px; margin-top: 8px"
             />
           </div>
+        </el-form-item>
+
+        <el-form-item label="品管相关经验">
+          <el-checkbox-group v-model="form.experience">
+            <el-checkbox v-for="item in EXPERIENCE_OPTIONS" :key="item.value" :value="item.value">
+              {{ item.label }}
+            </el-checkbox>
+          </el-checkbox-group>
         </el-form-item>
 
         <!-- 账号安全 -->
@@ -273,7 +287,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream, changeMyInstitution, getMyInstitutionHistory } from '@/api/reviewerProfile'
@@ -285,52 +299,62 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // ── 枚举 ─────────────────────────────────────────────────────────────
+const TITLE_OPTIONS = ['初级', '中级', '副高', '正高']
+
 const BACKGROUND_OPTIONS = [
-  { value: 'MANAGEMENT', label: '医院管理' },
-  { value: 'MEDICAL', label: '医疗' },
-  { value: 'NURSING', label: '护理' },
-  { value: 'QUALITY_MANAGEMENT', label: '质量管理' },
-  { value: 'PHARMACY', label: '药学' },
-  { value: 'MEDICAL_TECH', label: '医技' },
-  { value: 'MEDICAL_RECORD', label: '病案' },
-  { value: 'INFECTION_CONTROL', label: '院感' },
-  { value: 'OTHER', label: '其他' }
+  { value: 'MANAGEMENT',    label: '管理' },
+  { value: 'MEDICAL',       label: '医疗' },
+  { value: 'NURSING',       label: '护理' },
+  { value: 'QUALITY_MGMT',  label: '质量管理' },
+  { value: 'PHARMACY',      label: '药学' },
+  { value: 'MEDICAL_TECH',  label: '医技' },
+  { value: 'MEDICAL_RECORDS', label: '病案管理' },
+  { value: 'INFECTION_CTRL',  label: '院感' },
+  { value: 'OTHER',         label: '其他' }
 ]
 
 const TOOL_OPTIONS = [
-  { value: 'PDCA', label: 'PDCA' },
-  { value: 'FOCUS_PDCA', label: 'FOCUS-PDCA' },
-  { value: 'QFD', label: 'QFD' },
-  { value: 'QCC_PROBLEM_SOLVING', label: 'QCC问题解决型' },
-  { value: 'QCC_TOPIC_ACHIEVEMENT', label: 'QCC课题达成型' },
-  { value: 'PROJECT_IMPROVEMENT', label: '专案改善' },
-  { value: 'RCA', label: 'RCA' },
-  { value: 'FMEA', label: 'FMEA' },
-  { value: 'BENCHMARKING', label: '标杆管理' },
-  { value: 'S6', label: '6S' },
-  { value: 'LEAN', label: '精益管理' },
-  { value: 'SIX_SIGMA', label: '六西格玛' },
-  { value: 'EBM', label: '循证管理' },
-  { value: 'BSC', label: 'BSC' },
-  { value: 'QUALITY_REPORT_CARD', label: '品质报告卡' },
-  { value: 'TRM', label: 'TRM' },
-  { value: 'PROCESS_REDESIGN', label: '流程再造' },
-  { value: 'OTHER', label: '其他' }
+  { value: 'PDCA',                 label: 'PDCA' },
+  { value: 'FOCUS_PDCA',           label: 'FOCUS-PDCA' },
+  { value: 'QFD',                  label: 'QFD' },
+  { value: 'QCC_PROBLEM',          label: '品管圈（问题解决）' },
+  { value: 'QCC_TOPIC',            label: '品管圈（课题达成）' },
+  { value: 'CASE_IMPROVEMENT',     label: '专案改善' },
+  { value: 'RCA',                  label: '根本原因分析' },
+  { value: 'FMEA',                 label: '失效模式与效应分析' },
+  { value: 'BENCHMARKING',         label: '标杆学习' },
+  { value: 'SIX_S',                label: '6S 管理' },
+  { value: 'LEAN',                 label: '精益管理（Lean）' },
+  { value: 'SIX_SIGMA',            label: '六西格玛管理' },
+  { value: 'EBM',                  label: '循证医学' },
+  { value: 'BSC',                  label: '平衡计分卡' },
+  { value: 'QRC',                  label: '品质报告卡' },
+  { value: 'TQM',                  label: 'TQM' },
+  { value: 'PROCESS_REENGINEERING', label: '流程改造' },
+  { value: 'OTHER',                label: '其他' }
 ]
 
 const TOPIC_OPTIONS = [
-  { value: 'PATIENT_CARE', label: '患者照护' },
-  { value: 'MEDICAL_RECORD_QUALITY', label: '病历质量' },
-  { value: 'TIME_EFFICIENCY', label: '效率提升' },
-  { value: 'COST_EFFECTIVENESS', label: '成本效益' },
-  { value: 'SAFETY_ENVIRONMENT', label: '安全环境' },
-  { value: 'SATISFACTION', label: '满意度' },
-  { value: 'EDUCATION_TRAINING', label: '教育培训' },
-  { value: 'MEDICAL_INFORMATION', label: '医疗信息化' },
+  { value: 'PATIENT_CARE',          label: '病人照护' },
+  { value: 'MEDICAL_RECORDS',       label: '病历质量' },
+  { value: 'TIME_EFFICIENCY',       label: '时间效率' },
+  { value: 'COST_EFFECTIVENESS',    label: '成本效益' },
+  { value: 'SAFETY_ENV',            label: '安全环境' },
+  { value: 'SATISFACTION',          label: '满意度' },
+  { value: 'EDUCATION',             label: '教育训练' },
+  { value: 'MEDICAL_INFO',          label: '医疗信息' },
   { value: 'MEDICAL_QUALITY_SAFETY', label: '医疗质量与安全' },
-  { value: 'PROCESS_REDESIGN', label: '流程再造' },
-  { value: 'DIGITAL_AI', label: '数字化/AI' },
-  { value: 'OTHER', label: '其他' }
+  { value: 'PROCESS_REENGINEERING', label: '流程改造' },
+  { value: 'DIGITAL_AI',            label: '数字化与人工智能' },
+  { value: 'OTHER',                 label: '其他' }
+]
+
+const EXPERIENCE_OPTIONS = [
+  { value: 'PROJECT_LEADER',   label: '担任过品管项目负责人' },
+  { value: 'COACHED_PROJECT',  label: '辅导过品管参赛项目' },
+  { value: 'UNIT_JUDGE',       label: '单位内品管大赛评委' },
+  { value: 'CITY_JUDGE',       label: '市级/区级/县级品管大赛评委' },
+  { value: 'PROVINCE_JUDGE',   label: '省级及以上品管大赛评委' }
 ]
 
 // ── 状态 ─────────────────────────────────────────────────────────────
@@ -347,8 +371,9 @@ const frontFileInput = ref(null)
 const backFileInput = ref(null)
 
 const form = reactive({
+  title: '',
   gender: 'UNKNOWN',
-  jobPosition: '',
+  position: '',
   department: '',
   idNumber: '',
   idNumberMasked: '',
@@ -362,7 +387,8 @@ const form = reactive({
   tools: [],
   toolsOther: '',
   topics: [],
-  topicsOther: ''
+  topicsOther: '',
+  experience: []
 })
 
 // 修改密码
@@ -437,8 +463,9 @@ function autoMaskBank() {
 // ── API 与 Form 转换 ──────────────────────────────────────────────────
 function apiToForm(data) {
   if (!data) return
+  form.title = data.title || ''
   form.gender = data.gender || 'UNKNOWN'
-  form.jobPosition = data.jobPosition || data.position || ''
+  form.position = data.position || ''
   form.department = data.department || ''
   form.idNumber = data.idNumber || ''
   form.idNumberMasked = data.idNumberMasked || maskIdNumber(data.idNumber || '')
@@ -453,12 +480,14 @@ function apiToForm(data) {
   form.toolsOther = data.toolsOther || ''
   form.topics = safeJsonParse(data.topicsJson)
   form.topicsOther = data.topicsOther || ''
+  form.experience = safeJsonParse(data.experienceJson)
 }
 
 function formToApi() {
   return {
+    title: form.title || null,
     gender: form.gender,
-    jobPosition: form.jobPosition || null,
+    position: form.position || null,
     department: form.department || null,
     idNumber: form.idNumber || null,
     idNumberMasked: maskIdNumber(form.idNumber),
@@ -472,7 +501,8 @@ function formToApi() {
     toolsJson: JSON.stringify(form.tools),
     toolsOther: form.toolsOther || null,
     topicsJson: JSON.stringify(form.topics),
-    topicsOther: form.topicsOther || null
+    topicsOther: form.topicsOther || null,
+    experienceJson: JSON.stringify(form.experience)
   }
 }
 
@@ -560,9 +590,41 @@ onUnmounted(() => {
   if (idCardBackBlobUrl.value) URL.revokeObjectURL(idCardBackBlobUrl.value)
 })
 
+function checkCompleteness() {
+  const checks = [
+    { key: () => !!form.gender && form.gender !== 'UNKNOWN', label: '性别' },
+    { key: () => !!form.title, label: '职称' },
+    { key: () => !!form.position, label: '职务' },
+    { key: () => !!form.idNumber, label: '身份证号' },
+    { key: () => !!form.idCardFrontUrl, label: '身份证正面照片' },
+    { key: () => !!form.idCardBackUrl, label: '身份证反面照片' },
+    { key: () => !!form.bankName, label: '开户银行' },
+    { key: () => !!form.bankCardNo, label: '银行卡号' },
+    { key: () => form.backgrounds.length > 0, label: '专业背景' },
+    { key: () => form.tools.length > 0, label: '熟悉的品管工具' },
+    { key: () => form.topics.length > 0, label: '擅长评审主题方向' },
+    { key: () => form.experience.length > 0, label: '品管相关经验' }
+  ]
+  return checks.filter(c => !c.key()).map(c => c.label)
+}
+
 async function handleSave() {
   try {
     await formRef.value.validate()
+    // 完整度提示（非阻断，仅提示）
+    const missing = checkCompleteness()
+    if (missing.length > 0) {
+      await ElMessageBox.confirm(
+        `<div style="line-height:2">以下信息尚未完善，建议补充后再保存：<br>${missing.map((m, i) => `${i + 1}. ${m}`).join('<br>')}</div>`,
+        '信息不完整提醒',
+        {
+          dangerouslyUseHTMLString: true,
+          confirmButtonText: '继续保存',
+          cancelButtonText: '返回补充',
+          type: 'warning'
+        }
+      ).catch(() => { saving.value = false; return Promise.reject(false) })
+    }
     saving.value = true
     const res = await updateMyProfile(formToApi())
     if (res.success) {

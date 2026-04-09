@@ -149,124 +149,188 @@
 
           <!-- 书审评分 -->
           <template v-if="taskInfo.stage !== 'INTERVIEW'">
-            <el-alert
-              title="书审评分标准"
-              type="info"
-              :closable="false"
-              style="margin-bottom: 20px"
-            >
-              <div style="line-height: 1.8;">
-                1. 计划 (10分) &nbsp;&nbsp;
-                2. 问题结构与对策措施探讨 (20分) &nbsp;&nbsp;
-                3. 对策实施 (20分) &nbsp;&nbsp;
-                4. 成果表现 (15分)<br/>
-                5. 检讨 (10分) &nbsp;&nbsp;
-                6. 整体运作 (10分) &nbsp;&nbsp;
-                7. 资料呈现 (15分) &nbsp;&nbsp;
-                <strong>总分: 100分</strong>
-              </div>
-              <div style="margin-top: 10px;">
-                <el-button size="small" type="primary" plain :icon="Document" @click="openScoringStandard('book')">查看评分标准文件</el-button>
-              </div>
-            </el-alert>
+            <div class="scoring-header">
+              <span>书审评分（总分 100 分，起评分 80 分）</span>
+              <el-button size="small" type="primary" plain :icon="Document" @click="openScoringStandard('book')">查看评分标准文件</el-button>
+            </div>
 
-            <el-form-item label="计划" prop="planScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">计划 <span class="criteria-max">满分 10 分 / 起评 8 分</span></div>
+                <ol class="criteria-list">
+                  <li>主题选取适当性、重要性、特殊性的具体明确程度</li>
+                  <li>目标设定的理由及适当性</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.planScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.planScore }}</span><span class="score-denom">/ 10</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="问题结构与对策措施探讨" prop="problemAnalysisScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">问题结构与对策措施探讨 <span class="criteria-max">满分 20 分 / 起评 16 分</span></div>
+                <ol class="criteria-list">
+                  <li>问题分析、探讨并求证问题形成或影响目标达成之结构</li>
+                  <li>引用或采用相关文献与技术</li>
+                  <li>以相关数据或实例搜集资料来呈现事实</li>
+                  <li>问题分析结果与对策方案间的连贯性或逻辑性，及考量长、短期的效果发展对策</li>
+                  <li>对策行动计划的拟订考量时间、人力及费用等资源安排</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.problemAnalysisScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.problemAnalysisScore }}</span><span class="score-denom">/ 20</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="对策实施" prop="implementationScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">对策实施 <span class="criteria-max">满分 20 分 / 起评 16 分</span></div>
+                <ol class="criteria-list">
+                  <li>对策行动过程中，考量对策效果、目标达成状态及问题、目标结构的变化等因素，持续进行对策行动（含目标）的调整</li>
+                  <li>对策（最适策）的可行性与创意性</li>
+                  <li>改善对策（最适策）的实用性、适用性及有效性</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.implementationScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.implementationScore }}</span><span class="score-denom">/ 20</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="成果表现" prop="resultScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">成果表现 <span class="criteria-max">满分 15 分 / 起评 12 分</span></div>
+                <ol class="criteria-list">
+                  <li>对策效果确认和目标的达成程度（如目标达成率、顾客满意度、营业收益、生产力的提升等）及影响程度</li>
+                  <li>对于临床及质量改善的效益</li>
+                  <li>无形效益（医院形象、质量信誉、士气、环境、劳资关系、社会责任及安全卫生的提升）</li>
+                  <li>在行动过程中，制度与标准的改变情形及新版制度与标准的落实程度</li>
+                  <li>附加成果如发明、专利等，酌情加分（2 分）</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.resultScore" :min="0" :max="15" :step="0.5" :marks="marks15" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.resultScore }}</span><span class="score-denom">/ 15</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="检讨" prop="reviewScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">检讨 <span class="criteria-max">满分 10 分 / 起评 8 分</span></div>
+                <ol class="criteria-list">
+                  <li>本期活动的检讨（含余留问题的改善）</li>
+                  <li>未来重要目标与行动</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.reviewScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.reviewScore }}</span><span class="score-denom">/ 10</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="整体运作" prop="operationScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">整体运作 <span class="criteria-max">满分 10 分 / 起评 8 分</span></div>
+                <ol class="criteria-list">
+                  <li>团队积极投入的情形（促使全员参与的行动方法）</li>
+                  <li>机构内的推广交流</li>
+                  <li>整体运作与团队精神</li>
+                  <li>品管手法新颖、理念创新，酌情加分（2 分）</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.operationScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.operationScore }}</span><span class="score-denom">/ 10</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="资料呈现" prop="presentationScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">资料呈现 <span class="criteria-max">满分 15 分 / 起评 12 分</span></div>
+                <ol class="criteria-list">
+                  <li>整体周延性</li>
+                  <li>文字流畅性</li>
+                  <li>内容逻辑性（系统分明、前后连贯程度）</li>
+                  <li>图表文字清晰简洁</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.presentationScore" :min="0" :max="15" :step="0.5" :marks="marks15" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.presentationScore }}</span><span class="score-denom">/ 15</span></div>
               </div>
-            </el-form-item>
+            </div>
           </template>
 
           <!-- 面谈评分 -->
           <template v-else>
-            <el-alert
-              title="面谈评分标准"
-              type="warning"
-              :closable="false"
-              style="margin-bottom: 20px"
-            >
-              <div style="line-height: 1.8;">
-                1. 选题（迫切性/实用性/可行性）(10分) &nbsp;&nbsp;
-                2. 改善过程确实性 (40分) &nbsp;&nbsp;
-                3. 整体运作 (20分) &nbsp;&nbsp;
-                4. 改善成果 (30分) &nbsp;&nbsp;
-                <strong>总分: 100分</strong>
-              </div>
-              <div style="margin-top: 10px;">
-                <el-button size="small" type="warning" plain :icon="Document" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
-              </div>
-            </el-alert>
+            <div class="scoring-header">
+              <span>进阶组面谈评分（总分 100 分）</span>
+              <el-button size="small" type="warning" plain :icon="Document" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
+            </div>
 
-            <el-form-item label="选题（迫切性/实用性/可行性）" prop="topicScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">选题 <span class="criteria-max">满分 10 分</span></div>
+                <ol class="criteria-list">
+                  <li>迫切性、实用性、可行性</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.topicScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.topicScore }}</span><span class="score-denom">/ 10</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="改善过程确实性" prop="processScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">改善过程的确实性 <span class="criteria-max">满分 40 分</span></div>
+                <ol class="criteria-list">
+                  <li>书面资料与面谈结果的一致性</li>
+                  <li>改善过程中各阶段原始数据及会议记录等相关资料的确实性</li>
+                  <li>团队成员对问题解析、对策实施及目标达成的了解程度</li>
+                  <li>项目所用改善工具的适用性、运用的正确及熟练程度</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.processScore" :min="0" :max="40" :step="0.5" :marks="marks40" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.processScore }}</span><span class="score-denom">/ 40</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="整体运作" prop="interviewOperationScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">整体运作 <span class="criteria-max">满分 20 分</span></div>
+                <ol class="criteria-list">
+                  <li>团队成员对团队运作模式的了解程度</li>
+                  <li>团队组成及成员参与的积极性</li>
+                  <li>项目的创新性及团队成员的创造力</li>
+                  <li>团队成员的培训教育成长</li>
+                  <li>该团队改善活动的经历与经验</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.interviewOperationScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.interviewOperationScore }}</span><span class="score-denom">/ 20</span></div>
               </div>
-            </el-form-item>
+            </div>
 
-            <el-form-item label="改善成果" prop="resultScore">
-              <div class="score-slider-wrap">
+            <div class="score-item-card">
+              <div class="score-item-criteria">
+                <div class="criteria-title">改善成果 <span class="criteria-max">满分 30 分</span></div>
+                <ol class="criteria-list">
+                  <li>改善成效的确实性</li>
+                  <li>效果维持及标准化落实情况</li>
+                  <li>项目成果对医院或患者的贡献（有形及无形效益）</li>
+                </ol>
+              </div>
+              <div class="score-item-right">
                 <el-slider v-model="form.resultScore" :min="0" :max="30" :step="0.5" :marks="marks30" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
                 <div class="score-display"><span class="score-num">{{ form.resultScore }}</span><span class="score-denom">/ 30</span></div>
               </div>
-            </el-form-item>
+            </div>
           </template>
 
           <el-form-item label="总分">
@@ -286,16 +350,16 @@
             />
           </el-form-item>
 
-          <el-form-item label="不足之处" prop="shortcomings">
+          <el-form-item label="不足之处（请至少例举三条）" prop="shortcomings">
             <el-input
               v-model="form.shortcomings"
               type="textarea"
               :rows="5"
-              placeholder="请输入不足之处，至少150字，不超过1000字"
+              placeholder="必填，请至少例举三条不足之处，至少150字，不超过1000字"
               maxlength="1000"
               show-word-limit
             />
-            <div v-if="form.shortcomings && form.shortcomings.length < 150 && !isViewMode" style="color:#f56c6c; font-size:12px; margin-top:4px">
+            <div v-if="!isViewMode && form.shortcomings && form.shortcomings.length < 150" style="color:#f56c6c; font-size:12px; margin-top:4px">
               还需补充 {{ 150 - form.shortcomings.length }} 字
             </div>
           </el-form-item>
@@ -475,15 +539,17 @@ const rules = {
   topicScore: [{ type: 'number', min: 0, max: 10, message: '选题得分范围为0-10分', trigger: 'blur' }],
   processScore: [{ type: 'number', min: 0, max: 40, message: '改善过程得分范围为0-40分', trigger: 'blur' }],
   interviewOperationScore: [{ type: 'number', min: 0, max: 20, message: '整体运作得分范围为0-20分', trigger: 'blur' }],
-  // 评价字段（均非必填）
+  // 评价字段
   highlights: [{ max: 1000, message: '亮点不能超过1000字', trigger: 'blur' }],
   shortcomings: [
     {
       validator: (rule, value, callback) => {
-        if (value && value.length > 1000) {
-          callback(new Error('不足之处不能超过1000字'))
-        } else if (value && value.length > 0 && value.length < 150) {
+        if (!value || value.trim().length === 0) {
+          callback(new Error('不足之处为必填项，请至少例举三条'))
+        } else if (value.length < 150) {
           callback(new Error('不足之处至少填写150字'))
+        } else if (value.length > 1000) {
+          callback(new Error('不足之处不能超过1000字'))
         } else {
           callback()
         }
@@ -712,7 +778,7 @@ const openRecuseDialog = async () => {
   if (recuseReasons.value.length === 0) {
     try {
       const res = await getRecuseReasons()
-      recuseReasons.value = res.success ? (res.data || []) : []
+      recuseReasons.value = res.success ? (res.data || []).filter(r => r.code !== 'KNOW_LEADER') : []
     } catch { recuseReasons.value = [] }
   }
   recuseDialogVisible.value = true
@@ -873,6 +939,92 @@ watch(() => route.query.registrationId, (newId, oldId) => {
     .no-preview-tip {
       font-size: 12px;
       color: #c0c4cc;
+    }
+  }
+
+  // ── 评分区顶栏 ────────────────────────────────────────────────────
+  .scoring-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f5f7fa;
+    border: 1px solid #e4e7ed;
+    border-radius: 6px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #303133;
+  }
+
+  // ── 评分条目卡片（左细则 + 右滑条）────────────────────────────────
+  .score-item-card {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid #e4e7ed;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.2s;
+
+    &:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,.08);
+    }
+
+    .score-item-criteria {
+      flex: 1;
+      min-width: 0;
+
+      .criteria-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #303133;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .criteria-max {
+        font-size: 12px;
+        font-weight: normal;
+        color: #909399;
+        background: #f0f2f5;
+        padding: 1px 7px;
+        border-radius: 10px;
+      }
+
+      .criteria-list {
+        margin: 0;
+        padding-left: 18px;
+        color: #606266;
+        font-size: 12.5px;
+        line-height: 1.9;
+
+        li {
+          margin-bottom: 2px;
+        }
+      }
+    }
+
+    .score-item-right {
+      flex-shrink: 0;
+      width: 260px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 4px;
+
+      .score-slider {
+        width: 100%;
+      }
+
+      .score-display {
+        margin-top: 28px;
+      }
     }
   }
 
