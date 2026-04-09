@@ -74,6 +74,7 @@ import { downloadMaterial } from '@/api/material'
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   materialId: { type: [Number, String], default: null },
+  fileUrl: { type: String, default: null },
   fileName: { type: String, default: '文件预览' },
   showDownload: { type: Boolean, default: true }
 })
@@ -125,7 +126,7 @@ const currentSheetHtml = computed(() => {
 
 // ── 加载文件 ──────────────────────────────────────────────────────
 async function onOpen() {
-  if (!props.materialId) return
+  if (!props.materialId && !props.fileUrl) return
   loading.value = true
   error.value = ''
   blobUrl.value = ''
@@ -133,7 +134,14 @@ async function onOpen() {
   excelSheets.value = []
 
   try {
-    const blob = await downloadMaterial(props.materialId)
+    let blob
+    if (props.fileUrl) {
+      const resp = await fetch(props.fileUrl)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      blob = await resp.blob()
+    } else {
+      blob = await downloadMaterial(props.materialId)
+    }
     fileBlob.value = blob
 
     const mimeMap = {

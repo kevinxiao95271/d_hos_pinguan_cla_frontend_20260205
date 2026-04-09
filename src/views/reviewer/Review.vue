@@ -165,6 +165,9 @@
                 7. 资料呈现 (15分) &nbsp;&nbsp;
                 <strong>总分: 100分</strong>
               </div>
+              <div style="margin-top: 10px;">
+                <el-button size="small" type="primary" plain :icon="Document" @click="openScoringStandard('book')">查看评分标准文件</el-button>
+              </div>
             </el-alert>
 
             <el-form-item label="计划" prop="planScore">
@@ -231,6 +234,9 @@
                 3. 整体运作 (20分) &nbsp;&nbsp;
                 4. 改善成果 (30分) &nbsp;&nbsp;
                 <strong>总分: 100分</strong>
+              </div>
+              <div style="margin-top: 10px;">
+                <el-button size="small" type="warning" plain :icon="Document" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
               </div>
             </el-alert>
 
@@ -324,6 +330,7 @@
     <FilePreviewDialog
       v-model="filePreviewVisible"
       :material-id="previewMaterialId"
+      :file-url="previewFileUrl"
       :file-name="previewFileName"
       :show-download="false"
     />
@@ -367,6 +374,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Document } from '@element-plus/icons-vue'
 import { getReviewScore, getInterviewScore, saveBookReviewDraft, saveInterviewDraft } from '@/api/review'
 import { recuseReviewTask } from '@/api/review'
 import { getRecuseReasons } from '@/api/dictionary'
@@ -750,6 +758,7 @@ const getMaterialTypeLabel = (type) => {
 const filePreviewVisible = ref(false)
 const previewMaterialId = ref(null)
 const previewFileName = ref('')
+const previewFileUrl = ref(null)
 
 const canPreview = (fileName) => {
   if (!fileName) return false
@@ -760,7 +769,23 @@ const canPreview = (fileName) => {
 const previewFile = (material) => {
   previewMaterialId.value = material.id
   previewFileName.value = material.fileName || '文件预览'
+  previewFileUrl.value = null
   filePreviewVisible.value = true
+}
+
+// 打开评分标准文件预览弹窗
+const openScoringStandard = (type) => {
+  const fileMap = {
+    book: { url: '/scoring_standard_book.docx', name: '书审评分标准.docx' },
+    interview: { url: '/scoring_standard_interview.docx', name: '面谈评分标准.docx' }
+  }
+  const file = fileMap[type]
+  if (file) {
+    previewMaterialId.value = null
+    previewFileUrl.value = file.url
+    previewFileName.value = file.name
+    filePreviewVisible.value = true
+  }
 }
 
 const downloadFile = async (material) => {
