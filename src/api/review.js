@@ -45,11 +45,21 @@ export function submitReviewScore(data) {
 }
 
 /**
- * 获取评分详情
+ * 获取书审评分详情
  */
 export function getReviewScore(reviewTaskId) {
   return request({
     url: `/reviews/scores/${reviewTaskId}`,
+    method: 'get'
+  })
+}
+
+/**
+ * 获取面谈评分详情
+ */
+export function getInterviewScore(reviewTaskId) {
+  return request({
+    url: `/reviews/interview-scores/${reviewTaskId}`,
     method: 'get'
   })
 }
@@ -170,5 +180,61 @@ export function deleteReviewer(id) {
   return request({
     url: `/admin/reviewers/${id}`,
     method: 'delete'
+  })
+}
+
+/**
+ * 获取我的任务统计（待提交、已评分、已规避）
+ */
+export function getMyTaskStats() {
+  return request({
+    url: '/reviews/my-tasks/stats',
+    method: 'get'
+  })
+}
+
+/**
+ * 书审草稿保存（所有分值字段可选）
+ */
+export function saveBookReviewDraft(data) {
+  return request({
+    url: '/reviews/scores/draft',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 面谈草稿保存（所有分值字段可选）
+ */
+export function saveInterviewDraft(data) {
+  return request({
+    url: '/reviews/interview-scores/draft',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 提交面谈评分
+ */
+export function submitInterviewScore(data) {
+  return request({
+    url: '/reviews/interview-scores',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 规避评审任务
+ * @param {number} taskId
+ * @param {{ reasonCode: string, reasonOther?: string }} data
+ */
+export function recuseReviewTask(taskId, data) {
+  return request({
+    url: `/reviews/tasks/${taskId}/recuse`,
+    method: 'post',
+    data
   })
 }

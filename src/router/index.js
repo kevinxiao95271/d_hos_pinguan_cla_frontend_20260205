@@ -71,14 +71,12 @@ const routes = [
       {
         path: 'dashboard',
         name: 'ReviewerDashboard',
-        component: () => import('@/views/reviewer/Dashboard.vue'),
+        component: () => import('@/views/reviewer/Tasks.vue'),
         meta: { title: '评审任务' }
       },
       {
         path: 'tasks',
-        name: 'ReviewTasks',
-        component: () => import('@/views/reviewer/Tasks.vue'),
-        meta: { title: '评审任务列表' }
+        redirect: '/reviewer/dashboard'
       },
       {
         path: 'review/:taskId',
@@ -90,7 +88,7 @@ const routes = [
         path: 'profile',
         name: 'ReviewerProfile',
         component: () => import('@/views/reviewer/Profile.vue'),
-        meta: { title: '我的档案' }
+        meta: { title: '专家信息' }
       }
     ]
   },

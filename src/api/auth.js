@@ -58,3 +58,25 @@ export function getCurrentUser() {
     method: 'get'
   })
 }
+
+/**
+ * 确认已阅读诚信须知
+ */
+export function confirmIntegrityNotice() {
+  return request({
+    url: '/auth/notice/confirm',
+    method: 'post'
+  })
+}
+
+/**
+ * 本人修改密码（需要验证旧密码）
+ * @param {{ oldPassword, newPassword }} data
+ */
+export function selfChangePassword(data) {
+  return request({
+    url: '/auth/self-change-password',
+    method: 'post',
+    data
+  })
+}

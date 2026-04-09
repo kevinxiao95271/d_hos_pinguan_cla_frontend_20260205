@@ -86,6 +86,37 @@
     />
   </el-dialog>
 
+  <!-- 诚信须知强制阅读弹窗 -->
+  <el-dialog
+    v-model="showNoticeDialog"
+    title="诚信须知"
+    width="82%"
+    top="3vh"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
+    :show-close="false"
+  >
+    <div style="margin-bottom: 10px; color: #e6a23c; font-weight: 600;">
+      请认真阅读以下诚信须知，阅读完毕后方可继续使用系统。
+    </div>
+    <iframe
+      :src="noticePdfUrl"
+      style="width:100%; height:72vh; border:none;"
+    />
+    <template #footer>
+      <div style="display:flex; align-items:center; justify-content:flex-end;">
+        <el-button
+          type="primary"
+          :disabled="noticeCountdown > 0"
+          :loading="confirmingNotice"
+          @click="confirmNotice"
+        >
+          {{ noticeCountdown > 0 ? `请阅读完毕（${noticeCountdown}s）` : '确认已阅读，进入系统' }}
+        </el-button>
+      </div>
+    </template>
+  </el-dialog>
+
 </template>
 
 <script setup>
@@ -94,7 +125,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
-import { loginWithPassword } from '@/api/auth'
+import { loginWithPassword, confirmIntegrityNotice } from '@/api/auth'
 import { ensureCurrentCompetition } from '@/utils/competition'
 
 const router = useRouter()
@@ -127,36 +158,66 @@ const rules = {
   ]
 }
 
+// 诚信须知
+const showNoticeDialog = ref(false)
+const noticeCountdown = ref(0)
+const confirmingNotice = ref(false)
+const noticePdfUrl = `${import.meta.env.BASE_URL}integrity_notice.pdf`
+let noticeTimer = null
+
+const startNoticeCountdown = () => {
+  noticeCountdown.value = 5
+  if (noticeTimer) clearInterval(noticeTimer)
+  noticeTimer = setInterval(() => {
+    noticeCountdown.value--
+    if (noticeCountdown.value <= 0) clearInterval(noticeTimer)
+  }, 1000)
+}
+const navigateAfterLogin = async (role) => {
+  if (role === 'CONTESTANT') {
+    router.push('/contestant/dashboard')
+  } else if (role === 'REVIEWER') {
+    router.push('/reviewer/dashboard')
+  } else if (role === 'COMMITTEE_ADMIN') {
+    await initializeCompetitionForAdmin()
+    router.push('/committee/book-stage/registration')
+  } else if (role === 'OPS') {
+    router.push('/ops/institutions')
+  } else {
+    router.push('/dashboard')
+  }
+}
+
+const confirmNotice = async () => {
+  confirmingNotice.value = true
+  try {
+    await confirmIntegrityNotice()
+  } catch {
+    // 后端未实现时忽略错误，不阻塞流程
+  } finally {
+    confirmingNotice.value = false
+  }
+  showNoticeDialog.value = false
+  await navigateAfterLogin(userStore.role)
+}
+
 const handleLogin = async () => {
   try {
     await formRef.value.validate()
     loading.value = true
 
-    const loginData = {
-      phone: form.phone,
-      password: form.password
-    }
-
-    const res = await loginWithPassword(loginData)
+    const res = await loginWithPassword({ phone: form.phone, password: form.password })
 
     if (res.success && res.data) {
       userStore.setUserInfo(res.data)
       ElMessage.success('登录成功')
 
-      // 根据角色跳转到对应页面
-      const role = userStore.role
-      if (role === 'CONTESTANT') {
-        router.push('/contestant/dashboard')
-      } else if (role === 'REVIEWER') {
-        router.push('/reviewer/dashboard')
-      } else if (role === 'COMMITTEE_ADMIN') {
-        // 赛事管理者：自动初始化当前赛事
-        await initializeCompetitionForAdmin()
-        router.push('/committee/book-stage/registration')
-      } else if (role === 'OPS') {
-        router.push('/ops/institutions')
+      // noticeConfirmed: false 时弹出强制阅读（后端未返回该字段时默认不弹）
+      if (res.data.noticeConfirmed === false) {
+        showNoticeDialog.value = true
+        startNoticeCountdown()
       } else {
-        router.push('/dashboard')
+        await navigateAfterLogin(userStore.role)
       }
     } else {
       ElMessage.error(res.message || '手机号或密码错误')

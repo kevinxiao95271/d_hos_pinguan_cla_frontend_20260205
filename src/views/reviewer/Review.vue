@@ -47,200 +47,272 @@
             <span>{{ getGroupTypeText(taskInfo.groupType) }}</span>
           </el-form-item>
           
-          <!-- 项目详情折叠面板 -->
+          <!-- 项目详情折叠面板（分三块，默认全部折叠） -->
           <el-collapse v-if="projectDetail" v-model="activeCollapse" style="margin-bottom: 20px;">
-            <el-collapse-item title="查看项目详情" name="detail">
+
+            <!-- 活动说明 -->
+            <el-collapse-item v-if="projectDetail.activityInfo" title="活动说明" name="activity">
+              <el-descriptions :column="2" border size="small">
+                <el-descriptions-item label="活动主题" :span="2">{{ projectDetail.activityInfo.theme }}</el-descriptions-item>
+                <el-descriptions-item label="关键词" :span="2">{{ projectDetail.activityInfo.keywords }}</el-descriptions-item>
+                <el-descriptions-item label="主题类型">{{ projectDetail.activityInfo.subjectTypeLabel || projectDetail.activityInfo.subjectTypeCode || '未填写' }}</el-descriptions-item>
+                <el-descriptions-item label="运用手法">{{ projectDetail.activityInfo.methodLabel || projectDetail.activityInfo.methodCode || '未填写' }}</el-descriptions-item>
+                <el-descriptions-item label="改善就医环境">{{ getExperienceImproveDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
+                <el-descriptions-item label="医疗质量相关主题">{{ getQualityTopicDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
+                <el-descriptions-item label="平均工作年限">{{ projectDetail.activityInfo.avgWorkYears || '-' }} 年</el-descriptions-item>
+                <el-descriptions-item label="平均年龄">{{ projectDetail.activityInfo.avgAge || '-' }} 岁</el-descriptions-item>
+                <el-descriptions-item label="是否跨部门">
+                  <el-tag :type="projectDetail.activityInfo.crossDepartment ? 'success' : 'info'" size="small">
+                    {{ projectDetail.activityInfo.crossDepartment ? '是' : '否' }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="数字化/AI相关">
+                  <el-tag :type="projectDetail.activityInfo.relatedToDigitalAi ? 'success' : 'info'" size="small">
+                    {{ projectDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}
+                  </el-tag>
+                </el-descriptions-item>
+              </el-descriptions>
               <!-- 成员信息 -->
-              <div v-if="projectDetail.members && projectDetail.members.length > 0" style="margin-bottom: 20px;">
-                <h4>项目成员</h4>
+              <div v-if="projectDetail.members && projectDetail.members.length > 0" style="margin-top: 16px;">
+                <div style="font-weight:600; margin-bottom:8px; color:#606266">项目成员</div>
                 <el-table :data="projectDetail.members" border size="small">
                   <el-table-column prop="name" label="姓名" width="120" />
                   <el-table-column prop="title" label="职称" width="150" />
                   <el-table-column prop="department" label="科室" />
                   <el-table-column prop="role" label="角色" width="100">
-                    <template #default="{ row }">
-                      {{ row.role === 'PARTICIPANT' ? '参与人员' : '辅导员' }}
-                    </template>
-                  </el-table-column>
-                </el-table>
-              </div>
-              
-              <!-- 活动说明 -->
-              <div v-if="projectDetail.activityInfo" style="margin-bottom: 20px;">
-                <h4>活动说明</h4>
-                <el-descriptions :column="2" border>
-                  <el-descriptions-item label="活动主题" :span="2">{{ projectDetail.activityInfo.theme }}</el-descriptions-item>
-                  <el-descriptions-item label="关键词" :span="2">{{ projectDetail.activityInfo.keywords }}</el-descriptions-item>
-                  <el-descriptions-item label="主题类型">{{ projectDetail.activityInfo.subjectTypeLabel || projectDetail.activityInfo.subjectTypeCode || '未填写' }}</el-descriptions-item>
-                  <el-descriptions-item label="运用手法">{{ projectDetail.activityInfo.methodLabel || projectDetail.activityInfo.methodCode || '未填写' }}</el-descriptions-item>
-                  <el-descriptions-item label="改善就医环境">{{ getExperienceImproveDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
-                  <el-descriptions-item label="医疗质量相关主题">{{ getQualityTopicDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
-                  <el-descriptions-item label="平均工作年限">{{ projectDetail.activityInfo.avgWorkYears || '-' }} 年</el-descriptions-item>
-                  <el-descriptions-item label="平均年龄">{{ projectDetail.activityInfo.avgAge || '-' }} 岁</el-descriptions-item>
-                  <el-descriptions-item label="是否跨部门">
-                    <el-tag :type="projectDetail.activityInfo.crossDepartment ? 'success' : 'info'">
-                      {{ projectDetail.activityInfo.crossDepartment ? '是' : '否' }}
-                    </el-tag>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="是否与数字化/AI相关">
-                    <el-tag :type="projectDetail.activityInfo.relatedToDigitalAi ? 'success' : 'info'">
-                      {{ projectDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}
-                    </el-tag>
-                  </el-descriptions-item>
-                </el-descriptions>
-              </div>
-              
-              <!-- 项目摘要 -->
-              <div v-if="projectDetail.summary" style="margin-bottom: 20px;">
-                <h4>项目摘要</h4>
-                <el-descriptions :column="1" border>
-                  <el-descriptions-item label="主题" v-if="projectDetail.summary.theme">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.theme }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="计划">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.plan || '-' }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="问题结构与对策措施探讨">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.problem || '-' }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="对策行动过程">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.action || '-' }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="成果表现">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.success || '-' }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="讨论总结">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.discussion || '-' }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="运作" v-if="projectDetail.summary.operation">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.operation }}</div>
-                  </el-descriptions-item>
-                  <el-descriptions-item label="展示" v-if="projectDetail.summary.presentation">
-                    <div style="white-space: pre-wrap;">{{ projectDetail.summary.presentation }}</div>
-                  </el-descriptions-item>
-                </el-descriptions>
-              </div>
-              <!-- 材料文件 -->
-              <div v-if="projectDetail.materials && projectDetail.materials.length > 0" style="margin-bottom: 20px;">
-                <h4>材料文件</h4>
-                <el-table :data="projectDetail.materials" border size="small">
-                  <el-table-column label="类型" width="160">
-                    <template #default="{ row }">
-                      {{ getMaterialTypeLabel(row.type) }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column prop="fileName" label="文件名" />
-                  <el-table-column prop="uploadedAt" label="上传时间" width="160">
-                    <template #default="{ row }">
-                      {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
-                    </template>
-                  </el-table-column>
-                  <el-table-column label="操作" width="140">
-                    <template #default="{ row }">
-                      <el-button v-if="canPreview(row.fileName)" type="success" size="small" @click="previewFile(row)">预览</el-button>
-                      <el-button type="primary" size="small" @click="downloadFile(row)">下载</el-button>
-                    </template>
+                    <template #default="{ row }">{{ row.role === 'PARTICIPANT' ? '参与人员' : '辅导员' }}</template>
                   </el-table-column>
                 </el-table>
               </div>
             </el-collapse-item>
+
+            <!-- 项目摘要 -->
+            <el-collapse-item v-if="projectDetail.summary" title="项目摘要" name="summary">
+              <el-descriptions :column="1" border size="small">
+                <el-descriptions-item v-if="projectDetail.summary.theme" label="主题">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.theme }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item label="计划">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.plan || '-' }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item label="问题结构与对策措施探讨">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.problem || '-' }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item label="对策行动过程">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.action || '-' }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item label="成果表现">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.success || '-' }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item label="讨论总结">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.discussion || '-' }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item v-if="projectDetail.summary.operation" label="运作">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.operation }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item v-if="projectDetail.summary.presentation" label="展示">
+                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.presentation }}</div>
+                </el-descriptions-item>
+              </el-descriptions>
+            </el-collapse-item>
+
+            <!-- 材料文件 -->
+            <el-collapse-item
+              v-if="projectDetail.materials && projectDetail.materials.length > 0"
+              :title="`材料文件（${projectDetail.materials.length}个）`"
+              name="materials"
+            >
+              <el-table :data="projectDetail.materials" border size="small">
+                <el-table-column label="类型" width="160">
+                  <template #default="{ row }">{{ getMaterialTypeLabel(row.type) }}</template>
+                </el-table-column>
+                <el-table-column prop="fileName" label="文件名" />
+                <el-table-column prop="uploadedAt" label="上传时间" width="160">
+                  <template #default="{ row }">
+                    {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="140">
+                  <template #default="{ row }">
+                    <el-button v-if="canPreview(row.fileName)" type="success" size="small" @click="previewFile(row)">预览</el-button>
+                    <el-button type="primary" size="small" @click="downloadFile(row)">下载</el-button>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-collapse-item>
           </el-collapse>
           
           <el-divider content-position="left">评分</el-divider>
-          
-          <el-alert
-            title="书审评分标准"
-            type="info"
-            :closable="false"
-            style="margin-bottom: 20px"
-          >
-            <div style="line-height: 1.8;">
-              1. 计划 (10分) &nbsp;&nbsp;
-              2. 问题结构与对策措施探讨 (20分) &nbsp;&nbsp;
-              3. 对策实施 (20分) &nbsp;&nbsp;
-              4. 成果表现 (15分)<br/>
-              5. 检讨 (10分) &nbsp;&nbsp;
-              6. 整体运作 (10分) &nbsp;&nbsp;
-              7. 资料呈现 (15分) &nbsp;&nbsp;
-              <strong>总分: 100分</strong>
-            </div>
-          </el-alert>
-          
-          <el-form-item label="计划" prop="planScore">
-            <el-input-number v-model="form.planScore" :min="0" :max="10" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分10分</span>
-          </el-form-item>
-          
-          <el-form-item label="问题结构与对策措施探讨" prop="problemAnalysisScore">
-            <el-input-number v-model="form.problemAnalysisScore" :min="0" :max="20" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分20分</span>
-          </el-form-item>
-          
-          <el-form-item label="对策实施" prop="implementationScore">
-            <el-input-number v-model="form.implementationScore" :min="0" :max="20" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分20分</span>
-          </el-form-item>
-          
-          <el-form-item label="成果表现" prop="resultScore">
-            <el-input-number v-model="form.resultScore" :min="0" :max="15" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分15分</span>
-          </el-form-item>
-          
-          <el-form-item label="检讨" prop="reviewScore">
-            <el-input-number v-model="form.reviewScore" :min="0" :max="10" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分10分</span>
-          </el-form-item>
-          
-          <el-form-item label="整体运作" prop="operationScore">
-            <el-input-number v-model="form.operationScore" :min="0" :max="10" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分10分</span>
-          </el-form-item>
-          
-          <el-form-item label="资料呈现" prop="presentationScore">
-            <el-input-number v-model="form.presentationScore" :min="0" :max="15" :step="0.1" :precision="1" />
-            <span style="margin-left: 10px; color: #909399;">满分15分</span>
-          </el-form-item>
-          
+
+          <!-- 书审评分 -->
+          <template v-if="taskInfo.stage !== 'INTERVIEW'">
+            <el-alert
+              title="书审评分标准"
+              type="info"
+              :closable="false"
+              style="margin-bottom: 20px"
+            >
+              <div style="line-height: 1.8;">
+                1. 计划 (10分) &nbsp;&nbsp;
+                2. 问题结构与对策措施探讨 (20分) &nbsp;&nbsp;
+                3. 对策实施 (20分) &nbsp;&nbsp;
+                4. 成果表现 (15分)<br/>
+                5. 检讨 (10分) &nbsp;&nbsp;
+                6. 整体运作 (10分) &nbsp;&nbsp;
+                7. 资料呈现 (15分) &nbsp;&nbsp;
+                <strong>总分: 100分</strong>
+              </div>
+            </el-alert>
+
+            <el-form-item label="计划" prop="planScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.planScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.planScore }}</span><span class="score-denom">/ 10</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="问题结构与对策措施探讨" prop="problemAnalysisScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.problemAnalysisScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.problemAnalysisScore }}</span><span class="score-denom">/ 20</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="对策实施" prop="implementationScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.implementationScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.implementationScore }}</span><span class="score-denom">/ 20</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="成果表现" prop="resultScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.resultScore" :min="0" :max="15" :step="0.5" :marks="marks15" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.resultScore }}</span><span class="score-denom">/ 15</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="检讨" prop="reviewScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.reviewScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.reviewScore }}</span><span class="score-denom">/ 10</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="整体运作" prop="operationScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.operationScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.operationScore }}</span><span class="score-denom">/ 10</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="资料呈现" prop="presentationScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.presentationScore" :min="0" :max="15" :step="0.5" :marks="marks15" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.presentationScore }}</span><span class="score-denom">/ 15</span></div>
+              </div>
+            </el-form-item>
+          </template>
+
+          <!-- 面谈评分 -->
+          <template v-else>
+            <el-alert
+              title="面谈评分标准"
+              type="warning"
+              :closable="false"
+              style="margin-bottom: 20px"
+            >
+              <div style="line-height: 1.8;">
+                1. 选题（迫切性/实用性/可行性）(10分) &nbsp;&nbsp;
+                2. 改善过程确实性 (40分) &nbsp;&nbsp;
+                3. 整体运作 (20分) &nbsp;&nbsp;
+                4. 改善成果 (30分) &nbsp;&nbsp;
+                <strong>总分: 100分</strong>
+              </div>
+            </el-alert>
+
+            <el-form-item label="选题（迫切性/实用性/可行性）" prop="topicScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.topicScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.topicScore }}</span><span class="score-denom">/ 10</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="改善过程确实性" prop="processScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.processScore" :min="0" :max="40" :step="0.5" :marks="marks40" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.processScore }}</span><span class="score-denom">/ 40</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="整体运作" prop="interviewOperationScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.interviewOperationScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.interviewOperationScore }}</span><span class="score-denom">/ 20</span></div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="改善成果" prop="resultScore">
+              <div class="score-slider-wrap">
+                <el-slider v-model="form.resultScore" :min="0" :max="30" :step="0.5" :marks="marks30" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
+                <div class="score-display"><span class="score-num">{{ form.resultScore }}</span><span class="score-denom">/ 30</span></div>
+              </div>
+            </el-form-item>
+          </template>
+
           <el-form-item label="总分">
             <el-tag type="success" size="large">{{ totalScore.toFixed(1) }} / 100 分</el-tag>
           </el-form-item>
-          
+
           <el-divider content-position="left">评价</el-divider>
-          
+
           <el-form-item label="亮点" prop="highlights">
             <el-input
               v-model="form.highlights"
               type="textarea"
               :rows="4"
-              placeholder="请输入亮点，不超过500字"
-              maxlength="500"
+              placeholder="请输入亮点（选填，不超过1000字）"
+              maxlength="1000"
               show-word-limit
             />
           </el-form-item>
-          
+
           <el-form-item label="不足之处" prop="shortcomings">
             <el-input
               v-model="form.shortcomings"
               type="textarea"
-              :rows="4"
-              placeholder="请输入不足之处，不超过500字"
-              maxlength="500"
+              :rows="5"
+              placeholder="请输入不足之处，至少150字，不超过1000字"
+              maxlength="1000"
               show-word-limit
             />
+            <div v-if="form.shortcomings && form.shortcomings.length < 150 && !isViewMode" style="color:#f56c6c; font-size:12px; margin-top:4px">
+              还需补充 {{ 150 - form.shortcomings.length }} 字
+            </div>
           </el-form-item>
-          
+
           <el-form-item v-if="!isViewMode">
-            <el-button type="primary" :loading="submitting" @click="submitReview">
-              提交评分
+            <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">
+              保存草稿
+            </el-button>
+            <el-tag v-if="draftSavedAt" type="success" style="margin-left: 10px">
+              草稿已保存 {{ draftSavedAt }}
+            </el-tag>
+            <el-button
+              v-if="canRecuse"
+              type="warning"
+              plain
+              style="margin-left: 10px"
+              @click="openRecuseDialog"
+            >
+              申请规避
             </el-button>
           </el-form-item>
         </el-form>
-        
+
         <!-- 返回按钮移到表单外，避免被表单的 disabled 影响 -->
         <div style="margin-top: 20px; text-align: left; padding-left: 200px;">
-          <el-button @click="goBack">
-            返回
-          </el-button>
+          <el-button @click="goBack">返回任务列表</el-button>
         </div>
         </div>
     </el-card>
@@ -251,26 +323,65 @@
       :material-id="previewMaterialId"
       :file-name="previewFileName"
     />
+
+    <!-- 规避弹窗 -->
+    <el-dialog v-model="recuseDialogVisible" title="申请规避评审任务" width="440px" :close-on-click-modal="false">
+      <div style="margin-bottom:12px; color:#606266">
+        项目：<strong>{{ taskInfo.projectName }}</strong>
+      </div>
+      <el-form ref="recuseFormRef" :model="recuseForm" :rules="recuseRules" label-width="90px">
+        <el-form-item label="规避原因" prop="reasonCode">
+          <el-select v-model="recuseForm.reasonCode" placeholder="请选择规避原因" style="width:100%">
+            <el-option
+              v-for="item in recuseReasons"
+              :key="item.code"
+              :label="item.label || item.name || item.code"
+              :value="item.code"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="recuseForm.reasonCode === 'OTHER'" label="补充说明" prop="reasonOther">
+          <el-input
+            v-model="recuseForm.reasonOther"
+            type="textarea"
+            :rows="3"
+            placeholder="请填写具体原因"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="recuseDialogVisible = false">取消</el-button>
+        <el-button type="warning" :loading="recusing" @click="confirmRecuse">确认规避</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { submitReviewScore, getReviewScore } from '@/api/review'
+import { ElMessage } from 'element-plus'
+import { getReviewScore, getInterviewScore, saveBookReviewDraft, saveInterviewDraft } from '@/api/review'
+import { recuseReviewTask } from '@/api/review'
+import { getRecuseReasons } from '@/api/dictionary'
 import { getRegistrationDetail } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
 
 const taskId = computed(() => route.params.taskId)
-const registrationId = computed(() => route.query.registrationId)  // ✅ 改为 computed，自动响应路由变化
+const registrationId = computed(() => route.query.registrationId)
+const taskStatus = computed(() => route.query.status || '')
+// RETURNED 状态允许重新编辑，不算只读
 const isViewMode = computed(() => route.query.view === 'score' || route.query.isViewMode === 'true')
+// PENDING / CONFIRMED / DRAFT / RETURNED 均可申请规避（SCORED、RECUSED 不可）
+const canRecuse = computed(() => !isViewMode.value && ['PENDING', 'CONFIRMED', 'DRAFT', 'RETURNED'].includes(taskStatus.value))
 const formRef = ref(null)
-const submitting = ref(false)
 const loading = ref(false)
 
 const taskInfo = reactive({
@@ -282,66 +393,91 @@ const taskInfo = reactive({
 })
 
 const projectDetail = ref(null)
-const activeCollapse = ref(['detail']) // 默认展开项目详情
+const activeCollapse = ref([]) // 默认全部折叠
+
+const BOOK_MAX = { planScore: 10, problemAnalysisScore: 20, implementationScore: 20, resultScore: 15, reviewScore: 10, operationScore: 10, presentationScore: 15 }
+const INTERVIEW_MAX = { topicScore: 10, processScore: 40, interviewOperationScore: 20, resultScore: 30 }
+
+// 每5分一个刻度
+const makeMarks = (max) => {
+  const m = {}
+  for (let i = 0; i <= max; i += 5) {
+    m[i] = String(i)
+  }
+  return m
+}
+const marks10 = makeMarks(10)
+const marks15 = makeMarks(15)
+const marks20 = makeMarks(20)
+const marks30 = makeMarks(30)
+const marks40 = makeMarks(40)
 
 const form = reactive({
-  planScore: 0,
-  problemAnalysisScore: 0,
-  implementationScore: 0,
-  resultScore: 0,
-  reviewScore: 0,
-  operationScore: 0,
-  presentationScore: 0,
+  // 书审字段（默认满分）
+  planScore: 10,
+  problemAnalysisScore: 20,
+  implementationScore: 20,
+  resultScore: 15,
+  reviewScore: 10,
+  operationScore: 10,
+  presentationScore: 15,
+  // 面谈字段（默认满分）
+  topicScore: 10,
+  processScore: 40,
+  interviewOperationScore: 20,
+  // 公共字段
   highlights: '',
   shortcomings: ''
 })
 
+const isInterviewStage = computed(() => taskInfo.stage === 'INTERVIEW')
+
 const totalScore = computed(() => {
-  return form.planScore + 
-         form.problemAnalysisScore + 
-         form.implementationScore + 
-         form.resultScore + 
-         form.reviewScore + 
-         form.operationScore + 
+  if (isInterviewStage.value) {
+    return form.topicScore + form.processScore + form.interviewOperationScore + form.resultScore
+  }
+  return form.planScore +
+         form.problemAnalysisScore +
+         form.implementationScore +
+         form.resultScore +
+         form.reviewScore +
+         form.operationScore +
          form.presentationScore
 })
 
+// 草稿保存状态
+const draftSaving = ref(false)
+const draftSavedAt = ref('')
+let draftTimer = null
+
 const rules = {
-  planScore: [
-    { required: true, message: '请输入计划得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 10, message: '计划得分范围为0-10分', trigger: 'blur' }
-  ],
-  problemAnalysisScore: [
-    { required: true, message: '请输入问题分析得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 20, message: '问题分析得分范围为0-20分', trigger: 'blur' }
-  ],
-  implementationScore: [
-    { required: true, message: '请输入实施得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 20, message: '实施得分范围为0-20分', trigger: 'blur' }
-  ],
-  resultScore: [
-    { required: true, message: '请输入成果得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 15, message: '成果得分范围为0-15分', trigger: 'blur' }
-  ],
-  reviewScore: [
-    { required: true, message: '请输入检讨得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 10, message: '检讨得分范围为0-10分', trigger: 'blur' }
-  ],
-  operationScore: [
-    { required: true, message: '请输入整体运作得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 10, message: '整体运作得分范围为0-10分', trigger: 'blur' }
-  ],
-  presentationScore: [
-    { required: true, message: '请输入资料呈现得分', trigger: 'blur' },
-    { type: 'number', min: 0, max: 15, message: '资料呈现得分范围为0-15分', trigger: 'blur' }
-  ],
-  highlights: [
-    { required: true, message: '请输入亮点', trigger: 'blur' },
-    { max: 500, message: '亮点不能超过500字', trigger: 'blur' }
-  ],
+  // 书审分值规则
+  planScore: [{ type: 'number', min: 0, max: 10, message: '计划得分范围为0-10分', trigger: 'blur' }],
+  problemAnalysisScore: [{ type: 'number', min: 0, max: 20, message: '问题分析得分范围为0-20分', trigger: 'blur' }],
+  implementationScore: [{ type: 'number', min: 0, max: 20, message: '实施得分范围为0-20分', trigger: 'blur' }],
+  resultScore: [{ type: 'number', min: 0, max: 30, message: '成果得分超出范围', trigger: 'blur' }],
+  reviewScore: [{ type: 'number', min: 0, max: 10, message: '检讨得分范围为0-10分', trigger: 'blur' }],
+  operationScore: [{ type: 'number', min: 0, max: 10, message: '整体运作得分范围为0-10分', trigger: 'blur' }],
+  presentationScore: [{ type: 'number', min: 0, max: 15, message: '资料呈现得分范围为0-15分', trigger: 'blur' }],
+  // 面谈分值规则
+  topicScore: [{ type: 'number', min: 0, max: 10, message: '选题得分范围为0-10分', trigger: 'blur' }],
+  processScore: [{ type: 'number', min: 0, max: 40, message: '改善过程得分范围为0-40分', trigger: 'blur' }],
+  interviewOperationScore: [{ type: 'number', min: 0, max: 20, message: '整体运作得分范围为0-20分', trigger: 'blur' }],
+  // 评价字段（均非必填）
+  highlights: [{ max: 1000, message: '亮点不能超过1000字', trigger: 'blur' }],
   shortcomings: [
-    { required: true, message: '请输入不足之处', trigger: 'blur' },
-    { max: 500, message: '不足之处不能超过500字', trigger: 'blur' }
+    {
+      validator: (rule, value, callback) => {
+        if (value && value.length > 1000) {
+          callback(new Error('不足之处不能超过1000字'))
+        } else if (value && value.length > 0 && value.length < 150) {
+          callback(new Error('不足之处至少填写150字'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ]
 }
 
@@ -400,37 +536,41 @@ const loadData = async () => {
       ElMessage.warning('缺少项目ID，无法加载详情')
     }
     
-    // 如果是查看模式或已经评分，加载评分数据
-    if (isViewMode.value || taskId.value) {
+    // 加载已有评分数据（查看模式 / 草稿 / 已提交均尝试加载）
+    if (taskId.value) {
       try {
-        const scoreRes = await getReviewScore(taskId.value)
+        const fetchFn = taskInfo.stage === 'INTERVIEW' ? getInterviewScore : getReviewScore
+        const scoreRes = await fetchFn(taskId.value)
         if (scoreRes.success && scoreRes.data) {
           const data = scoreRes.data
-          // ✅ 字段映射：后端字段 -> 前端表单字段
-          form.planScore = data.plan || 0
-          form.problemAnalysisScore = data.problem || 0
-          form.implementationScore = data.action || 0
-          form.resultScore = data.success || 0
-          form.reviewScore = data.review || 0
-          form.operationScore = data.operation || 0
-          form.presentationScore = data.presentation || 0
+          if (taskInfo.stage === 'INTERVIEW') {
+            form.topicScore = data.topic || 0
+            form.processScore = data.process || 0
+            form.interviewOperationScore = data.operation || data.interviewOperation || 0
+            form.resultScore = data.result || 0
+          } else {
+            form.planScore = data.plan || 0
+            form.problemAnalysisScore = data.problem || 0
+            form.implementationScore = data.action || 0
+            form.resultScore = data.success || 0
+            form.reviewScore = data.review || 0
+            form.operationScore = data.operation || 0
+            form.presentationScore = data.presentation || 0
+          }
           form.highlights = data.highlight || ''
           form.shortcomings = data.weakness || ''
-          
-          console.log('✅ 评分数据加载成功:', {
-            plan: form.planScore,
-            problem: form.problemAnalysisScore,
-            action: form.implementationScore,
-            success: form.resultScore,
-            review: form.reviewScore,
-            operation: form.operationScore,
-            presentation: form.presentationScore,
-            totalScore: totalScore.value
-          })
+          if (!data.submittedAt) {
+            draftSavedAt.value = data.updatedAt ? dayjs(data.updatedAt).format('HH:mm:ss') : '已保存'
+          }
         }
       } catch (error) {
-        // 未评分，忽略错误
-        console.log('未找到已有评分')
+        // 无已有评分，默认满分
+        if (taskInfo.stage === 'INTERVIEW') {
+          Object.assign(form, INTERVIEW_MAX)
+        } else {
+          Object.assign(form, BOOK_MAX)
+        }
+        console.log('未找到已有评分数据，默认满分')
       }
     }
   } catch (error) {
@@ -489,61 +629,107 @@ const getQualityTopicDisplay = (activityInfo) => {
   return activityInfo.qualityTopicLabel || '未填写'
 }
 
-const submitReview = async () => {
+const buildSubmitData = () => {
+  const base = {
+    reviewTaskId: parseInt(taskId.value),
+    highlight: form.highlights || undefined,
+    weakness: form.shortcomings || undefined
+  }
+  if (isInterviewStage.value) {
+    return {
+      ...base,
+      topic: form.topicScore,
+      process: form.processScore,
+      operation: form.interviewOperationScore,   // API 字段名是 operation，不是 interviewOperation
+      result: form.resultScore
+    }
+  }
+  return {
+    ...base,
+    plan: form.planScore,
+    problem: form.problemAnalysisScore,
+    action: form.implementationScore,
+    success: form.resultScore,
+    review: form.reviewScore,
+    operation: form.operationScore,
+    presentation: form.presentationScore
+  }
+}
+
+const saveDraft = async () => {
+  if (draftSaving.value) return
+  draftSaving.value = true
   try {
-    await formRef.value.validate()
-    
-    // 确认提交
-    await ElMessageBox.confirm(
-      `确认提交评分？总分为 ${totalScore.value} 分`,
-      '确认提交',
-      {
-        confirmButtonText: '确认',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    submitting.value = true
-    
-    // ✅ 使用正确的字段名
-    const submitData = {
-      reviewTaskId: parseInt(taskId.value),  // ✅ 任务ID（不是 taskId）
-      plan: form.planScore,                  // ✅ 计划（不是 planScore）
-      problem: form.problemAnalysisScore,    // ✅ 问题（不是 problemAnalysisScore）
-      action: form.implementationScore,      // ✅ 措施（不是 implementationScore）
-      success: form.resultScore,             // ✅ 成效（不是 resultScore）
-      review: form.reviewScore,              // ✅ 回顾（不是 reviewScore）
-      operation: form.operationScore,        // ✅ 操作（不是 operationScore）
-      presentation: form.presentationScore,  // ✅ 展示（不是 presentationScore）
-      highlight: form.highlights || '',      // ✅ 亮点（单数，必填）
-      weakness: form.shortcomings || ''      // ✅ 不足（不是 shortcomings，必填）
+    const data = buildSubmitData()
+    const res = isInterviewStage.value
+      ? await saveInterviewDraft(data)
+      : await saveBookReviewDraft(data)
+    if (res && res.success !== false) {
+      draftSavedAt.value = dayjs().format('HH:mm:ss')
     }
-    
-    console.log('📤 提交评分参数:', submitData)
-    console.log('  reviewTaskId:', submitData.reviewTaskId)
-    console.log('  总分:', submitData.plan + submitData.problem + submitData.action + submitData.success + submitData.review + submitData.operation + submitData.presentation)
-    
-    const res = await submitReviewScore(submitData)
-    
-    if (res.success) {
-      ElMessage.success('提交成功')
-      router.push('/reviewer/tasks')
-    } else {
-      ElMessage.error(res.message || '提交失败')
-    }
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('提交评分失败:', error)
-      ElMessage.error('提交评分失败')
-    }
+  } catch (e) {
+    // 草稿接口未实现时静默失败，不打扰用户
+    console.warn('草稿保存失败（后端未实现）:', e?.response?.status)
   } finally {
-    submitting.value = false
+    draftSaving.value = false
+  }
+}
+
+// 规避
+const recuseDialogVisible = ref(false)
+const recusing = ref(false)
+const recuseFormRef = ref(null)
+const recuseReasons = ref([])
+const recuseForm = reactive({ reasonCode: '', reasonOther: '' })
+const recuseRules = {
+  reasonCode: [{ required: true, message: '请选择规避原因', trigger: 'change' }],
+  reasonOther: [
+    {
+      validator: (rule, value, callback) => {
+        if (recuseForm.reasonCode === 'OTHER' && !value) callback(new Error('请填写补充说明'))
+        else callback()
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+const openRecuseDialog = async () => {
+  recuseForm.reasonCode = ''
+  recuseForm.reasonOther = ''
+  if (recuseReasons.value.length === 0) {
+    try {
+      const res = await getRecuseReasons()
+      recuseReasons.value = res.success ? (res.data || []) : []
+    } catch { recuseReasons.value = [] }
+  }
+  recuseDialogVisible.value = true
+}
+
+const confirmRecuse = async () => {
+  try {
+    await recuseFormRef.value.validate()
+    recusing.value = true
+    const res = await recuseReviewTask(parseInt(taskId.value), {
+      reasonCode: recuseForm.reasonCode,
+      reasonOther: recuseForm.reasonOther || undefined
+    })
+    if (res.success) {
+      ElMessage.success('规避申请已提交')
+      recuseDialogVisible.value = false
+      router.push('/reviewer/dashboard')
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (e) {
+    if (e !== false) ElMessage.error(e?.response?.data?.message || '操作失败')
+  } finally {
+    recusing.value = false
   }
 }
 
 const goBack = () => {
-  router.back()
+  router.push('/reviewer/dashboard')
 }
 
 const getMaterialTypeLabel = (type) => {
@@ -595,6 +781,22 @@ onMounted(() => {
   loadData()
 })
 
+// 非查看模式时启动草稿自动保存（30s/次）
+watch(isViewMode, (viewMode) => {
+  if (!viewMode) {
+    if (draftTimer) clearInterval(draftTimer)
+    draftTimer = setInterval(() => {
+      if (!isViewMode.value) saveDraft()
+    }, 30000)
+  } else {
+    if (draftTimer) { clearInterval(draftTimer); draftTimer = null }
+  }
+}, { immediate: true })
+
+onUnmounted(() => {
+  if (draftTimer) clearInterval(draftTimer)
+})
+
 // 监听路由变化，重新加载数据
 watch(() => route.query.registrationId, (newId, oldId) => {
   if (newId && newId !== oldId) {
@@ -615,8 +817,129 @@ watch(() => route.query.registrationId, (newId, oldId) => {
     font-weight: 600;
   }
   
-  :deep(.el-input-number) {
-    width: 150px;
+  /* ── Slider ── */
+  .score-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    padding-bottom: 22px; // 留出刻度标签空间
+  }
+
+  .score-slider {
+    flex: 1;
+
+    // 轨道更细
+    :deep(.el-slider__runway) {
+      height: 4px;
+      border-radius: 2px;
+      background: #e4e7ed;
+    }
+
+    :deep(.el-slider__bar) {
+      height: 4px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #a0cfff, #409EFF);
+    }
+
+    // 滑块更小更精致
+    :deep(.el-slider__button-wrapper) {
+      top: -14px;
+    }
+
+    :deep(.el-slider__button) {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #409EFF;
+      box-shadow: 0 2px 6px rgba(64, 158, 255, 0.35);
+      transition: transform 0.15s;
+
+      &:hover { transform: scale(1.3); }
+    }
+
+    // 刻度点
+    :deep(.el-slider__stop) {
+      width: 4px;
+      height: 4px;
+      background: #c0c4cc;
+      border-radius: 50%;
+      top: 0;
+    }
+
+    // 刻度标签
+    :deep(.el-slider__marks-text) {
+      font-size: 11px;
+      color: #c0c4cc;
+      margin-top: 6px;
+      white-space: nowrap;
+    }
+  }
+
+  .score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    min-width: 68px;
+    flex-shrink: 0;
+
+    .score-num {
+      font-size: 20px;
+      font-weight: 700;
+      color: #409EFF;
+      line-height: 1;
+    }
+
+    .score-denom {
+      font-size: 12px;
+      color: #c0c4cc;
+    }
+  }
+
+  /* ── 折叠区域视觉增强 ── */
+  :deep(.el-collapse) {
+    border: none;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  :deep(.el-collapse-item) {
+    margin-bottom: 4px;
+
+    &:last-child { margin-bottom: 0; }
+  }
+
+  :deep(.el-collapse-item__header) {
+    background: #f5f7fa;
+    padding: 0 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #303133;
+    border-left: 3px solid #409EFF;
+    border-bottom: 1px solid #ebeef5;
+    height: 46px;
+    transition: background 0.2s, color 0.2s;
+
+    &:hover {
+      background: #ecf5ff;
+      color: #409EFF;
+    }
+
+    &.is-active {
+      color: #409EFF;
+      background: #ecf5ff;
+      border-left-color: #409EFF;
+    }
+  }
+
+  :deep(.el-collapse-item__wrap) {
+    background: #fff;
+    border-left: 3px solid #e0edff;
+    padding: 16px 16px 8px;
+  }
+
+  :deep(.el-collapse-item__content) {
+    padding-bottom: 0;
   }
 }
 </style>

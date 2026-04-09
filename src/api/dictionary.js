@@ -58,3 +58,11 @@ export function deleteDictionary(id) {
     method: 'delete'
   })
 }
+
+/**
+ * 获取规避原因字典
+ * 接口：GET /api/dictionaries/recuse_reason（公开，无需登录）
+ */
+export function getRecuseReasons() {
+  return getDictionaryByType('recuse_reason')
+}

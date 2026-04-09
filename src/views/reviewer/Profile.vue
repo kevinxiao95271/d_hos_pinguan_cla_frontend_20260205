@@ -2,10 +2,7 @@
   <div class="reviewer-profile-page">
     <el-card v-loading="loading">
       <template #header>
-        <div style="display: flex; justify-content: space-between; align-items: center">
-          <span style="font-weight: 600; font-size: 16px">我的档案</span>
-          <el-button type="primary" :loading="saving" @click="handleSave">保存</el-button>
-        </div>
+        <span style="font-weight: 600; font-size: 16px">专家信息</span>
       </template>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-width="140px">
@@ -21,8 +18,21 @@
           </el-radio-group>
         </el-form-item>
 
-        <el-form-item label="职务" prop="position">
-          <el-input v-model="form.position" placeholder="请输入职务" maxlength="100" style="width: 320px" />
+        <el-form-item label="职务" prop="jobPosition">
+          <el-input v-model="form.jobPosition" placeholder="请输入职务" maxlength="100" style="width: 320px" />
+        </el-form-item>
+
+        <el-form-item label="科室" prop="department">
+          <el-input v-model="form.department" placeholder="请输入科室" maxlength="100" style="width: 320px" />
+        </el-form-item>
+
+        <!-- 所属机构 -->
+        <el-divider content-position="left">所属机构</el-divider>
+
+        <el-form-item label="当前机构">
+          <span style="margin-right: 16px">{{ userStore.institutionName || '未知机构' }}</span>
+          <el-button size="small" @click="showInstitutionDialog = true">申请变更机构</el-button>
+          <el-button size="small" type="info" plain @click="loadInstitutionHistory">变更记录</el-button>
         </el-form-item>
 
         <!-- 证件信息 -->
@@ -117,39 +127,162 @@
         <el-divider content-position="left">专业背景与能力</el-divider>
 
         <el-form-item label="专业背景">
-          <el-checkbox-group v-model="form.backgrounds">
-            <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+          <div>
+            <el-checkbox-group v-model="form.backgrounds">
+              <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </el-checkbox>
+            </el-checkbox-group>
+            <el-input
+              v-if="form.backgrounds.includes('OTHER')"
+              v-model="form.backgroundsOther"
+              placeholder="请填写其他专业背景"
+              maxlength="200"
+              style="width: 400px; margin-top: 8px"
+            />
+          </div>
         </el-form-item>
 
         <el-form-item label="擅长工具">
-          <el-checkbox-group v-model="form.tools">
-            <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+          <div>
+            <el-checkbox-group v-model="form.tools">
+              <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </el-checkbox>
+            </el-checkbox-group>
+            <el-input
+              v-if="form.tools.includes('OTHER')"
+              v-model="form.toolsOther"
+              placeholder="请填写其他擅长工具"
+              maxlength="200"
+              style="width: 400px; margin-top: 8px"
+            />
+          </div>
         </el-form-item>
 
         <el-form-item label="擅长主题">
-          <el-checkbox-group v-model="form.topics">
-            <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+          <div>
+            <el-checkbox-group v-model="form.topics">
+              <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </el-checkbox>
+            </el-checkbox-group>
+            <el-input
+              v-if="form.topics.includes('OTHER')"
+              v-model="form.topicsOther"
+              placeholder="请填写其他擅长主题"
+              maxlength="200"
+              style="width: 400px; margin-top: 8px"
+            />
+          </div>
         </el-form-item>
+
+        <!-- 账号安全 -->
+        <el-divider content-position="left">账号安全</el-divider>
+
+        <el-form-item label="登录密码">
+          <el-button size="small" @click="showPasswordDialog = true">修改密码</el-button>
+        </el-form-item>
+
+        <!-- 底部保存按钮 -->
+        <div style="text-align: center; margin-top: 32px; padding-bottom: 8px;">
+          <el-button type="primary" size="large" :loading="saving" @click="handleSave" style="min-width: 140px;">
+            保存专家信息
+          </el-button>
+        </div>
 
       </el-form>
     </el-card>
   </div>
+
+  <!-- 修改密码弹窗 -->
+  <el-dialog v-model="showPasswordDialog" title="修改密码" width="420px" :close-on-click-modal="false">
+    <el-form ref="pwdFormRef" :model="pwdForm" :rules="pwdRules" label-width="100px">
+      <el-form-item label="当前密码" prop="oldPassword">
+        <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入当前密码" />
+      </el-form-item>
+      <el-form-item label="新密码" prop="newPassword">
+        <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="6-20位密码" />
+      </el-form-item>
+      <el-form-item label="确认新密码" prop="confirmPassword">
+        <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="showPasswordDialog = false">取消</el-button>
+      <el-button type="primary" :loading="changingPwd" @click="handleChangePassword">确认修改</el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 变更机构弹窗 -->
+  <el-dialog
+    v-model="showInstitutionDialog"
+    title="申请变更所属机构"
+    width="780px"
+    :close-on-click-modal="false"
+    @closed="selectedNewInstitution = null; instForm.reason = ''"
+  >
+    <div style="margin-bottom: 12px; color: #606266; font-size: 13px">
+      当前机构：<strong>{{ userStore.institutionName || '未知机构' }}</strong>
+    </div>
+
+    <InstitutionSelector @select="selectedNewInstitution = $event" />
+
+    <el-form ref="instFormRef" :model="instForm" label-width="80px" style="margin-top: 16px">
+      <el-form-item label="变更原因">
+        <el-input
+          v-model="instForm.reason"
+          type="textarea"
+          :rows="2"
+          placeholder="请输入变更原因（选填）"
+          maxlength="500"
+        />
+      </el-form-item>
+    </el-form>
+
+    <template #footer>
+      <el-button @click="showInstitutionDialog = false">取消</el-button>
+      <el-button
+        type="primary"
+        :loading="changingInst"
+        :disabled="!selectedNewInstitution"
+        @click="handleChangeInstitution"
+      >
+        提交申请
+      </el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 机构变更历史弹窗 -->
+  <el-dialog v-model="showHistoryDialog" title="机构变更记录" width="600px">
+    <el-table :data="institutionHistory" border v-loading="historyLoading" empty-text="暂无变更记录">
+      <el-table-column prop="oldInstitutionName" label="原机构" />
+      <el-table-column prop="newInstitutionName" label="新机构" />
+      <el-table-column prop="reason" label="原因" />
+      <el-table-column prop="changedAt" label="变更时间" width="160">
+        <template #default="{ row }">
+          {{ row.changedAt ? row.changedAt.replace('T', ' ').substring(0, 16) : '-' }}
+        </template>
+      </el-table-column>
+    </el-table>
+    <template #footer>
+      <el-button @click="showHistoryDialog = false">关闭</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream } from '@/api/reviewerProfile'
+import { useRouter } from 'vue-router'
+import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream, changeMyInstitution, getMyInstitutionHistory } from '@/api/reviewerProfile'
+import { selfChangePassword } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
+import InstitutionSelector from '@/components/InstitutionSelector.vue'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 // ── 枚举 ─────────────────────────────────────────────────────────────
 const BACKGROUND_OPTIONS = [
@@ -215,7 +348,8 @@ const backFileInput = ref(null)
 
 const form = reactive({
   gender: 'UNKNOWN',
-  position: '',
+  jobPosition: '',
+  department: '',
   idNumber: '',
   idNumberMasked: '',
   idCardFrontUrl: '',
@@ -224,9 +358,47 @@ const form = reactive({
   bankCardNo: '',
   bankCardNoMasked: '',
   backgrounds: [],
+  backgroundsOther: '',
   tools: [],
-  topics: []
+  toolsOther: '',
+  topics: [],
+  topicsOther: ''
 })
+
+// 修改密码
+const showPasswordDialog = ref(false)
+const changingPwd = ref(false)
+const pwdFormRef = ref(null)
+const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const pwdRules = {
+  oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '密码长度为6-20位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (rule, value, callback) => {
+        if (value !== pwdForm.newPassword) callback(new Error('两次密码不一致'))
+        else callback()
+      },
+      trigger: 'blur'
+    }
+  ]
+}
+
+// 变更机构
+const showInstitutionDialog = ref(false)
+const changingInst = ref(false)
+const instFormRef = ref(null)
+const instForm = reactive({ reason: '' })
+const selectedNewInstitution = ref(null)
+
+// 机构变更历史
+const showHistoryDialog = ref(false)
+const historyLoading = ref(false)
+const institutionHistory = ref([])
 
 const rules = {
   idNumber: [
@@ -266,7 +438,8 @@ function autoMaskBank() {
 function apiToForm(data) {
   if (!data) return
   form.gender = data.gender || 'UNKNOWN'
-  form.position = data.position || ''
+  form.jobPosition = data.jobPosition || data.position || ''
+  form.department = data.department || ''
   form.idNumber = data.idNumber || ''
   form.idNumberMasked = data.idNumberMasked || maskIdNumber(data.idNumber || '')
   form.idCardFrontUrl = data.idCardFrontUrl || ''
@@ -275,14 +448,18 @@ function apiToForm(data) {
   form.bankCardNo = data.bankCardNo || ''
   form.bankCardNoMasked = data.bankCardNoMasked || maskBankCard(data.bankCardNo || '')
   form.backgrounds = safeJsonParse(data.backgroundsJson)
+  form.backgroundsOther = data.backgroundsOther || ''
   form.tools = safeJsonParse(data.toolsJson)
+  form.toolsOther = data.toolsOther || ''
   form.topics = safeJsonParse(data.topicsJson)
+  form.topicsOther = data.topicsOther || ''
 }
 
 function formToApi() {
   return {
     gender: form.gender,
-    position: form.position || null,
+    jobPosition: form.jobPosition || null,
+    department: form.department || null,
     idNumber: form.idNumber || null,
     idNumberMasked: maskIdNumber(form.idNumber),
     idCardFrontUrl: form.idCardFrontUrl || null,
@@ -291,8 +468,11 @@ function formToApi() {
     bankCardNo: form.bankCardNo || null,
     bankCardNoMasked: maskBankCard(form.bankCardNo),
     backgroundsJson: JSON.stringify(form.backgrounds),
+    backgroundsOther: form.backgroundsOther || null,
     toolsJson: JSON.stringify(form.tools),
-    topicsJson: JSON.stringify(form.topics)
+    toolsOther: form.toolsOther || null,
+    topicsJson: JSON.stringify(form.topics),
+    topicsOther: form.topicsOther || null
   }
 }
 
@@ -397,6 +577,75 @@ async function handleSave() {
     }
   } finally {
     saving.value = false
+  }
+}
+
+async function handleChangePassword() {
+  try {
+    await pwdFormRef.value.validate()
+    changingPwd.value = true
+    const res = await selfChangePassword({
+      oldPassword: pwdForm.oldPassword,
+      newPassword: pwdForm.newPassword
+    })
+    if (res.success) {
+      ElMessage.success('密码修改成功，请使用新密码重新登录')
+      showPasswordDialog.value = false
+      // 清除 token，强制重新登录
+      userStore.logout()
+      router.push('/login')
+    } else {
+      ElMessage.error(res.message || '修改失败')
+      // 原密码错误时清空原密码框，方便重新填写
+      if (res.message && res.message.includes('原密码')) {
+        pwdForm.oldPassword = ''
+      }
+    }
+  } catch (e) {
+    if (e !== false) {
+      ElMessage.error(e?.response?.data?.message || e?.message || '修改失败')
+    }
+  } finally {
+    changingPwd.value = false
+  }
+}
+
+async function handleChangeInstitution() {
+  if (!selectedNewInstitution.value) {
+    ElMessage.warning('请先选择新机构')
+    return
+  }
+  changingInst.value = true
+  try {
+    const res = await changeMyInstitution({
+      newInstitutionId: selectedNewInstitution.value.id,
+      reason: instForm.reason || undefined
+    })
+    if (res.success) {
+      ElMessage.success('机构变更申请已提交')
+      showInstitutionDialog.value = false
+      selectedNewInstitution.value = null
+      instForm.reason = ''
+    } else {
+      ElMessage.error(res.message || '提交失败')
+    }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e?.message || '提交失败')
+  } finally {
+    changingInst.value = false
+  }
+}
+
+async function loadInstitutionHistory() {
+  showHistoryDialog.value = true
+  historyLoading.value = true
+  try {
+    const res = await getMyInstitutionHistory()
+    institutionHistory.value = res.success ? (res.data || []) : []
+  } catch {
+    institutionHistory.value = []
+  } finally {
+    historyLoading.value = false
   }
 }
 </script>

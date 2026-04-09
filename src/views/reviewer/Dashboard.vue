@@ -59,12 +59,20 @@
         <el-table-column label="操作" width="150">
           <template #default="{ row }">
             <el-button
-              v-if="row.status === 'PENDING'"
+              v-if="['PENDING','CONFIRMED','DRAFT'].includes(row.status)"
               type="primary"
               size="small"
               @click="goToReview(row)"
             >
-              开始评审
+              {{ row.status === 'DRAFT' ? '继续评分' : '开始评审' }}
+            </el-button>
+            <el-button
+              v-else-if="row.status === 'RETURNED'"
+              type="danger"
+              size="small"
+              @click="goToReview(row)"
+            >
+              重新评分
             </el-button>
             <el-button
               v-else-if="row.status === 'SCORED' || row.status === 'COMPLETED'"
@@ -94,10 +102,9 @@ const tasks = ref([])
 
 const stats = computed(() => {
   const total = tasks.value.length
-  const completed = tasks.value.filter(t => t.status === 'SCORED').length  // ✅ 改为 SCORED
-  const pending = tasks.value.filter(t => t.status === 'PENDING').length
+  const completed = tasks.value.filter(t => t.status === 'SCORED' || t.status === 'COMPLETED').length
+  const pending = tasks.value.filter(t => ['PENDING','CONFIRMED','DRAFT','RETURNED'].includes(t.status)).length
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0
-  
   return { total, completed, pending, completionRate }
 })
 
@@ -134,8 +141,13 @@ const getStageText = (stage) => {
 const getStatusType = (status) => {
   const map = {
     'PENDING': 'warning',
+    'CONFIRMED': 'warning',
+    'DRAFT': 'primary',
     'IN_PROGRESS': 'primary',
-    'COMPLETED': 'success'
+    'SCORED': 'success',
+    'COMPLETED': 'success',
+    'RETURNED': 'danger',
+    'RECUSED': 'info'
   }
   return map[status] || 'info'
 }
@@ -143,8 +155,13 @@ const getStatusType = (status) => {
 const getStatusText = (status) => {
   const map = {
     'PENDING': '待评审',
+    'CONFIRMED': '已确认',
+    'DRAFT': '草稿',
     'IN_PROGRESS': '评审中',
-    'COMPLETED': '已完成'
+    'SCORED': '已评分',
+    'COMPLETED': '已完成',
+    'RETURNED': '已退回',
+    'RECUSED': '已规避'
   }
   return map[status] || status
 }

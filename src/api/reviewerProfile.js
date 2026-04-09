@@ -37,6 +37,28 @@ export function getMyIdCardStream(side) {
   })
 }
 
+/**
+ * 修改本人所属机构
+ * @param {{ newInstitutionId: number, reason?: string }} data
+ */
+export function changeMyInstitution(data) {
+  return request({
+    url: '/reviewers/me/institution',
+    method: 'put',
+    data
+  })
+}
+
+/**
+ * 获取本人机构变更历史
+ */
+export function getMyInstitutionHistory() {
+  return request({
+    url: '/reviewers/me/institution/history',
+    method: 'get'
+  })
+}
+
 // ── 管理端（admin 按 ID）──────────────────────────────────────────
 export function getReviewerProfile(id) {
   return request({ url: `/admin/reviewers/${id}/profile`, method: 'get' })
@@ -44,4 +66,18 @@ export function getReviewerProfile(id) {
 
 export function updateReviewerProfile(id, data) {
   return request({ url: `/admin/reviewers/${id}/profile`, method: 'put', data })
+}
+
+/**
+ * 管理员修改评委所属机构
+ */
+export function adminChangeReviewerInstitution(id, data) {
+  return request({ url: `/admin/reviewers/${id}/institution`, method: 'put', data })
+}
+
+/**
+ * 管理员查看评委机构变更历史
+ */
+export function adminGetReviewerInstitutionHistory(id) {
+  return request({ url: `/admin/reviewers/${id}/institution/history`, method: 'get' })
 }

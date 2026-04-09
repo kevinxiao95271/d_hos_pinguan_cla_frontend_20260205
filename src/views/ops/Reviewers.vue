@@ -263,6 +263,67 @@
             </el-form>
           </div>
         </el-tab-pane>
+
+        <!-- Tab 3: 机构变更 -->
+        <el-tab-pane label="机构变更" name="institution" lazy>
+          <div style="padding: 4px 0">
+            <!-- 变更记录 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+              <span style="font-weight:600">机构变更记录</span>
+              <el-button type="primary" size="small" @click="showInstChangeForm = !showInstChangeForm">
+                {{ showInstChangeForm ? '收起' : '发起变更' }}
+              </el-button>
+            </div>
+
+            <!-- 发起变更表单 -->
+            <el-card v-if="showInstChangeForm" shadow="never" style="margin-bottom:16px; background:#fafafa">
+              <el-form ref="instChangeFormRef" :model="instChangeForm" label-width="90px" size="small">
+                <el-form-item label="当前机构">
+                  <span>{{ drawerRow.institutionName || '-' }}</span>
+                </el-form-item>
+                <el-form-item label="新机构" required>
+                  <el-select
+                    v-model="instChangeForm.newInstitutionId"
+                    filterable
+                    remote
+                    :remote-method="searchInstForChange"
+                    :loading="instChangeSearching"
+                    placeholder="输入关键词搜索机构"
+                    style="width: 100%"
+                    value-key="id"
+                  >
+                    <el-option
+                      v-for="item in instChangeOptions"
+                      :key="item.id"
+                      :label="item.name"
+                      :value="item.id"
+                    />
+                  </el-select>
+                </el-form-item>
+                <el-form-item label="变更原因">
+                  <el-input v-model="instChangeForm.reason" type="textarea" :rows="2" maxlength="500" placeholder="选填" />
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" size="small" :loading="instChanging" @click="submitInstChange">提交变更</el-button>
+                  <el-button size="small" @click="showInstChangeForm = false">取消</el-button>
+                </el-form-item>
+              </el-form>
+            </el-card>
+
+            <!-- 历史记录表格 -->
+            <el-table :data="instHistory" border size="small" v-loading="instHistoryLoading" empty-text="暂无变更记录">
+              <el-table-column prop="oldInstitutionName" label="原机构" min-width="140" />
+              <el-table-column prop="newInstitutionName" label="新机构" min-width="140" />
+              <el-table-column prop="reason" label="原因" min-width="100" />
+              <el-table-column prop="changedByName" label="操作人" width="80" />
+              <el-table-column prop="changedAt" label="时间" width="140">
+                <template #default="{ row }">
+                  {{ row.changedAt ? row.changedAt.replace('T',' ').substring(0,16) : '-' }}
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </el-drawer>
   </div>
@@ -273,8 +334,8 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getReviewers, createReviewer, updateReviewer, deleteReviewer } from '@/api/review'
-import { autocomplete } from '@/api/institution'
-import { getReviewerProfile, updateReviewerProfile } from '@/api/reviewerProfile'
+import { autocomplete, searchInstitutions } from '@/api/institution'
+import { getReviewerProfile, updateReviewerProfile, adminChangeReviewerInstitution, adminGetReviewerInstitutionHistory } from '@/api/reviewerProfile'
 
 // ── 枚举（与 Profile.vue 保持一致） ─────────────────────────────────
 const BACKGROUND_OPTIONS = [
@@ -673,6 +734,63 @@ async function saveProfile() {
   }
 }
 
+// ── 机构变更 Tab ──────────────────────────────────────────────────
+const showInstChangeForm = ref(false)
+const instChanging = ref(false)
+const instChangeSearching = ref(false)
+const instChangeOptions = ref([])
+const instHistoryLoading = ref(false)
+const instHistory = ref([])
+const instChangeFormRef = ref(null)
+const instChangeForm = reactive({ newInstitutionId: null, reason: '' })
+
+async function searchInstForChange(keyword) {
+  if (!keyword) return
+  instChangeSearching.value = true
+  try {
+    const res = await searchInstitutions({ keyword, page: 0, size: 20 })
+    instChangeOptions.value = res.success ? (res.data.content || []) : []
+  } catch { instChangeOptions.value = [] }
+  finally { instChangeSearching.value = false }
+}
+
+async function loadInstHistory(id) {
+  instHistoryLoading.value = true
+  instHistory.value = []
+  try {
+    const res = await adminGetReviewerInstitutionHistory(id)
+    instHistory.value = res.success ? (res.data || []) : []
+  } catch { instHistory.value = [] }
+  finally { instHistoryLoading.value = false }
+}
+
+async function submitInstChange() {
+  if (!instChangeForm.newInstitutionId) {
+    ElMessage.warning('请选择新机构')
+    return
+  }
+  instChanging.value = true
+  try {
+    const res = await adminChangeReviewerInstitution(drawerRow.value.id, {
+      newInstitutionId: instChangeForm.newInstitutionId,
+      reason: instChangeForm.reason || undefined
+    })
+    if (res.success) {
+      ElMessage.success('机构已变更')
+      showInstChangeForm.value = false
+      instChangeForm.newInstitutionId = null
+      instChangeForm.reason = ''
+      loadInstHistory(drawerRow.value.id)
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || '操作失败')
+  } finally {
+    instChanging.value = false
+  }
+}
+
 function openDetail(row) {
   drawerRow.value = row
   drawerTitle.value = `评委详情 — ${row.name}`
@@ -680,11 +798,12 @@ function openDetail(row) {
   drawerVisible.value = true
 }
 
-// 切换到扩展档案 Tab 时自动加载
+// 切换 Tab 时按需加载
 watch(drawerTab, (tab) => {
-  if (tab === 'profile' && drawerRow.value.id) {
-    loadProfile(drawerRow.value.id)
-  }
+  const id = drawerRow.value.id
+  if (!id) return
+  if (tab === 'profile') loadProfile(id)
+  if (tab === 'institution') loadInstHistory(id)
 })
 
 onMounted(() => {
