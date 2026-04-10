@@ -5,7 +5,7 @@
         <span style="font-weight: 600; font-size: 16px">专家信息</span>
       </template>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="140px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="160px">
 
         <!-- 基本信息 -->
         <el-divider content-position="left">基本信息</el-divider>
@@ -132,7 +132,7 @@
         <!-- 专业背景 -->
         <el-divider content-position="left">专业背景与能力</el-divider>
 
-        <el-form-item label="专业背景">
+        <el-form-item label="专业背景（可多选）" prop="backgrounds">
           <div>
             <el-checkbox-group v-model="form.backgrounds">
               <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">
@@ -149,7 +149,7 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="擅长工具">
+        <el-form-item label="擅长工具（可多选）" prop="tools">
           <div>
             <el-checkbox-group v-model="form.tools">
               <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">
@@ -166,7 +166,7 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="擅长主题">
+        <el-form-item label="擅长主题（可多选）" prop="topics">
           <div>
             <el-checkbox-group v-model="form.topics">
               <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">
@@ -183,7 +183,7 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="品管相关经验">
+        <el-form-item label="品管相关经验（可多选）" prop="experience">
           <el-checkbox-group v-model="form.experience">
             <el-checkbox v-for="item in EXPERIENCE_OPTIONS" :key="item.value" :value="item.value">
               {{ item.label }}
@@ -426,8 +426,20 @@ const showHistoryDialog = ref(false)
 const historyLoading = ref(false)
 const institutionHistory = ref([])
 
+const multiSelectRequired = (label) => ({
+  validator: (rule, value, callback) => {
+    if (!value || value.length === 0) callback(new Error(`${label}为必填项，请至少选择一项`))
+    else callback()
+  },
+  trigger: 'change'
+})
+
 const rules = {
+  title: [{ required: true, message: '职称为必填项', trigger: 'change' }],
+  gender: [{ required: true, message: '性别为必填项', trigger: 'change' }],
+  position: [{ required: true, message: '职务为必填项', trigger: 'blur' }],
   idNumber: [
+    { required: true, message: '身份证号为必填项', trigger: 'blur' },
     {
       validator: (rule, value, callback) => {
         if (value && !/^\d{17}[\dXx]$/.test(value)) {
@@ -438,7 +450,13 @@ const rules = {
       },
       trigger: 'blur'
     }
-  ]
+  ],
+  bankName: [{ required: true, message: '开户银行为必填项', trigger: 'blur' }],
+  bankCardNo: [{ required: true, message: '银行卡号为必填项', trigger: 'blur' }],
+  backgrounds: [multiSelectRequired('专业背景')],
+  tools: [multiSelectRequired('擅长工具')],
+  topics: [multiSelectRequired('擅长主题')],
+  experience: [multiSelectRequired('品管相关经验')]
 }
 
 // ── 脱敏辅助 ─────────────────────────────────────────────────────────
@@ -590,40 +608,16 @@ onUnmounted(() => {
   if (idCardBackBlobUrl.value) URL.revokeObjectURL(idCardBackBlobUrl.value)
 })
 
-function checkCompleteness() {
-  const checks = [
-    { key: () => !!form.gender && form.gender !== 'UNKNOWN', label: '性别' },
-    { key: () => !!form.title, label: '职称' },
-    { key: () => !!form.position, label: '职务' },
-    { key: () => !!form.idNumber, label: '身份证号' },
-    { key: () => !!form.idCardFrontUrl, label: '身份证正面照片' },
-    { key: () => !!form.idCardBackUrl, label: '身份证反面照片' },
-    { key: () => !!form.bankName, label: '开户银行' },
-    { key: () => !!form.bankCardNo, label: '银行卡号' },
-    { key: () => form.backgrounds.length > 0, label: '专业背景' },
-    { key: () => form.tools.length > 0, label: '熟悉的品管工具' },
-    { key: () => form.topics.length > 0, label: '擅长评审主题方向' },
-    { key: () => form.experience.length > 0, label: '品管相关经验' }
-  ]
-  return checks.filter(c => !c.key()).map(c => c.label)
-}
-
 async function handleSave() {
   try {
     await formRef.value.validate()
-    // 完整度提示（非阻断，仅提示）
-    const missing = checkCompleteness()
-    if (missing.length > 0) {
-      await ElMessageBox.confirm(
-        `<div style="line-height:2">以下信息尚未完善，建议补充后再保存：<br>${missing.map((m, i) => `${i + 1}. ${m}`).join('<br>')}</div>`,
-        '信息不完整提醒',
-        {
-          dangerouslyUseHTMLString: true,
-          confirmButtonText: '继续保存',
-          cancelButtonText: '返回补充',
-          type: 'warning'
-        }
-      ).catch(() => { saving.value = false; return Promise.reject(false) })
+    // 身份证照片单独检查（非表单字段）
+    const photoMissing = []
+    if (!form.idCardFrontUrl) photoMissing.push('身份证正面照片')
+    if (!form.idCardBackUrl) photoMissing.push('身份证反面照片')
+    if (photoMissing.length > 0) {
+      ElMessage.error(`以下必填项未完成：${photoMissing.join('、')}`)
+      return
     }
     saving.value = true
     const res = await updateMyProfile(formToApi())
