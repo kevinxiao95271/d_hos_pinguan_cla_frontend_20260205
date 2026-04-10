@@ -135,181 +135,101 @@
       @close="drawerTab = 'basic'"
     >
       <el-tabs v-model="drawerTab" style="height: 100%">
-        <!-- Tab 1: 基本信息（只读） -->
+        <!-- Tab 1: 基本信息（只读汇总） -->
         <el-tab-pane label="基本信息" name="basic">
-          <el-descriptions :column="2" border size="small" style="margin-top: 8px">
-            <el-descriptions-item label="ID">{{ drawerRow.id }}</el-descriptions-item>
-            <el-descriptions-item label="手机号">{{ drawerRow.phone }}</el-descriptions-item>
-            <el-descriptions-item label="姓名">{{ drawerRow.name }}</el-descriptions-item>
-            <el-descriptions-item label="职称">{{ drawerRow.title || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="所属机构" :span="2">{{ drawerRow.institutionName || '-' }}</el-descriptions-item>
-            <el-descriptions-item label="当前负荷">{{ drawerRow.currentLoad ?? 0 }}</el-descriptions-item>
-            <el-descriptions-item label="专家背景" :span="2">{{ drawerRow.expertBackground || '-' }}</el-descriptions-item>
-          </el-descriptions>
+          <div v-loading="profileLoading" style="padding: 4px 0">
+            <!-- 账号信息 -->
+            <el-divider content-position="left" style="margin: 8px 0 12px">账号信息</el-divider>
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="ID">{{ drawerRow.id }}</el-descriptions-item>
+              <el-descriptions-item label="手机号">{{ drawerRow.phone }}</el-descriptions-item>
+              <el-descriptions-item label="姓名">{{ drawerRow.name }}</el-descriptions-item>
+              <el-descriptions-item label="职称">{{ profileForm.title || drawerRow.title || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="所属机构" :span="2">{{ drawerRow.institutionName || '-' }}</el-descriptions-item>
+            </el-descriptions>
+
+            <!-- 个人信息 -->
+            <el-divider content-position="left" style="margin: 16px 0 12px">个人信息</el-divider>
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="性别">{{ GENDER_LABEL[profileForm.gender] || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="职务">{{ profileForm.position || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="科室" :span="2">{{ profileForm.department || '-' }}</el-descriptions-item>
+            </el-descriptions>
+
+            <!-- 证件信息 -->
+            <el-divider content-position="left" style="margin: 16px 0 12px">证件信息</el-divider>
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="身份证号（脱敏）" :span="2">{{ profileForm.idNumberMasked || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="身份证正面">
+                <span v-if="profileForm.idCardFrontUrl" style="color:#67c23a">已上传</span>
+                <span v-else style="color:#f56c6c">未上传</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="身份证反面">
+                <span v-if="profileForm.idCardBackUrl" style="color:#67c23a">已上传</span>
+                <span v-else style="color:#f56c6c">未上传</span>
+              </el-descriptions-item>
+            </el-descriptions>
+
+            <!-- 银行卡信息 -->
+            <el-divider content-position="left" style="margin: 16px 0 12px">银行卡信息</el-divider>
+            <el-descriptions :column="2" border size="small">
+              <el-descriptions-item label="开户银行">{{ profileForm.bankName || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="银行卡号（脱敏）">{{ profileForm.bankCardNoMasked || '-' }}</el-descriptions-item>
+            </el-descriptions>
+
+          </div>
         </el-tab-pane>
 
-        <!-- Tab 2: 扩展档案 -->
-        <el-tab-pane label="扩展档案" name="profile" lazy>
-          <div v-loading="profileLoading" style="padding: 4px 0">
-            <el-form
-              ref="profileFormRef"
-              :model="profileForm"
-              :rules="profileRules"
-              label-width="130px"
-            >
-              <el-divider content-position="left">基本信息</el-divider>
-
-              <el-form-item label="性别">
-                <el-radio-group v-model="profileForm.gender">
-                  <el-radio value="MALE">男</el-radio>
-                  <el-radio value="FEMALE">女</el-radio>
-                  <el-radio value="UNKNOWN">保密</el-radio>
-                </el-radio-group>
-              </el-form-item>
-
-              <el-form-item label="职务">
-                <el-input v-model="profileForm.position" placeholder="请输入职务" maxlength="100" style="width: 280px" />
-              </el-form-item>
-
-              <el-divider content-position="left">证件信息</el-divider>
-
-              <el-form-item label="身份证号" prop="idNumber">
-                <el-input
-                  v-model="profileForm.idNumber"
-                  placeholder="请输入身份证号"
-                  maxlength="18"
-                  style="width: 280px"
-                  @input="profileAutoMaskId"
-                />
-                <span v-if="profileForm.idNumberMasked" style="margin-left: 12px; color: #909399; font-size: 12px">
-                  {{ profileForm.idNumberMasked }}
-                </span>
-              </el-form-item>
-
-              <el-form-item label="身份证正面">
-                <div style="display: flex; align-items: center; gap: 10px">
-                  <el-image
-                    v-if="profileForm.idCardFrontUrl"
-                    :src="profileForm.idCardFrontUrl"
-                    style="width: 130px; height: 80px; border-radius: 4px; border: 1px solid #eee"
-                    fit="cover"
-                    :preview-src-list="[profileForm.idCardFrontUrl]"
-                  />
-                  <el-input v-model="profileForm.idCardFrontUrl" placeholder="图片 URL" style="width: 240px" clearable />
+        <!-- Tab 2: 扩展信息（只读，有值才展示） -->
+        <el-tab-pane label="扩展信息" name="profile" lazy>
+          <div v-loading="profileLoading" style="padding: 8px 0">
+            <template v-if="!profileLoading">
+              <!-- 专业背景 -->
+              <div v-if="profileForm.backgrounds.length > 0" class="profile-readonly-section">
+                <div class="profile-readonly-label">专业背景</div>
+                <div class="profile-readonly-tags">
+                  <el-tag v-for="item in BACKGROUND_OPTIONS.filter(o => profileForm.backgrounds.includes(o.value))" :key="item.value" type="info" effect="plain" size="small" style="margin:3px">{{ item.label }}</el-tag>
+                  <span v-if="profileForm.backgroundsOther" class="profile-readonly-other">其他：{{ profileForm.backgroundsOther }}</span>
                 </div>
-              </el-form-item>
+              </div>
 
-              <el-form-item label="身份证反面">
-                <div style="display: flex; align-items: center; gap: 10px">
-                  <el-image
-                    v-if="profileForm.idCardBackUrl"
-                    :src="profileForm.idCardBackUrl"
-                    style="width: 130px; height: 80px; border-radius: 4px; border: 1px solid #eee"
-                    fit="cover"
-                    :preview-src-list="[profileForm.idCardBackUrl]"
-                  />
-                  <el-input v-model="profileForm.idCardBackUrl" placeholder="图片 URL" style="width: 240px" clearable />
+              <!-- 熟悉的品管工具 -->
+              <div v-if="profileForm.tools.length > 0" class="profile-readonly-section">
+                <div class="profile-readonly-label">熟悉的品管工具</div>
+                <div class="profile-readonly-tags">
+                  <el-tag v-for="item in TOOL_OPTIONS.filter(o => profileForm.tools.includes(o.value))" :key="item.value" type="info" effect="plain" size="small" style="margin:3px">{{ item.label }}</el-tag>
+                  <span v-if="profileForm.toolsOther" class="profile-readonly-other">其他：{{ profileForm.toolsOther }}</span>
                 </div>
-              </el-form-item>
+              </div>
 
-              <el-divider content-position="left">银行卡信息</el-divider>
+              <!-- 擅长评审主题方向 -->
+              <div v-if="profileForm.topics.length > 0" class="profile-readonly-section">
+                <div class="profile-readonly-label">擅长评审主题方向</div>
+                <div class="profile-readonly-tags">
+                  <el-tag v-for="item in TOPIC_OPTIONS.filter(o => profileForm.topics.includes(o.value))" :key="item.value" type="info" effect="plain" size="small" style="margin:3px">{{ item.label }}</el-tag>
+                  <span v-if="profileForm.topicsOther" class="profile-readonly-other">其他：{{ profileForm.topicsOther }}</span>
+                </div>
+              </div>
 
-              <el-form-item label="开户银行">
-                <el-input v-model="profileForm.bankName" placeholder="请输入开户银行" maxlength="100" style="width: 280px" />
-              </el-form-item>
+              <!-- 品管相关经验 -->
+              <div v-if="profileForm.experience.length > 0" class="profile-readonly-section">
+                <div class="profile-readonly-label">品管相关经验</div>
+                <div class="profile-readonly-tags">
+                  <el-tag v-for="item in EXPERIENCE_OPTIONS.filter(o => profileForm.experience.includes(o.value))" :key="item.value" type="info" effect="plain" size="small" style="margin:3px">{{ item.label }}</el-tag>
+                </div>
+              </div>
 
-              <el-form-item label="银行卡号">
-                <el-input
-                  v-model="profileForm.bankCardNo"
-                  placeholder="请输入银行卡号"
-                  maxlength="25"
-                  style="width: 280px"
-                  @input="profileAutoMaskBank"
-                />
-                <span v-if="profileForm.bankCardNoMasked" style="margin-left: 12px; color: #909399; font-size: 12px">
-                  {{ profileForm.bankCardNoMasked }}
-                </span>
-              </el-form-item>
-
-              <el-divider content-position="left">专业背景与能力</el-divider>
-
-              <el-form-item label="专业背景">
-                <el-checkbox-group v-model="profileForm.backgrounds">
-                  <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">
-                    {{ item.label }}
-                  </el-checkbox>
-                </el-checkbox-group>
-              </el-form-item>
-
-              <el-form-item label="擅长工具">
-                <el-checkbox-group v-model="profileForm.tools">
-                  <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">
-                    {{ item.label }}
-                  </el-checkbox>
-                </el-checkbox-group>
-              </el-form-item>
-
-              <el-form-item label="擅长主题">
-                <el-checkbox-group v-model="profileForm.topics">
-                  <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">
-                    {{ item.label }}
-                  </el-checkbox>
-                </el-checkbox-group>
-              </el-form-item>
-
-              <el-form-item>
-                <el-button type="primary" :loading="profileSaving" @click="saveProfile">保存扩展档案</el-button>
-              </el-form-item>
-            </el-form>
+              <div v-if="profileForm.backgrounds.length === 0 && profileForm.tools.length === 0 && profileForm.topics.length === 0 && profileForm.experience.length === 0" style="color:#909399; padding:24px 0; text-align:center; font-size:14px">
+                专家尚未填写扩展信息
+              </div>
+            </template>
           </div>
         </el-tab-pane>
 
         <!-- Tab 3: 机构变更 -->
         <el-tab-pane label="机构变更" name="institution" lazy>
           <div style="padding: 4px 0">
-            <!-- 变更记录 -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
-              <span style="font-weight:600">机构变更记录</span>
-              <el-button type="primary" size="small" @click="showInstChangeForm = !showInstChangeForm">
-                {{ showInstChangeForm ? '收起' : '发起变更' }}
-              </el-button>
-            </div>
-
-            <!-- 发起变更表单 -->
-            <el-card v-if="showInstChangeForm" shadow="never" style="margin-bottom:16px; background:#fafafa">
-              <el-form ref="instChangeFormRef" :model="instChangeForm" label-width="90px" size="small">
-                <el-form-item label="当前机构">
-                  <span>{{ drawerRow.institutionName || '-' }}</span>
-                </el-form-item>
-                <el-form-item label="新机构" required>
-                  <el-select
-                    v-model="instChangeForm.newInstitutionId"
-                    filterable
-                    remote
-                    :remote-method="searchInstForChange"
-                    :loading="instChangeSearching"
-                    placeholder="输入关键词搜索机构"
-                    style="width: 100%"
-                    value-key="id"
-                  >
-                    <el-option
-                      v-for="item in instChangeOptions"
-                      :key="item.id"
-                      :label="item.name"
-                      :value="item.id"
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item label="变更原因">
-                  <el-input v-model="instChangeForm.reason" type="textarea" :rows="2" maxlength="500" placeholder="选填" />
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" size="small" :loading="instChanging" @click="submitInstChange">提交变更</el-button>
-                  <el-button size="small" @click="showInstChangeForm = false">取消</el-button>
-                </el-form-item>
-              </el-form>
-            </el-card>
-
+            <div style="font-weight:600; margin-bottom:12px">机构变更记录</div>
             <!-- 历史记录表格 -->
             <el-table :data="instHistory" border size="small" v-loading="instHistoryLoading" empty-text="暂无变更记录">
               <el-table-column prop="oldInstitutionName" label="原机构" min-width="140" />
@@ -338,50 +258,59 @@ import { autocomplete, searchInstitutions } from '@/api/institution'
 import { getReviewerProfile, updateReviewerProfile, adminChangeReviewerInstitution, adminGetReviewerInstitutionHistory } from '@/api/reviewerProfile'
 
 // ── 枚举（与 Profile.vue 保持一致） ─────────────────────────────────
+const TITLE_OPTIONS = ['初级', '中级', '副高', '正高']
+
 const BACKGROUND_OPTIONS = [
-  { value: 'MANAGEMENT', label: '医院管理' },
-  { value: 'MEDICAL', label: '医疗' },
-  { value: 'NURSING', label: '护理' },
-  { value: 'QUALITY_MANAGEMENT', label: '质量管理' },
-  { value: 'PHARMACY', label: '药学' },
-  { value: 'MEDICAL_TECH', label: '医技' },
-  { value: 'MEDICAL_RECORD', label: '病案' },
-  { value: 'INFECTION_CONTROL', label: '院感' },
-  { value: 'OTHER', label: '其他' }
+  { value: 'MANAGEMENT',     label: '管理' },
+  { value: 'MEDICAL',        label: '医疗' },
+  { value: 'NURSING',        label: '护理' },
+  { value: 'QUALITY_MGMT',   label: '质量管理' },
+  { value: 'PHARMACY',       label: '药学' },
+  { value: 'MEDICAL_TECH',   label: '医技' },
+  { value: 'MEDICAL_RECORDS', label: '病案管理' },
+  { value: 'INFECTION_CTRL', label: '院感' },
+  { value: 'OTHER',          label: '其他' }
 ]
 const TOOL_OPTIONS = [
-  { value: 'PDCA', label: 'PDCA' },
-  { value: 'FOCUS_PDCA', label: 'FOCUS-PDCA' },
-  { value: 'QFD', label: 'QFD' },
-  { value: 'QCC_PROBLEM_SOLVING', label: 'QCC问题解决型' },
-  { value: 'QCC_TOPIC_ACHIEVEMENT', label: 'QCC课题达成型' },
-  { value: 'PROJECT_IMPROVEMENT', label: '专案改善' },
-  { value: 'RCA', label: 'RCA' },
-  { value: 'FMEA', label: 'FMEA' },
-  { value: 'BENCHMARKING', label: '标杆管理' },
-  { value: 'S6', label: '6S' },
-  { value: 'LEAN', label: '精益管理' },
-  { value: 'SIX_SIGMA', label: '六西格玛' },
-  { value: 'EBM', label: '循证管理' },
-  { value: 'BSC', label: 'BSC' },
-  { value: 'QUALITY_REPORT_CARD', label: '品质报告卡' },
-  { value: 'TRM', label: 'TRM' },
-  { value: 'PROCESS_REDESIGN', label: '流程再造' },
-  { value: 'OTHER', label: '其他' }
+  { value: 'PDCA',                  label: 'PDCA' },
+  { value: 'FOCUS_PDCA',            label: 'FOCUS-PDCA' },
+  { value: 'QFD',                   label: 'QFD' },
+  { value: 'QCC_PROBLEM',           label: '品管圈（问题解决）' },
+  { value: 'QCC_TOPIC',             label: '品管圈（课题达成）' },
+  { value: 'CASE_IMPROVEMENT',      label: '专案改善' },
+  { value: 'RCA',                   label: '根本原因分析' },
+  { value: 'FMEA',                  label: '失效模式与效应分析' },
+  { value: 'BENCHMARKING',          label: '标杆学习' },
+  { value: 'SIX_S',                 label: '6S 管理' },
+  { value: 'LEAN',                  label: '精益管理（Lean）' },
+  { value: 'SIX_SIGMA',             label: '六西格玛管理' },
+  { value: 'EBM',                   label: '循证医学' },
+  { value: 'BSC',                   label: '平衡计分卡' },
+  { value: 'QRC',                   label: '品质报告卡' },
+  { value: 'TQM',                   label: 'TQM' },
+  { value: 'PROCESS_REENGINEERING', label: '流程改造' },
+  { value: 'OTHER',                 label: '其他' }
 ]
 const TOPIC_OPTIONS = [
-  { value: 'PATIENT_CARE', label: '患者照护' },
-  { value: 'MEDICAL_RECORD_QUALITY', label: '病历质量' },
-  { value: 'TIME_EFFICIENCY', label: '效率提升' },
-  { value: 'COST_EFFECTIVENESS', label: '成本效益' },
-  { value: 'SAFETY_ENVIRONMENT', label: '安全环境' },
-  { value: 'SATISFACTION', label: '满意度' },
-  { value: 'EDUCATION_TRAINING', label: '教育培训' },
-  { value: 'MEDICAL_INFORMATION', label: '医疗信息化' },
+  { value: 'PATIENT_CARE',           label: '病人照护' },
+  { value: 'MEDICAL_RECORDS',        label: '病历质量' },
+  { value: 'TIME_EFFICIENCY',        label: '时间效率' },
+  { value: 'COST_EFFECTIVENESS',     label: '成本效益' },
+  { value: 'SAFETY_ENV',             label: '安全环境' },
+  { value: 'SATISFACTION',           label: '满意度' },
+  { value: 'EDUCATION',              label: '教育训练' },
+  { value: 'MEDICAL_INFO',           label: '医疗信息' },
   { value: 'MEDICAL_QUALITY_SAFETY', label: '医疗质量与安全' },
-  { value: 'PROCESS_REDESIGN', label: '流程再造' },
-  { value: 'DIGITAL_AI', label: '数字化/AI' },
-  { value: 'OTHER', label: '其他' }
+  { value: 'PROCESS_REENGINEERING',  label: '流程改造' },
+  { value: 'DIGITAL_AI',             label: '数字化与人工智能' },
+  { value: 'OTHER',                  label: '其他' }
+]
+const EXPERIENCE_OPTIONS = [
+  { value: 'PROJECT_LEADER',  label: '担任过品管项目负责人' },
+  { value: 'COACHED_PROJECT', label: '辅导过品管参赛项目' },
+  { value: 'UNIT_JUDGE',      label: '单位内品管大赛评委' },
+  { value: 'CITY_JUDGE',      label: '市级/区级/县级品管大赛评委' },
+  { value: 'PROVINCE_JUDGE',  label: '省级及以上品管大赛评委' }
 ]
 
 const loading = ref(false)
@@ -614,8 +543,10 @@ const profileLoading = ref(false)
 const profileSaving = ref(false)
 const profileFormRef = ref(null)
 const profileForm = reactive({
+  title: '',
   gender: 'UNKNOWN',
   position: '',
+  department: '',
   idNumber: '',
   idNumberMasked: '',
   idCardFrontUrl: '',
@@ -624,8 +555,12 @@ const profileForm = reactive({
   bankCardNo: '',
   bankCardNoMasked: '',
   backgrounds: [],
+  backgroundsOther: '',
   tools: [],
-  topics: []
+  toolsOther: '',
+  topics: [],
+  topicsOther: '',
+  experience: []
 })
 const profileRules = {
   idNumber: [
@@ -643,6 +578,13 @@ function safeJsonParse(str) {
   if (!str) return []
   try { return JSON.parse(str) } catch { return [] }
 }
+
+const GENDER_LABEL = { MALE: '男', FEMALE: '女', UNKNOWN: '保密' }
+
+function codeToLabels(codes, options) {
+  if (!codes || codes.length === 0) return '-'
+  return codes.map(c => options.find(o => o.value === c)?.label || c).join('、')
+}
 function maskIdNumber(v) {
   if (!v || v.length < 10) return ''
   return v.slice(0, 6) + '********' + v.slice(-4)
@@ -659,8 +601,10 @@ function profileAutoMaskBank() {
 }
 
 function apiToProfileForm(data) {
+  profileForm.title = data.title || ''
   profileForm.gender = data.gender || 'UNKNOWN'
   profileForm.position = data.position || ''
+  profileForm.department = data.department || ''
   profileForm.idNumber = data.idNumber || ''
   profileForm.idNumberMasked = data.idNumberMasked || maskIdNumber(data.idNumber || '')
   profileForm.idCardFrontUrl = data.idCardFrontUrl || ''
@@ -669,13 +613,19 @@ function apiToProfileForm(data) {
   profileForm.bankCardNo = data.bankCardNo || ''
   profileForm.bankCardNoMasked = data.bankCardNoMasked || maskBankCard(data.bankCardNo || '')
   profileForm.backgrounds = safeJsonParse(data.backgroundsJson)
+  profileForm.backgroundsOther = data.backgroundsOther || ''
   profileForm.tools = safeJsonParse(data.toolsJson)
+  profileForm.toolsOther = data.toolsOther || ''
   profileForm.topics = safeJsonParse(data.topicsJson)
+  profileForm.topicsOther = data.topicsOther || ''
+  profileForm.experience = safeJsonParse(data.experienceJson)
 }
 
 function resetProfileForm() {
+  profileForm.title = ''
   profileForm.gender = 'UNKNOWN'
   profileForm.position = ''
+  profileForm.department = ''
   profileForm.idNumber = ''
   profileForm.idNumberMasked = ''
   profileForm.idCardFrontUrl = ''
@@ -684,8 +634,12 @@ function resetProfileForm() {
   profileForm.bankCardNo = ''
   profileForm.bankCardNoMasked = ''
   profileForm.backgrounds = []
+  profileForm.backgroundsOther = ''
   profileForm.tools = []
+  profileForm.toolsOther = ''
   profileForm.topics = []
+  profileForm.topicsOther = ''
+  profileForm.experience = []
 }
 
 async function loadProfile(id) {
@@ -706,8 +660,10 @@ async function saveProfile() {
     await profileFormRef.value.validate()
     profileSaving.value = true
     const payload = {
+      title: profileForm.title || null,
       gender: profileForm.gender,
       position: profileForm.position || null,
+      department: profileForm.department || null,
       idNumber: profileForm.idNumber || null,
       idNumberMasked: maskIdNumber(profileForm.idNumber),
       idCardFrontUrl: profileForm.idCardFrontUrl || null,
@@ -716,8 +672,12 @@ async function saveProfile() {
       bankCardNo: profileForm.bankCardNo || null,
       bankCardNoMasked: maskBankCard(profileForm.bankCardNo),
       backgroundsJson: JSON.stringify(profileForm.backgrounds),
+      backgroundsOther: profileForm.backgroundsOther || null,
       toolsJson: JSON.stringify(profileForm.tools),
-      topicsJson: JSON.stringify(profileForm.topics)
+      toolsOther: profileForm.toolsOther || null,
+      topicsJson: JSON.stringify(profileForm.topics),
+      topicsOther: profileForm.topicsOther || null,
+      experienceJson: JSON.stringify(profileForm.experience)
     }
     const res = await updateReviewerProfile(drawerRow.value.id, payload)
     if (res.success) {
@@ -796,9 +756,11 @@ function openDetail(row) {
   drawerTitle.value = `评委详情 — ${row.name}`
   drawerTab.value = 'basic'
   drawerVisible.value = true
+  // 打开时同步加载扩展档案，供基本信息 Tab 只读展示
+  loadProfile(row.id)
 }
 
-// 切换 Tab 时按需加载
+// 切换 Tab 时按需加载机构变更历史；profile 已在 openDetail 中加载
 watch(drawerTab, (tab) => {
   const id = drawerRow.value.id
   if (!id) return
@@ -823,5 +785,26 @@ onMounted(() => {
   :deep(.el-card__body) {
     padding: 20px;
   }
+}
+
+.profile-readonly-section {
+  margin-bottom: 16px;
+}
+.profile-readonly-label {
+  font-size: 13px;
+  color: #606266;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.profile-readonly-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.profile-readonly-other {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 4px;
 }
 </style>
