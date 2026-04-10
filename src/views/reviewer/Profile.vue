@@ -597,7 +597,8 @@ async function handleChangePassword() {
     changingPwd.value = true
     const res = await selfChangePassword({
       oldPassword: pwdForm.oldPassword,
-      newPassword: pwdForm.newPassword
+      newPassword: pwdForm.newPassword,
+      confirmPassword: pwdForm.confirmPassword
     })
     if (res.success) {
       ElMessage.success('密码修改成功，请使用新密码重新登录')
