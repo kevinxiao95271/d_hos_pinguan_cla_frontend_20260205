@@ -79,7 +79,6 @@
         <div class="task-actions">
           <el-button v-if="['PENDING','CONFIRMED'].includes(task.status)" type="primary" size="small" @click="goToReview(task)">评分</el-button>
           <el-button v-if="['DRAFT','RETURNED'].includes(task.status)" size="small" @click="goToReview(task)">继续评分</el-button>
-          <el-button v-if="['DRAFT','RETURNED'].includes(task.status)" type="primary" size="small" :loading="submitting" @click="handleSubmitScore(task)">提交评分</el-button>
           <el-button v-if="['PENDING','CONFIRMED','DRAFT','RETURNED'].includes(task.status)" type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
         </div>
       </div>
