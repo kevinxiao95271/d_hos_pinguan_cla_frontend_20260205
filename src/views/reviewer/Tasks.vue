@@ -45,7 +45,7 @@
           :loading="submittingAll"
           @click="submitAllDrafts"
         >
-          一键提交全部评审项目（{{ draftTasks.length }}项）
+          一键提交全部评审项目
         </el-button>
       </div>
     </transition>
