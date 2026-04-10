@@ -1,7 +1,7 @@
 <template>
   <div class="tasks-page">
 
-    <!-- 统计卡片：总任务 → 待提交 → 已提交 → 已规避 -->
+    <!-- 统计卡片：总任务 → 已评审 → 待评审 → 已规避 -->
     <el-row :gutter="12" class="stats-row">
       <el-col :span="6">
         <div class="stat-card stat-total">
@@ -10,15 +10,15 @@
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="stat-card stat-pending">
-          <span class="stat-value">{{ computedStats.pendingSubmit }}</span>
-          <span class="stat-label">待提交</span>
+        <div class="stat-card stat-scored">
+          <span class="stat-value">{{ computedStats.scored }}</span>
+          <span class="stat-label">已评审</span>
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="stat-card stat-scored">
-          <span class="stat-value">{{ computedStats.scored }}</span>
-          <span class="stat-label">已提交</span>
+        <div class="stat-card stat-pending">
+          <span class="stat-value">{{ computedStats.pendingSubmit }}</span>
+          <span class="stat-label">待评审</span>
         </div>
       </el-col>
       <el-col :span="6">
@@ -74,8 +74,6 @@
           <el-tag v-else type="warning" size="small">待评审</el-tag>
           <span class="meta-sep">·</span>
           <span class="meta-text">{{ task.institutionName || '-' }}</span>
-          <span class="meta-sep">·</span>
-          <span class="meta-text">{{ getStageText(task.stage) }}</span>
           <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
         </div>
         <div class="task-actions">
@@ -103,8 +101,6 @@
           <el-tag type="success" size="small">已提交</el-tag>
           <span class="meta-sep">·</span>
           <span class="meta-text">{{ task.institutionName || '-' }}</span>
-          <span class="meta-sep">·</span>
-          <span class="meta-text">{{ getStageText(task.stage) }}</span>
           <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
         </div>
         <div class="task-actions">
@@ -127,10 +123,11 @@
           <el-tag type="info" size="small">已规避</el-tag>
           <span class="meta-sep">·</span>
           <span class="meta-text">{{ task.institutionName || '-' }}</span>
-          <span class="meta-sep">·</span>
-          <span class="meta-text">{{ getStageText(task.stage) }}</span>
+          <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
         </div>
-        <div class="task-actions" />
+        <div class="task-actions">
+          <el-button size="small" type="danger" plain :loading="cancelRecusingId === task.id" @click="handleCancelRecuse(task)">撤销规避</el-button>
+        </div>
       </div>
     </el-card>
 
@@ -193,7 +190,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore } from '@/api/review'
+import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore } from '@/api/review'
 import { getRecuseReasons } from '@/api/dictionary'
 
 const router = useRouter()
@@ -209,6 +206,7 @@ const showThankYouDialog = ref(false)
 const recuseDialogVisible = ref(false)
 const recusing = ref(false)
 const recuseRow = ref(null)
+const cancelRecusingId = ref(null)
 const recuseFormRef = ref(null)
 const recuseReasons = ref([])
 const recuseForm = reactive({ reasonCode: '', reasonOther: '' })
@@ -263,6 +261,18 @@ const draftTasks = computed(() => tasks.value.filter(t => t.status === 'DRAFT'))
 const submitAllDrafts = async () => {
   const drafts = draftTasks.value
   if (!drafts.length) return
+
+  // 检查是否还有未评分任务（PENDING / CONFIRMED / RETURNED 没有草稿的）
+  const unscoredTasks = pendingTasks.value.filter(t => !['DRAFT'].includes(t.status))
+  if (unscoredTasks.length > 0) {
+    await ElMessageBox.alert(
+      `还有 ${unscoredTasks.length} 个项目未评审，请全部完成后再提交。`,
+      '无法提交',
+      { confirmButtonText: '知道了', type: 'warning' }
+    )
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
       `共 ${drafts.length} 项草稿评分将被正式提交，提交后不可修改。确认继续？`,
@@ -378,6 +388,28 @@ const confirmRecuse = async () => {
     if (e !== false) ElMessage.error(e?.response?.data?.message || '操作失败')
   } finally {
     recusing.value = false
+  }
+}
+
+const handleCancelRecuse = async (task) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认撤销对「${task.projectName}」的规避申请？撤销后任务将恢复为可评分状态。`,
+      '撤销规避',
+      { confirmButtonText: '确认撤销', cancelButtonText: '取消', type: 'warning' }
+    )
+    cancelRecusingId.value = task.id
+    const res = await cancelRecuse(task.id)
+    if (res.success) {
+      ElMessage.success('规避已撤销，任务已恢复')
+      loadData()
+    } else {
+      ElMessage.error(res.message || '撤销失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel' && e !== false) ElMessage.error(e?.response?.data?.message || '撤销失败')
+  } finally {
+    cancelRecusingId.value = null
   }
 }
 

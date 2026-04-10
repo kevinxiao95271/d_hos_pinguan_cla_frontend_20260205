@@ -3,10 +3,7 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>{{ isViewMode ? '查看评分' : '评分' }}</span>
-          <el-tag v-if="taskInfo.projectName" type="info" style="margin-left: 10px">
-            {{ taskInfo.projectName }}
-          </el-tag>
+          <span>{{ isViewMode ? '查看评分' : taskInfo.projectName || '' }}</span>
         </div>
       </template>
       
@@ -18,34 +15,27 @@
           label-width="200px"
           :disabled="isViewMode"
         >
-          <el-divider content-position="left">项目信息</el-divider>
-          
-          <el-form-item label="项目编号">
-            <span>{{ registrationId || route.query.registrationId || '-' }}</span>
-          </el-form-item>
-          
-          <el-form-item label="项目名称">
-            <span>{{ taskInfo.projectName || route.query.projectName || '-' }}</span>
-          </el-form-item>
-          
-          <el-form-item label="医疗机构">
-            <span>{{ taskInfo.institutionName || '-' }}</span>
-          </el-form-item>
-          
-          <el-form-item label="机构等级">
-            <el-tag v-if="taskInfo.institutionLevel" type="success">
-              {{ taskInfo.institutionLevel }}
-            </el-tag>
-            <span v-else>-</span>
-          </el-form-item>
-          
-          <el-form-item label="评审阶段">
-            <span>{{ getStageText(taskInfo.stage) }}</span>
-          </el-form-item>
-          
-          <el-form-item label="竞赛组别">
-            <span>{{ getGroupTypeText(taskInfo.groupType) }}</span>
-          </el-form-item>
+          <!-- 项目信息（可折叠，默认展开） -->
+          <el-collapse v-model="activeProjectInfo" class="project-info-collapse" style="margin-bottom: 16px;">
+            <el-collapse-item title="项目信息" name="projectInfo">
+              <el-form-item label="项目编号">
+                <span>{{ registrationId || route.query.registrationId || '-' }}</span>
+              </el-form-item>
+              <el-form-item label="项目名称">
+                <span>{{ taskInfo.projectName || route.query.projectName || '-' }}</span>
+              </el-form-item>
+              <el-form-item label="医疗机构">
+                <span>{{ taskInfo.institutionName || '-' }}</span>
+              </el-form-item>
+              <el-form-item label="机构等级">
+                <el-tag v-if="taskInfo.institutionLevel" type="success">{{ taskInfo.institutionLevel }}</el-tag>
+                <span v-else>-</span>
+              </el-form-item>
+              <el-form-item label="竞赛组别">
+                <span>{{ getGroupTypeText(taskInfo.groupType) }}</span>
+              </el-form-item>
+            </el-collapse-item>
+          </el-collapse>
           
           <!-- 项目详情折叠面板（分三块，默认全部折叠） -->
           <el-collapse v-if="projectDetail" v-model="activeCollapse" style="margin-bottom: 20px;">
@@ -121,7 +111,7 @@
           <!-- 材料文件（不折叠，始终展示） -->
           <div class="materials-section">
             <div class="materials-title">
-              材料文件{{ projectDetail && projectDetail.materials && projectDetail.materials.length > 0 ? `（${projectDetail.materials.length}个）` : '' }}
+              项目材料{{ projectDetail && projectDetail.materials && projectDetail.materials.length > 0 ? `（${projectDetail.materials.length}个）` : '' }}
             </div>
             <template v-if="projectDetail && projectDetail.materials && projectDetail.materials.length > 0">
               <el-table :data="projectDetail.materials" border size="small">
@@ -150,7 +140,7 @@
           <!-- 书审评分 -->
           <template v-if="taskInfo.stage !== 'INTERVIEW'">
             <div class="scoring-header">
-              <span>书审评分（总分 100 分，起评分 80 分）</span>
+              <span>项目评分（100 分）</span>
               <el-button size="small" type="primary" plain :icon="Document" @click="openScoringStandard('book')">查看评分标准文件</el-button>
             </div>
 
@@ -267,7 +257,7 @@
           <!-- 面谈评分 -->
           <template v-else>
             <div class="scoring-header">
-              <span>进阶组面谈评分（总分 100 分）</span>
+              <span>项目评分（100 分）</span>
               <el-button size="small" type="warning" plain :icon="Document" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
             </div>
 
@@ -333,36 +323,47 @@
             </div>
           </template>
 
-          <el-form-item label="总分">
-            <el-tag type="success" size="large">{{ totalScore.toFixed(1) }} / 100 分</el-tag>
-          </el-form-item>
-
-          <el-divider content-position="left">评价</el-divider>
-
-          <el-form-item label="亮点" prop="highlights">
-            <el-input
-              v-model="form.highlights"
-              type="textarea"
-              :rows="4"
-              placeholder="请输入亮点（选填，不超过1000字）"
-              maxlength="1000"
-              show-word-limit
-            />
-          </el-form-item>
-
-          <el-form-item label="不足之处（请至少例举三条）" prop="shortcomings">
-            <el-input
-              v-model="form.shortcomings"
-              type="textarea"
-              :rows="5"
-              placeholder="必填，请至少例举三条不足之处，至少150字，不超过1000字"
-              maxlength="1000"
-              show-word-limit
-            />
-            <div v-if="!isViewMode && form.shortcomings && form.shortcomings.length < 150" style="color:#f56c6c; font-size:12px; margin-top:4px">
-              还需补充 {{ 150 - form.shortcomings.length }} 字
+          <!-- 总分 / 亮点 / 不足 — 靠左对齐 -->
+          <div class="bottom-section">
+            <div class="bottom-item total-score-row">
+              <span class="bottom-label">总分</span>
+              <span class="total-score-value">{{ totalScore.toFixed(1) }}</span>
+              <span class="total-score-unit">/ 100 分</span>
             </div>
-          </el-form-item>
+
+            <div class="bottom-item">
+              <div class="bottom-label">亮点</div>
+              <el-form-item prop="highlights" label-width="0" style="margin-bottom:0">
+                <el-input
+                  v-model="form.highlights"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入亮点（选填，不超过1000字）"
+                  maxlength="1000"
+                  show-word-limit
+                  :disabled="isViewMode"
+                />
+              </el-form-item>
+            </div>
+
+            <div class="bottom-item">
+              <div class="bottom-label required-label">不足 <span class="required-star">*</span></div>
+              <el-form-item prop="shortcomings" label-width="0" style="margin-bottom:0">
+                <el-input
+                  v-model="form.shortcomings"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="必填，请至少例举三条不足之处，至少150字，不超过1000字"
+                  maxlength="1000"
+                  show-word-limit
+                  :disabled="isViewMode"
+                />
+              </el-form-item>
+              <div v-if="!isViewMode && form.shortcomings && form.shortcomings.length < 150" style="color:#f56c6c; font-size:12px; margin-top:4px">
+                还需补充 {{ 150 - form.shortcomings.length }} 字
+              </div>
+            </div>
+          </div>
 
           <el-form-item v-if="!isViewMode">
             <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">
@@ -469,7 +470,8 @@ const taskInfo = reactive({
 })
 
 const projectDetail = ref(null)
-const activeCollapse = ref([]) // 默认全部折叠
+const activeCollapse = ref([]) // 活动说明/项目摘要 默认全部折叠
+const activeProjectInfo = ref(['projectInfo']) // 项目信息默认展开
 
 const BOOK_MAX = { planScore: 10, problemAnalysisScore: 20, implementationScore: 20, resultScore: 15, reviewScore: 10, operationScore: 10, presentationScore: 15 }
 const INTERVIEW_MAX = { topicScore: 10, processScore: 40, interviewOperationScore: 20, resultScore: 30 }
@@ -1012,7 +1014,7 @@ watch(() => route.query.registrationId, (newId, oldId) => {
 
     .score-item-right {
       flex-shrink: 0;
-      width: 260px;
+      width: 360px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1055,16 +1057,18 @@ watch(() => route.query.registrationId, (newId, oldId) => {
     // 滑块更小更精致
     :deep(.el-slider__button-wrapper) {
       top: -14px;
+      cursor: ew-resize;
     }
 
     :deep(.el-slider__button) {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       border: 2px solid #409EFF;
       box-shadow: 0 2px 6px rgba(64, 158, 255, 0.35);
       transition: transform 0.15s;
+      cursor: ew-resize;
 
-      &:hover { transform: scale(1.3); }
+      &:hover { transform: scale(1.25); }
     }
 
     // 刻度点
@@ -1150,6 +1154,70 @@ watch(() => route.query.registrationId, (newId, oldId) => {
 
   :deep(.el-collapse-item__content) {
     padding-bottom: 0;
+  }
+}
+
+// 项目信息折叠区（与评分区保持一致样式）
+.project-info-collapse {
+  :deep(.el-collapse-item__header) {
+    background: #f5f7fa;
+    padding: 0 16px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #303133;
+    border-radius: 6px;
+  }
+  :deep(.el-collapse-item__wrap) {
+    border-left: 3px solid #e0edff;
+    background: #fff;
+    padding: 12px 16px 4px;
+  }
+  :deep(.el-collapse-item__content) { padding-bottom: 0; }
+  :deep(.el-collapse) { border: none; border-radius: 6px; overflow: hidden; }
+  :deep(.el-form-item) { margin-bottom: 10px; }
+}
+
+// 总分 / 亮点 / 不足 左对齐区域
+.bottom-section {
+  padding: 12px 0 0;
+  border-top: 1px solid #ebeef5;
+  margin-top: 8px;
+}
+
+.bottom-item {
+  margin-bottom: 16px;
+}
+
+.bottom-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.required-star {
+  color: #f56c6c;
+  font-size: 14px;
+}
+
+.total-score-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+
+  .total-score-value {
+    font-size: 36px;
+    font-weight: 700;
+    color: #409EFF;
+    line-height: 1;
+  }
+
+  .total-score-unit {
+    font-size: 14px;
+    color: #909399;
   }
 }
 </style>

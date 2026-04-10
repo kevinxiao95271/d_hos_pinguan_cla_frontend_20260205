@@ -35,10 +35,9 @@
         <!-- 所属机构 -->
         <el-divider content-position="left">所属机构</el-divider>
 
-        <el-form-item label="当前机构">
+        <el-form-item label="所属单位">
           <span style="margin-right: 16px">{{ userStore.institutionName || '未知机构' }}</span>
-          <el-button size="small" @click="showInstitutionDialog = true">申请变更机构</el-button>
-          <el-button size="small" type="info" plain @click="loadInstitutionHistory">变更记录</el-button>
+          <el-button size="small" @click="showInstitutionDialog = true">变更机构</el-button>
         </el-form-item>
 
         <!-- 证件信息 -->
@@ -57,7 +56,7 @@
           </span>
         </el-form-item>
 
-        <el-form-item label="身份证正面">
+        <el-form-item label="身份证正面" required>
           <div style="display: flex; align-items: center; gap: 16px">
             <div class="id-card-preview" @click="triggerIdCardInput('FRONT')">
               <img v-if="idCardFrontBlobUrl" :src="idCardFrontBlobUrl" />
@@ -83,7 +82,7 @@
           </div>
         </el-form-item>
 
-        <el-form-item label="身份证反面">
+        <el-form-item label="身份证反面" required>
           <div style="display: flex; align-items: center; gap: 16px">
             <div class="id-card-preview" @click="triggerIdCardInput('BACK')">
               <img v-if="idCardBackBlobUrl" :src="idCardBackBlobUrl" />
@@ -132,63 +131,39 @@
         <!-- 专业背景 -->
         <el-divider content-position="left">专业背景与能力</el-divider>
 
-        <el-form-item label="专业背景（可多选）" prop="backgrounds">
-          <div>
-            <el-checkbox-group v-model="form.backgrounds">
-              <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </el-checkbox>
+        <el-form-item label="专业背景（可多选）" prop="backgrounds" required>
+          <div class="checkbox-group-wrap">
+            <el-checkbox-group v-model="form.backgrounds" class="checkbox-group-grid">
+              <el-checkbox v-for="item in BACKGROUND_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</el-checkbox>
             </el-checkbox-group>
-            <el-input
-              v-if="form.backgrounds.includes('OTHER')"
-              v-model="form.backgroundsOther"
-              placeholder="请填写其他专业背景"
-              maxlength="255"
-              style="width: 400px; margin-top: 8px"
-            />
+            <el-input v-if="form.backgrounds.includes('OTHER')" v-model="form.backgroundsOther" placeholder="请填写其他专业背景" maxlength="255" style="width: 400px; margin-top: 8px" />
           </div>
         </el-form-item>
 
-        <el-form-item label="擅长工具（可多选）" prop="tools">
-          <div>
-            <el-checkbox-group v-model="form.tools">
-              <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </el-checkbox>
+        <el-form-item label="熟悉的品管工具（可多选）" prop="tools" required>
+          <div class="checkbox-group-wrap">
+            <el-checkbox-group v-model="form.tools" class="checkbox-group-grid">
+              <el-checkbox v-for="item in TOOL_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</el-checkbox>
             </el-checkbox-group>
-            <el-input
-              v-if="form.tools.includes('OTHER')"
-              v-model="form.toolsOther"
-              placeholder="请填写其他擅长工具"
-              maxlength="255"
-              style="width: 400px; margin-top: 8px"
-            />
+            <el-input v-if="form.tools.includes('OTHER')" v-model="form.toolsOther" placeholder="请填写其他工具" maxlength="255" style="width: 400px; margin-top: 8px" />
           </div>
         </el-form-item>
 
-        <el-form-item label="擅长主题（可多选）" prop="topics">
-          <div>
-            <el-checkbox-group v-model="form.topics">
-              <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">
-                {{ item.label }}
-              </el-checkbox>
+        <el-form-item label="擅长评审主题（可多选）" prop="topics" required>
+          <div class="checkbox-group-wrap">
+            <el-checkbox-group v-model="form.topics" class="checkbox-group-grid">
+              <el-checkbox v-for="item in TOPIC_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</el-checkbox>
             </el-checkbox-group>
-            <el-input
-              v-if="form.topics.includes('OTHER')"
-              v-model="form.topicsOther"
-              placeholder="请填写其他擅长主题"
-              maxlength="255"
-              style="width: 400px; margin-top: 8px"
-            />
+            <el-input v-if="form.topics.includes('OTHER')" v-model="form.topicsOther" placeholder="请填写其他主题" maxlength="255" style="width: 400px; margin-top: 8px" />
           </div>
         </el-form-item>
 
-        <el-form-item label="品管相关经验（可多选）" prop="experience">
-          <el-checkbox-group v-model="form.experience">
-            <el-checkbox v-for="item in EXPERIENCE_OPTIONS" :key="item.value" :value="item.value">
-              {{ item.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+        <el-form-item label="品管相关经验（可多选）" prop="experience" required>
+          <div class="checkbox-group-wrap">
+            <el-checkbox-group v-model="form.experience" class="checkbox-group-grid">
+              <el-checkbox v-for="item in EXPERIENCE_OPTIONS" :key="item.value" :value="item.value">{{ item.label }}</el-checkbox>
+            </el-checkbox-group>
+          </div>
         </el-form-item>
 
         <!-- 账号安全 -->
@@ -231,7 +206,7 @@
   <!-- 变更机构弹窗 -->
   <el-dialog
     v-model="showInstitutionDialog"
-    title="申请变更所属机构"
+    title="变更所属单位"
     width="780px"
     :close-on-click-modal="false"
     @closed="selectedNewInstitution = null; instForm.reason = ''"
@@ -267,22 +242,6 @@
     </template>
   </el-dialog>
 
-  <!-- 机构变更历史弹窗 -->
-  <el-dialog v-model="showHistoryDialog" title="机构变更记录" width="600px">
-    <el-table :data="institutionHistory" border v-loading="historyLoading" empty-text="暂无变更记录">
-      <el-table-column prop="oldInstitutionName" label="原机构" />
-      <el-table-column prop="newInstitutionName" label="新机构" />
-      <el-table-column prop="reason" label="原因" />
-      <el-table-column prop="changedAt" label="变更时间" width="160">
-        <template #default="{ row }">
-          {{ row.changedAt ? row.changedAt.replace('T', ' ').substring(0, 16) : '-' }}
-        </template>
-      </el-table-column>
-    </el-table>
-    <template #footer>
-      <el-button @click="showHistoryDialog = false">关闭</el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup>
@@ -290,7 +249,7 @@ import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
-import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream, changeMyInstitution, getMyInstitutionHistory } from '@/api/reviewerProfile'
+import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream, changeMyInstitution } from '@/api/reviewerProfile'
 import { selfChangePassword } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import InstitutionSelector from '@/components/InstitutionSelector.vue'
@@ -421,10 +380,6 @@ const instFormRef = ref(null)
 const instForm = reactive({ reason: '' })
 const selectedNewInstitution = ref(null)
 
-// 机构变更历史
-const showHistoryDialog = ref(false)
-const historyLoading = ref(false)
-const institutionHistory = ref([])
 
 const multiSelectRequired = (label) => ({
   validator: (rule, value, callback) => {
@@ -692,27 +647,37 @@ async function handleChangeInstitution() {
   }
 }
 
-async function loadInstitutionHistory() {
-  showHistoryDialog.value = true
-  historyLoading.value = true
-  try {
-    const res = await getMyInstitutionHistory()
-    institutionHistory.value = res.success ? (res.data || []) : []
-  } catch {
-    institutionHistory.value = []
-  } finally {
-    historyLoading.value = false
-  }
-}
 </script>
 
 <style scoped lang="scss">
 .reviewer-profile-page {
   padding: 20px;
 
+  // 一级分区标题加粗
+  :deep(.el-divider__text) {
+    font-weight: 700;
+    font-size: 14px;
+    color: #303133;
+  }
+}
+
+.checkbox-group-wrap {
+  background: #f9fafb;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  padding: 10px 14px 4px;
+  width: 100%;
+}
+
+.checkbox-group-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 4px 0;
+
   :deep(.el-checkbox) {
-    margin-right: 12px;
-    margin-bottom: 6px;
+    margin-right: 18px;
+    margin-bottom: 8px;
+    min-width: 140px;
   }
 }
 

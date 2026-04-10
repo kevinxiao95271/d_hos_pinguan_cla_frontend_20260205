@@ -238,3 +238,15 @@ export function recuseReviewTask(taskId, data) {
     data
   })
 }
+
+/**
+ * 撤销规避（仅 RECUSED 状态可用）
+ * 有草稿分 → DRAFT；无草稿 → PENDING
+ * @param {number} taskId
+ */
+export function cancelRecuse(taskId) {
+  return request({
+    url: `/reviews/tasks/${taskId}/recuse`,
+    method: 'delete'
+  })
+}

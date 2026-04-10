@@ -252,7 +252,12 @@ const loadInstitutions = async () => {
     }
     const res = await searchInstitutions(params)
     if (res.success) {
-      institutions.value = res.data.content
+      const levelOrder = { '三级': 0, '二级': 1, '一级': 2 }
+      institutions.value = (res.data.content || []).slice().sort((a, b) => {
+        const la = levelOrder[a.level] ?? 9
+        const lb = levelOrder[b.level] ?? 9
+        return la - lb
+      })
       total.value = res.data.totalElements
     }
   } catch (error) {
