@@ -13,6 +13,15 @@ export default defineConfig(({ mode }) => {
         '@': resolve(__dirname, 'src')
       }
     },
+    preview: {
+      port: 6039,
+      proxy: {
+        '/api': {
+          target: 'http://localhost:6031',
+          changeOrigin: true
+        }
+      }
+    },
     server: {
       port: 6039,
       proxy: {

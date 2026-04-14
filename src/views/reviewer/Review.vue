@@ -353,14 +353,14 @@
                   v-model="form.shortcomings"
                   type="textarea"
                   :rows="5"
-                  placeholder="必填，请至少例举三条不足之处，至少150字，不超过1000字"
+                  placeholder="必填，请至少例举三条不足之处，至少60字，不超过1000字"
                   maxlength="1000"
                   show-word-limit
                   :disabled="isViewMode"
                 />
               </el-form-item>
-              <div v-if="!isViewMode && form.shortcomings && form.shortcomings.length < 150" style="color:#f56c6c; font-size:12px; margin-top:4px">
-                还需补充 {{ 150 - form.shortcomings.length }} 字
+              <div v-if="!isViewMode && form.shortcomings && form.shortcomings.length < 60" style="color:#f56c6c; font-size:12px; margin-top:4px">
+                还需补充 {{ 60 - form.shortcomings.length }} 字
               </div>
             </div>
           </div>
@@ -548,8 +548,8 @@ const rules = {
       validator: (rule, value, callback) => {
         if (!value || value.trim().length === 0) {
           callback(new Error('不足之处为必填项，请至少例举三条'))
-        } else if (value.length < 150) {
-          callback(new Error('不足之处至少填写150字'))
+        } else if (value.length < 60) {
+          callback(new Error('不足之处至少填写60字'))
         } else if (value.length > 1000) {
           callback(new Error('不足之处不能超过1000字'))
         } else {
