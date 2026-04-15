@@ -10,7 +10,7 @@
           <el-icon><List /></el-icon>
           查看已分配任务
         </el-button>
-        <el-button type="primary" @click="showAutoAssignDialog">
+        <el-button type="primary" disabled>
           <el-icon><MagicStick /></el-icon>
           自动分配
         </el-button>
@@ -217,6 +217,31 @@
       :close-on-click-modal="false"
     >
       <div v-loading="loadingAssignedTasks">
+        <el-form :inline="true" size="small" style="margin-bottom: 12px;">
+          <el-form-item label="组别">
+            <el-select v-model="assignedTaskFilter.groupType" placeholder="全部" clearable style="width: 110px"
+              @change="assignedTaskFilter.groupCode = ''; assignedTaskFilter.institution = ''">
+              <el-option label="基层组" value="BASIC" />
+              <el-option label="综合组" value="COMPREHENSIVE" />
+              <el-option label="进阶组" value="ADVANCED" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="分组">
+            <el-select v-model="assignedTaskFilter.groupCode" placeholder="全部" clearable style="width: 100px"
+              @change="assignedTaskFilter.institution = ''">
+              <el-option v-for="code in assignedTaskGroupCodes" :key="code" :label="code" :value="code" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="参赛机构">
+            <el-select v-model="assignedTaskFilter.institution" placeholder="全部" clearable filterable style="width: 200px">
+              <el-option v-for="name in assignedTaskInstitutions" :key="name" :label="name" :value="name" />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button @click="resetAssignedTaskFilter">重置</el-button>
+          </el-form-item>
+        </el-form>
+
         <el-alert 
           v-if="allAssignedTasks.length === 0" 
           type="info" 
@@ -228,13 +253,13 @@
 
         <el-table 
           v-else
-          :data="allAssignedTasks" 
+          :data="filteredAssignedTasks" 
           border 
           stripe
           max-height="500"
           style="width: 100%"
         >
-          <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table-column prop="registrationId" label="项目编号" width="80" align="center" />
           <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />
           <el-table-column prop="institutionName" label="医疗机构" width="160" show-overflow-tooltip />
           <el-table-column prop="groupType" label="组别" width="100" align="center">
@@ -259,7 +284,7 @@
         </el-table>
 
         <div style="margin-top: 15px; text-align: right; color: #606266;">
-          共 {{ allAssignedTasks.length }} 条任务记录
+          共 {{ filteredAssignedTasks.length }} / {{ allAssignedTasks.length }} 条任务记录
         </div>
       </div>
       <template #footer>
@@ -322,6 +347,32 @@ const autoAssignForm = ref({
 const assignedTasksDialogVisible = ref(false)
 const loadingAssignedTasks = ref(false)
 const allAssignedTasks = ref([])
+const assignedTaskFilter = ref({ groupType: '', groupCode: '', institution: '' })
+const assignedTaskGroupCodes = computed(() => {
+  const base = assignedTaskFilter.value.groupType
+    ? allAssignedTasks.value.filter(t => t.groupType === assignedTaskFilter.value.groupType)
+    : allAssignedTasks.value
+  return [...new Set(base.map(t => t.groupCode).filter(Boolean))].sort()
+})
+const assignedTaskInstitutions = computed(() => {
+  const base = allAssignedTasks.value.filter(t => {
+    if (assignedTaskFilter.value.groupType && t.groupType !== assignedTaskFilter.value.groupType) return false
+    if (assignedTaskFilter.value.groupCode && t.groupCode !== assignedTaskFilter.value.groupCode) return false
+    return true
+  })
+  return [...new Set(base.map(t => t.institutionName).filter(Boolean))].sort()
+})
+const filteredAssignedTasks = computed(() =>
+  allAssignedTasks.value.filter(t => {
+    if (assignedTaskFilter.value.groupType && t.groupType !== assignedTaskFilter.value.groupType) return false
+    if (assignedTaskFilter.value.groupCode && t.groupCode !== assignedTaskFilter.value.groupCode) return false
+    if (assignedTaskFilter.value.institution && t.institutionName !== assignedTaskFilter.value.institution) return false
+    return true
+  })
+)
+const resetAssignedTaskFilter = () => {
+  assignedTaskFilter.value = { groupType: '', groupCode: '', institution: '' }
+}
 
 // 进阶组分组代码（C1-C10）
 const advancedGroupCodes = computed(() => {
