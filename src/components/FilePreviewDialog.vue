@@ -7,6 +7,23 @@
     @open="onOpen"
     @close="onClose"
   >
+    <!-- 缩放工具栏（PDF / 图片 / DOCX / Excel 显示） -->
+    <div
+      v-if="!loading && !error && ['pdf','image','docx','excel'].includes(fileType)"
+      class="zoom-toolbar"
+    >
+      <div class="zoom-controls">
+        <el-tooltip content="缩小 (-)" placement="bottom">
+          <el-button :icon="ZoomOut" circle size="small" @click="zoomOut" :disabled="zoomLevel <= 0.5" />
+        </el-tooltip>
+        <span class="zoom-label">{{ zoomPercent }}</span>
+        <el-tooltip content="放大 (+)" placement="bottom">
+          <el-button :icon="ZoomIn" circle size="small" @click="zoomIn" :disabled="zoomLevel >= 4" />
+        </el-tooltip>
+        <el-button size="small" @click="resetZoom" :disabled="zoomLevel === 1">重置</el-button>
+      </div>
+    </div>
+
     <!-- 加载中 -->
     <div v-if="loading" class="preview-loading">
       <el-icon class="is-loading" :size="36"><Loading /></el-icon>
@@ -20,23 +37,52 @@
       <el-button v-if="showDownload" type="primary" @click="triggerDownload">下载文件</el-button>
     </div>
 
-    <!-- PDF：iframe -->
-    <div v-else-if="fileType === 'pdf'" class="preview-pdf">
-      <iframe :src="showDownload ? blobUrl : blobUrl + '#toolbar=0&navpanes=0'" width="100%" height="100%" frameborder="0" />
+    <!-- PDF：iframe + 缩放容器 -->
+    <div v-else-if="fileType === 'pdf'" ref="pdfScrollRef" class="preview-pdf" @wheel.prevent="onWheel">
+      <!-- 外壳按缩放比例撑大，产生正确的滚动区域 -->
+      <div
+        class="pdf-zoom-spacer"
+        :style="{ width: `${zoomLevel * 100}%`, height: `${zoomLevel * 100}%` }"
+      >
+        <!-- iframe 保持原始尺寸（1/zoom），transform 放大内容 -->
+        <iframe
+          :src="showDownload ? blobUrl : blobUrl + '#toolbar=0&navpanes=0'"
+          class="pdf-iframe"
+          :style="{
+            width: `${(1 / zoomLevel) * 100}%`,
+            height: `${(1 / zoomLevel) * 100}%`,
+            transform: `scale(${zoomLevel})`,
+            transformOrigin: 'top left'
+          }"
+          frameborder="0"
+        />
+      </div>
     </div>
 
     <!-- 图片 -->
-    <div v-else-if="fileType === 'image'" class="preview-image">
-      <img :src="blobUrl" style="max-width:100%; max-height:calc(100vh - 130px); display:block; margin:0 auto; object-fit:contain;" />
+    <div v-else-if="fileType === 'image'" class="preview-image" @wheel.prevent="onWheel">
+      <div class="zoom-scroll-area">
+        <img
+          :src="blobUrl"
+          class="zoomable-img"
+          :style="{ transform: `scale(${zoomLevel})` }"
+        />
+      </div>
     </div>
 
     <!-- DOCX：docx-preview 渲染 -->
-    <div v-else-if="fileType === 'docx'" class="preview-docx">
-      <div ref="docxContainer" class="docx-container" />
+    <div v-else-if="fileType === 'docx'" class="preview-docx" @wheel.prevent="onWheel">
+      <div class="zoom-scroll-area">
+        <div
+          ref="docxContainer"
+          class="docx-container"
+          :style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }"
+        />
+      </div>
     </div>
 
     <!-- XLSX / XLS：表格 -->
-    <div v-else-if="fileType === 'excel'" class="preview-excel">
+    <div v-else-if="fileType === 'excel'" class="preview-excel" @wheel.prevent="onWheel">
       <el-tabs v-model="activeSheet" v-if="excelSheets.length > 1">
         <el-tab-pane
           v-for="sheet in excelSheets"
@@ -45,7 +91,13 @@
           :name="sheet.name"
         />
       </el-tabs>
-      <div class="excel-table-wrap" v-html="currentSheetHtml" />
+      <div class="zoom-scroll-area">
+        <div
+          class="excel-table-wrap"
+          v-html="currentSheetHtml"
+          :style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }"
+        />
+      </div>
     </div>
 
     <!-- 不支持预览 -->
@@ -64,9 +116,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, watchEffect } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Loading, WarningFilled, Document, Download } from '@element-plus/icons-vue'
+import { Loading, WarningFilled, Document, Download, ZoomIn, ZoomOut } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
 import { downloadMaterial } from '@/api/material'
 
@@ -91,8 +143,43 @@ const error = ref('')
 const blobUrl = ref('')
 const fileBlob = ref(null)
 const docxContainer = ref(null)
+const pdfScrollRef = ref(null)
 const excelSheets = ref([])
 const activeSheet = ref('')
+
+// ── 缩放 ──────────────────────────────────────────────────────────
+const zoomLevel = ref(1)
+const zoomPercent = computed(() => `${Math.round(zoomLevel.value * 100)}%`)
+const ZOOM_STEP = 0.25
+const ZOOM_MIN = 0.5
+const ZOOM_MAX = 4
+
+function zoomIn() {
+  zoomLevel.value = Math.min(ZOOM_MAX, +(zoomLevel.value + ZOOM_STEP).toFixed(2))
+}
+function zoomOut() {
+  zoomLevel.value = Math.max(ZOOM_MIN, +(zoomLevel.value - ZOOM_STEP).toFixed(2))
+}
+function resetZoom() {
+  zoomLevel.value = 1
+}
+
+function onWheel(e) {
+  if (!e.ctrlKey && !e.metaKey) return
+  e.preventDefault()
+  if (e.deltaY < 0) zoomIn()
+  else zoomOut()
+}
+
+// PDF 缩放后将水平滚动居中，确保可视区对准内容中央
+watch(zoomLevel, async () => {
+  if (fileType.value !== 'pdf') return
+  await nextTick()
+  if (pdfScrollRef.value) {
+    const el = pdfScrollRef.value
+    el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2
+  }
+})
 
 // ── 计算属性 ──────────────────────────────────────────────────────
 const ext = computed(() => {
@@ -131,6 +218,7 @@ async function onOpen() {
   blobUrl.value = ''
   fileBlob.value = null
   excelSheets.value = []
+  zoomLevel.value = 1
 
   try {
     let blob
@@ -226,10 +314,48 @@ function onClose() {
   fileBlob.value = null
   excelSheets.value = []
   error.value = ''
+  zoomLevel.value = 1
 }
 </script>
 
 <style scoped lang="scss">
+// ── 缩放工具栏 ──────────────────────────────────────────────────
+.zoom-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid #ebeef5;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+
+  .zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .zoom-label {
+    min-width: 48px;
+    text-align: center;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: #303133;
+    user-select: none;
+  }
+}
+
+// ── 通用可缩放滚动容器 ───────────────────────────────────────────
+.zoom-scroll-area {
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+
 .preview-loading,
 .preview-error,
 .preview-unsupported {
@@ -242,15 +368,53 @@ function onClose() {
 }
 
 .preview-pdf {
-  height: calc(100vh - 120px);
-  iframe { height: 100%; }
+  height: calc(100vh - 160px);
+  overflow: auto;
+
+  .pdf-zoom-spacer {
+    position: relative;
+  }
+
+  .pdf-iframe {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+}
+
+.preview-image {
+  height: calc(100vh - 160px);
+  background: #f5f5f5;
+
+  .zoom-scroll-area {
+    height: 100%;
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .zoomable-img {
+    display: block;
+    transform-origin: top center;
+    transition: transform 0.15s ease;
+    max-width: 100%;
+    cursor: zoom-in;
+  }
 }
 
 .preview-docx {
-  height: calc(100vh - 120px);
-  overflow-y: auto;
+  height: calc(100vh - 160px);
   background: #f5f5f5;
   padding: 12px;
+
+  .zoom-scroll-area {
+    min-height: 100%;
+    align-items: flex-start;
+  }
+
+  .docx-container {
+    transition: transform 0.15s ease;
+  }
 
   :deep(.docx-render) {
     background: #fff;
@@ -261,11 +425,20 @@ function onClose() {
 }
 
 .preview-excel {
-  height: calc(100vh - 120px);
-  overflow: auto;
+  height: calc(100vh - 160px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  .zoom-scroll-area {
+    flex: 1;
+    overflow: auto;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
 
   .excel-table-wrap {
-    overflow: auto;
+    transition: transform 0.15s ease;
     :deep(table) {
       border-collapse: collapse;
       font-size: 13px;
