@@ -72,13 +72,15 @@
 
     <!-- DOCX：docx-preview 渲染 -->
     <div v-else-if="fileType === 'docx'" class="preview-docx" @wheel.prevent="onWheel">
-      <div class="zoom-scroll-area">
-        <div
-          ref="docxContainer"
-          class="docx-container"
-          :style="{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }"
-        />
-      </div>
+      <div
+        ref="docxContainer"
+        class="docx-container"
+        :style="{
+          transform: `scale(${zoomLevel})`,
+          transformOrigin: 'top left',
+          minWidth: zoomLevel > 1 ? `${zoomLevel * 100}%` : '100%'
+        }"
+      />
     </div>
 
     <!-- XLSX / XLS：表格 -->
@@ -272,7 +274,7 @@ async function renderDocx(blob) {
   await renderAsync(blob, docxContainer.value, null, {
     className: 'docx-render',
     inWrapper: true,
-    ignoreWidth: false,
+    ignoreWidth: true,
     ignoreHeight: true,
     ignoreFonts: false,
     breakPages: true,
@@ -404,16 +406,15 @@ function onClose() {
 
 .preview-docx {
   height: calc(100vh - 160px);
+  overflow-y: auto;
+  overflow-x: hidden;
   background: #f5f5f5;
   padding: 12px;
 
-  .zoom-scroll-area {
-    min-height: 100%;
-    align-items: flex-start;
-  }
-
   .docx-container {
     transition: transform 0.15s ease;
+    transform-origin: top left;
+    width: 100%;
   }
 
   :deep(.docx-render) {
