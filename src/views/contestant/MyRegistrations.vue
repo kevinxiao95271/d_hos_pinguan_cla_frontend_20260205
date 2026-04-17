@@ -338,10 +338,11 @@ const hasAdvancedGroup = computed(() =>
   registrations.value.some(r => r.groupType === 'ADVANCED')
 )
 
+const base = import.meta.env.BASE_URL
 const noticeFiles = [
-  { name: '关于组织2026年浙江省医院品管大赛进阶组项目面谈的函', url: '/interview_notice.pdf' },
-  { name: '附件1.2026年浙江省医院品管大赛面谈须知', url: '/interview_guide.pdf' },
-  { name: '附件2.2026年浙江省医院品管大赛进阶组面谈排程', url: '/interview_schedule.pdf' }
+  { name: '关于组织2026年浙江省医院品管大赛进阶组项目面谈的函', url: `${base}interview_notice.pdf` },
+  { name: '附件1.2026年浙江省医院品管大赛面谈须知', url: `${base}interview_guide.pdf` },
+  { name: '附件2.2026年浙江省医院品管大赛进阶组面谈排程', url: `${base}interview_schedule.pdf` }
 ]
 
 const openNoticeFile = (file) => {
