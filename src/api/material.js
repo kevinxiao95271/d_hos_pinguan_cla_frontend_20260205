@@ -35,20 +35,6 @@ export function downloadMaterial(materialId) {
   })
 }
 
-/**
- * 预览 doc/docx 文件（后端转换为 PDF 返回）
- * @param {number} materialId - 材料ID
- * @returns {Promise<Blob>} PDF Blob
- */
-export function previewMaterialAsPdf(materialId) {
-  return request({
-    url: `/materials/${materialId}/preview-pdf`,
-    method: 'get',
-    responseType: 'blob',
-    timeout: MATERIAL_UPLOAD_TIMEOUT_MS
-  })
-}
-
 
 /**
  * 获取报名的所有材料列表
