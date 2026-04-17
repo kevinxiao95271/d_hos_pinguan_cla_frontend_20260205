@@ -38,7 +38,7 @@
     </div>
 
     <!-- PDF：iframe + 缩放容器 -->
-    <div v-else-if="fileType === 'pdf'" ref="pdfScrollRef" class="preview-pdf" @wheel.prevent="onWheel">
+    <div v-else-if="fileType === 'pdf'" ref="pdfScrollRef" class="preview-pdf" @wheel="onWheel">
       <!-- 外壳按缩放比例撑大，产生正确的滚动区域 -->
       <div
         class="pdf-zoom-spacer"
@@ -60,7 +60,7 @@
     </div>
 
     <!-- 图片 -->
-    <div v-else-if="fileType === 'image'" class="preview-image" @wheel.prevent="onWheel">
+    <div v-else-if="fileType === 'image'" class="preview-image" @wheel="onWheel">
       <div class="zoom-scroll-area">
         <img
           :src="blobUrl"
@@ -71,7 +71,7 @@
     </div>
 
     <!-- DOCX：docx-preview 渲染 -->
-    <div v-else-if="fileType === 'docx'" class="preview-docx" @wheel.prevent="onWheel">
+    <div v-else-if="fileType === 'docx'" class="preview-docx" @wheel="onWheel">
       <div
         ref="docxContainer"
         class="docx-container"
@@ -84,7 +84,7 @@
     </div>
 
     <!-- XLSX / XLS：表格 -->
-    <div v-else-if="fileType === 'excel'" class="preview-excel" @wheel.prevent="onWheel">
+    <div v-else-if="fileType === 'excel'" class="preview-excel" @wheel="onWheel">
       <el-tabs v-model="activeSheet" v-if="excelSheets.length > 1">
         <el-tab-pane
           v-for="sheet in excelSheets"
@@ -111,8 +111,10 @@
     </div>
 
     <template #footer>
-      <el-button @click="visible = false">关闭</el-button>
-      <el-button v-if="showDownload" type="primary" :icon="Download" @click="triggerDownload">下载</el-button>
+      <div class="dialog-footer">
+        <el-button @click="visible = false">关闭</el-button>
+        <el-button v-if="showDownload" type="primary" :icon="Download" @click="triggerDownload">下载</el-button>
+      </div>
     </template>
   </el-dialog>
 </template>
@@ -321,6 +323,13 @@ function onClose() {
 </script>
 
 <style scoped lang="scss">
+// ── 底部按钮居中 ─────────────────────────────────────────────────
+.dialog-footer {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
 // ── 缩放工具栏 ──────────────────────────────────────────────────
 .zoom-toolbar {
   position: sticky;

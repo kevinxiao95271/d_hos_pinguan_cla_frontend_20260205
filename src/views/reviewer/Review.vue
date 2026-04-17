@@ -124,10 +124,11 @@
                     {{ row.uploadedAt ? row.uploadedAt.replace('T',' ').substring(0,16) : '-' }}
                   </template>
                 </el-table-column>
-                <el-table-column label="操作" width="120">
+                <el-table-column label="操作" width="180">
                   <template #default="{ row }">
                     <el-button v-if="canPreview(row.fileName)" type="success" size="small" @click="previewFile(row)">预览</el-button>
                     <el-button v-else type="primary" size="small" @click="downloadFile(row)">下载</el-button>
+                    <el-button v-if="row.type === 'REPORT'" type="primary" size="small" @click="downloadFile(row)">下载</el-button>
                   </template>
                 </el-table-column>
               </el-table>

@@ -156,17 +156,37 @@
       </template>
     </el-dialog>
 
+    <!-- 面谈通知文件区（仅进阶组可见） -->
+    <el-card v-if="hasAdvancedGroup" style="margin-top: 20px;">
+      <template #header>
+        <span style="font-size:16px; font-weight:600;">面谈通知文件</span>
+      </template>
+      <div class="notice-file-links">
+        <el-link
+          v-for="file in noticeFiles"
+          :key="file.url"
+          underline="never"
+          style="color: #67b3e8;"
+          @click="openNoticeFile(file)"
+        >
+          📄 {{ file.name }}
+        </el-link>
+      </div>
+    </el-card>
+
     <!-- 文件预览 -->
     <FilePreviewDialog
       v-model="filePreviewVisible"
       :material-id="previewMaterialId"
+      :file-url="previewFileUrl"
       :file-name="previewFileName"
+      :show-download="previewShowDownload"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
@@ -310,6 +330,27 @@ const viewProof = async (row) => {
 const filePreviewVisible = ref(false)
 const previewMaterialId = ref(null)
 const previewFileName = ref('')
+const previewFileUrl = ref(null)
+const previewShowDownload = ref(false)
+
+// 面谈通知静态文件（仅进阶组可见）
+const hasAdvancedGroup = computed(() =>
+  registrations.value.some(r => r.groupType === 'ADVANCED')
+)
+
+const noticeFiles = [
+  { name: '关于组织2026年浙江省医院品管大赛进阶组项目面谈的函', url: '/interview_notice.pdf' },
+  { name: '附件1.2026年浙江省医院品管大赛面谈须知', url: '/interview_guide.pdf' },
+  { name: '附件2.2026年浙江省医院品管大赛进阶组面谈排程', url: '/interview_schedule.pdf' }
+]
+
+const openNoticeFile = (file) => {
+  previewMaterialId.value = null
+  previewFileUrl.value = file.url
+  previewFileName.value = file.name + '.pdf'
+  previewShowDownload.value = true
+  filePreviewVisible.value = true
+}
 
 const canPreview = (fileName) => {
   if (!fileName) return false
@@ -319,7 +360,9 @@ const canPreview = (fileName) => {
 
 const previewProof = (material) => {
   previewMaterialId.value = material.id
+  previewFileUrl.value = null
   previewFileName.value = material.fileName || '文件预览'
+  previewShowDownload.value = false
   filePreviewVisible.value = true
 }
 
@@ -408,5 +451,13 @@ onMounted(() => {
     font-size: 18px;
     font-weight: 600;
   }
+}
+
+.notice-file-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
 }
 </style>

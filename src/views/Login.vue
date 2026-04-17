@@ -212,8 +212,8 @@ const handleLogin = async () => {
       userStore.setUserInfo(res.data)
       ElMessage.success('登录成功')
 
-      // noticeConfirmed: false 时弹出强制阅读（后端未返回该字段时默认不弹）
-      if (res.data.noticeConfirmed === false) {
+      // 仅评审专家且未确认时弹出强制阅读
+      if (userStore.role === 'REVIEWER' && res.data.noticeConfirmed === false) {
         showNoticeDialog.value = true
         startNoticeCountdown()
       } else {
