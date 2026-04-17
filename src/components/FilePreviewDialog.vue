@@ -9,7 +9,7 @@
   >
     <!-- 缩放工具栏（PDF / 图片 / DOCX / Excel 显示） -->
     <div
-      v-if="!loading && !error && ['pdf','image','docx','excel'].includes(fileType)"
+      v-if="!loading && !error && ['pdf','image','docx','excel'].includes(effectiveType)"
       class="zoom-toolbar"
     >
       <div class="zoom-controls">
@@ -37,14 +37,12 @@
       <el-button v-if="showDownload" type="primary" @click="triggerDownload">下载文件</el-button>
     </div>
 
-    <!-- PDF：iframe + 缩放容器 -->
-    <div v-else-if="fileType === 'pdf'" ref="pdfScrollRef" class="preview-pdf" @wheel.prevent="onWheel">
-      <!-- 外壳按缩放比例撑大，产生正确的滚动区域 -->
+    <!-- PDF：iframe + 缩放容器（含后端转换的 doc/docx） -->
+    <div v-else-if="effectiveType === 'pdf'" ref="pdfScrollRef" class="preview-pdf" @wheel="onWheel">
       <div
         class="pdf-zoom-spacer"
         :style="{ width: `${zoomLevel * 100}%`, height: `${zoomLevel * 100}%` }"
       >
-        <!-- iframe 保持原始尺寸（1/zoom），transform 放大内容 -->
         <iframe
           :src="showDownload ? blobUrl : blobUrl + '#toolbar=0&navpanes=0'"
           class="pdf-iframe"
@@ -60,7 +58,7 @@
     </div>
 
     <!-- 图片 -->
-    <div v-else-if="fileType === 'image'" class="preview-image" @wheel.prevent="onWheel">
+    <div v-else-if="effectiveType === 'image'" class="preview-image" @wheel="onWheel">
       <div class="zoom-scroll-area">
         <img
           :src="blobUrl"
@@ -70,8 +68,8 @@
       </div>
     </div>
 
-    <!-- DOCX：docx-preview 渲染 -->
-    <div v-else-if="fileType === 'docx'" class="preview-docx" @wheel.prevent="onWheel">
+    <!-- DOCX：fileUrl 来源（如评分标准），用 docx-preview 渲染 -->
+    <div v-else-if="effectiveType === 'docx'" class="preview-docx" @wheel="onWheel">
       <div
         ref="docxContainer"
         class="docx-container"
@@ -84,7 +82,7 @@
     </div>
 
     <!-- XLSX / XLS：表格 -->
-    <div v-else-if="fileType === 'excel'" class="preview-excel" @wheel.prevent="onWheel">
+    <div v-else-if="effectiveType === 'excel'" class="preview-excel" @wheel="onWheel">
       <el-tabs v-model="activeSheet" v-if="excelSheets.length > 1">
         <el-tab-pane
           v-for="sheet in excelSheets"
@@ -103,7 +101,7 @@
     </div>
 
     <!-- 不支持预览 -->
-    <div v-else-if="fileType === 'unsupported'" class="preview-unsupported">
+    <div v-else-if="effectiveType === 'unsupported'" class="preview-unsupported">
       <el-icon :size="48" color="#909399"><Document /></el-icon>
       <p style="margin:12px 0 4px; font-weight:600">{{ fileName }}</p>
       <p style="color:#909399; font-size:13px">该格式暂不支持在线预览</p>
@@ -122,7 +120,7 @@ import { ref, computed, watch, nextTick, watchEffect } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, WarningFilled, Document, Download, ZoomIn, ZoomOut } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
-import { downloadMaterial } from '@/api/material'
+import { downloadMaterial, previewMaterialAsPdf } from '@/api/material'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -148,6 +146,8 @@ const docxContainer = ref(null)
 const pdfScrollRef = ref(null)
 const excelSheets = ref([])
 const activeSheet = ref('')
+// doc/docx 经后端转换为 PDF 时，用此覆盖渲染类型
+const renderAs = ref('')
 
 // ── 缩放 ──────────────────────────────────────────────────────────
 const zoomLevel = ref(1)
@@ -175,7 +175,7 @@ function onWheel(e) {
 
 // PDF 缩放后将水平滚动居中，确保可视区对准内容中央
 watch(zoomLevel, async () => {
-  if (fileType.value !== 'pdf') return
+  if (effectiveType.value !== 'pdf') return
   await nextTick()
   if (pdfScrollRef.value) {
     const el = pdfScrollRef.value
@@ -193,10 +193,13 @@ const fileType = computed(() => {
   const e = ext.value
   if (e === 'pdf') return 'pdf'
   if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(e)) return 'image'
-  if (e === 'docx') return 'docx'
+  if (['doc', 'docx'].includes(e)) return 'docx'
   if (['xlsx', 'xls'].includes(e)) return 'excel'
   return 'unsupported'
 })
+
+// 实际渲染类型：doc/docx 通过后端转 PDF 时覆盖为 pdf
+const effectiveType = computed(() => renderAs.value || fileType.value)
 
 const title = computed(() => props.fileName || '文件预览')
 
@@ -221,8 +224,19 @@ async function onOpen() {
   fileBlob.value = null
   excelSheets.value = []
   zoomLevel.value = 1
+  renderAs.value = ''
 
   try {
+    // doc/docx + materialId：走后端转 PDF 接口
+    if (fileType.value === 'docx' && props.materialId) {
+      const pdfBlob = await previewMaterialAsPdf(props.materialId)
+      fileBlob.value = pdfBlob
+      renderAs.value = 'pdf'
+      blobUrl.value = URL.createObjectURL(new Blob([pdfBlob], { type: 'application/pdf' }))
+      loading.value = false
+      return
+    }
+
     let blob
     if (props.fileUrl) {
       const resp = await fetch(props.fileUrl)
@@ -245,16 +259,14 @@ async function onOpen() {
     const typedBlob = new Blob([blob], { type: mime })
 
     if (fileType.value === 'excel') {
-      // Excel 数据解析不依赖 DOM，可以在 loading 关闭前完成
       await renderExcel(typedBlob)
       loading.value = false
     } else if (fileType.value === 'docx') {
-      // 必须先关 loading，让 docxContainer div 进入 DOM，再调 renderAsync
+      // fileUrl 来源的 docx（如评分标准），仍用 docx-preview 渲染
       loading.value = false
       await nextTick()
       await renderDocx(typedBlob)
     } else {
-      // PDF / 图片：先设 blobUrl，关 loading 后 iframe/img 自然渲染
       blobUrl.value = URL.createObjectURL(typedBlob)
       loading.value = false
     }
@@ -317,6 +329,7 @@ function onClose() {
   excelSheets.value = []
   error.value = ''
   zoomLevel.value = 1
+  renderAs.value = ''
 }
 </script>
 
