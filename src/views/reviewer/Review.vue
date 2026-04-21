@@ -12,7 +12,8 @@
           ref="formRef"
           :model="form"
           :rules="rules"
-          label-width="200px"
+          :label-width="isMobile ? '0px' : '200px'"
+          :label-position="isMobile ? 'top' : 'right'"
           :disabled="isViewMode"
         >
           <!-- 项目信息（可折叠，默认展开） -->
@@ -108,8 +109,8 @@
 
           </el-collapse>
 
-          <!-- 材料文件（不折叠，始终展示） -->
-          <div class="materials-section">
+          <!-- 材料文件（书审阶段显示，面谈阶段隐藏） -->
+          <div v-if="taskInfo.stage !== 'INTERVIEW'" class="materials-section">
             <div class="materials-title">
               项目材料{{ projectDetail && projectDetail.materials && projectDetail.materials.length > 0 ? `（${projectDetail.materials.length}个）` : '' }}
             </div>
@@ -142,7 +143,7 @@
           <template v-if="taskInfo.stage !== 'INTERVIEW'">
             <div class="scoring-header">
               <span>项目评分（100 分）</span>
-              <el-button size="small" type="primary" plain :icon="Document" @click="openScoringStandard('book')">查看评分标准文件</el-button>
+              <el-button size="small" type="primary" plain :icon="Document" :disabled="false" @click="openScoringStandard('book')">查看评分标准文件</el-button>
             </div>
 
             <div class="score-item-card">
@@ -259,7 +260,7 @@
           <template v-else>
             <div class="scoring-header">
               <span>项目评分（100 分）</span>
-              <el-button size="small" type="warning" plain :icon="Document" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
+              <el-button size="small" type="warning" plain :icon="Document" :disabled="false" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
             </div>
 
             <div class="score-item-card">
@@ -451,6 +452,10 @@ import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
+
+const isMobile = ref(window.innerWidth <= 768)
+const onResize = () => { isMobile.value = window.innerWidth <= 768 }
+window.addEventListener('resize', onResize)
 
 const taskId = computed(() => route.params.taskId)
 const registrationId = computed(() => route.query.registrationId)
@@ -844,9 +849,10 @@ const previewFile = (material) => {
 
 // 打开评分标准文件预览弹窗
 const openScoringStandard = (type) => {
+  const base = import.meta.env.BASE_URL
   const fileMap = {
-    book: { url: '/scoring_standard_book.docx', name: '书审评分标准.docx' },
-    interview: { url: '/scoring_standard_interview.docx', name: '面谈评分标准.docx' }
+    book: { url: `${base}scoring_standard_book.docx`, name: '书审评分标准.docx' },
+    interview: { url: `${base}scoring_standard_interview.docx`, name: '面谈评分标准.docx' }
   }
   const file = fileMap[type]
   if (file) {
@@ -893,6 +899,7 @@ watch(isViewMode, (viewMode) => {
 
 onUnmounted(() => {
   if (draftTimer) clearInterval(draftTimer)
+  window.removeEventListener('resize', onResize)
 })
 
 // 监听路由变化，重新加载数据
@@ -1219,6 +1226,80 @@ watch(() => route.query.registrationId, (newId, oldId) => {
   .total-score-unit {
     font-size: 14px;
     color: #909399;
+  }
+}
+
+/* ── 移动端评分页适配 ── */
+@media (max-width: 768px) {
+  .review-page {
+    :deep(.el-card__body) {
+      padding: 12px 10px;
+    }
+
+    // 评分卡片：改为上下布局
+    .score-item-card {
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px 10px;
+    }
+
+    // 右侧打分区：宽度撑满，不再固定360px
+    .score-item-right {
+      width: 100% !important;
+      padding: 0 4px 0 0;
+    }
+
+    // 滑块容器
+    .score-slider-wrap {
+      gap: 10px;
+      padding-bottom: 28px;
+    }
+
+    // 刻度标签字体更小防溢出
+    :deep(.el-slider__marks-text) {
+      font-size: 10px !important;
+    }
+
+    // 评分标准文件按钮在小屏换行
+    .scoring-header {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    // 表格横向可滚动
+    :deep(.el-table) {
+      font-size: 12px;
+    }
+
+    // 底部操作按钮堆叠
+    .action-bar {
+      flex-direction: column;
+      gap: 8px;
+
+      .el-button {
+        width: 100%;
+      }
+    }
+
+    // 总分展示放大
+    .total-score-row .total-score-value {
+      font-size: 28px;
+    }
+
+    // 描述列表手机单列
+    :deep(.el-descriptions__body .el-descriptions__table) {
+      display: block;
+      width: 100%;
+
+      tr {
+        display: flex;
+        flex-direction: column;
+      }
+
+      td {
+        width: 100% !important;
+      }
+    }
   }
 }
 </style>

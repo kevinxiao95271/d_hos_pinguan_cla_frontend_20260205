@@ -59,6 +59,9 @@
           <el-link type="info" underline="never" style="color: #67b3e8;" @click="showGuidePdf = true">
             📄 报名系统操作说明
           </el-link>
+          <el-link type="info" underline="never" style="color: #67b3e8;" @click="showQrDialog = true">
+            📱 面谈评审专家请扫码
+          </el-link>
         </div>
       </el-form>
     </div>
@@ -84,6 +87,15 @@
       :src="guidePdfUrl"
       style="width:100%; height:75vh; border:none;"
     />
+  </el-dialog>
+
+  <!-- 移动端扫码入口弹窗 -->
+  <el-dialog v-model="showQrDialog" title="面谈评审专家请扫码登录" width="340px" align-center>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:16px; padding:8px 0;">
+      <qrcode-vue :value="mobileLoginUrl" :size="220" level="H" />
+      <div style="font-size:13px; color:#909399;">扫码后使用专家账号登录即可打分</div>
+      <el-button size="small" @click="openFullscreen">全屏投屏</el-button>
+    </div>
   </el-dialog>
 
   <!-- 诚信须知强制阅读弹窗（支持多份按队列阅读） -->
@@ -127,6 +139,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
+import QrcodeVue from 'qrcode.vue'
 import { loginWithPassword, confirmIntegrityNotice } from '@/api/auth'
 import { ensureCurrentCompetition } from '@/utils/competition'
 import {
@@ -273,6 +286,13 @@ const handleForgotPassword = () => {
   ElMessage.info('密码重置功能开发中，请联系管理员')
 }
 
+// 移动端扫码二维码
+const showQrDialog = ref(false)
+const mobileLoginUrl = `${window.location.origin}${import.meta.env.BASE_URL}login`
+const openFullscreen = () => {
+  window.open(`${import.meta.env.BASE_URL}mobile-qr`, '_blank')
+}
+
 // 报名系统操作说明 PDF
 const showGuidePdf = ref(false)
 const guidePdfUrl = `${import.meta.env.BASE_URL}registration_guide.pdf`
@@ -291,18 +311,21 @@ const downloadGuidePdf = () => {
   align-items: center;
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  
+  padding: 16px;
+  box-sizing: border-box;
+
   .login-box {
     width: 420px;
+    max-width: 100%;
     padding: 40px;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    
+
     .login-header {
       text-align: center;
       margin-bottom: 32px;
-      
+
       h1 {
         font-size: 24px;
         font-weight: 600;
@@ -310,7 +333,7 @@ const downloadGuidePdf = () => {
         margin: 0;
       }
     }
-    
+
     .login-form {
       .login-footer {
         display: flex;
@@ -323,6 +346,25 @@ const downloadGuidePdf = () => {
         align-items: center;
         gap: 6px;
         margin-top: 12px;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .login-container {
+    align-items: flex-start;
+    padding-top: 40px;
+
+    .login-box {
+      padding: 28px 20px;
+
+      .login-header {
+        margin-bottom: 24px;
+
+        h1 {
+          font-size: 20px;
+        }
       }
     }
   }

@@ -381,6 +381,7 @@ function onClose() {
 .preview-pdf {
   height: calc(100vh - 160px);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 
   .pdf-zoom-spacer {
     position: relative;
@@ -402,6 +403,7 @@ function onClose() {
     height: 100%;
     align-items: flex-start;
     padding: 16px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .zoomable-img {
@@ -415,8 +417,8 @@ function onClose() {
 
 .preview-docx {
   height: calc(100vh - 160px);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;          // 改为双向滚动，移动端也能横划
+  -webkit-overflow-scrolling: touch;
   background: #f5f5f5;
   padding: 12px;
 
@@ -443,6 +445,7 @@ function onClose() {
   .zoom-scroll-area {
     flex: 1;
     overflow: auto;
+    -webkit-overflow-scrolling: touch;
     justify-content: flex-start;
     align-items: flex-start;
   }
@@ -461,6 +464,37 @@ function onClose() {
     }
     :deep(tr:nth-child(even)) {
       background: #fafafa;
+    }
+  }
+}
+
+// ── 移动端：弹窗内容区防裁剪 ─────────────────────────────────────
+@media (max-width: 768px) {
+  :deep(.el-dialog__body) {
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .preview-pdf,
+  .preview-image,
+  .preview-docx,
+  .preview-excel {
+    height: calc(100dvh - 120px);  // 动态视口高度，适配手机地址栏
+  }
+
+  .preview-docx {
+    padding: 6px;
+
+    :deep(.docx-render) {
+      padding: 20px 16px;
+    }
+  }
+
+  .zoom-toolbar {
+    padding: 4px 8px;
+
+    .zoom-controls {
+      gap: 6px;
     }
   }
 }

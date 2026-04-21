@@ -50,9 +50,26 @@
       </div>
     </transition>
 
-    <!-- 操作栏 -->
-    <div style="margin-bottom: 12px; text-align: right;">
-      <el-button type="primary" plain @click="loadData">刷新</el-button>
+    <!-- 阶段 Tab + 刷新 -->
+    <div class="stage-tab-bar">
+      <el-tabs v-model="activeStageTab" class="stage-tabs">
+        <el-tab-pane v-if="!isMobile" name="BOOK">
+          <template #label>
+            <span>书面评审 <el-badge :value="stageTabCount('BOOK')" :hidden="stageTabCount('BOOK') === 0" type="warning" /></span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane name="INTERVIEW">
+          <template #label>
+            <span>面谈评审 <el-badge :value="stageTabCount('INTERVIEW')" :hidden="stageTabCount('INTERVIEW') === 0" type="danger" /></span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane v-if="hasFinalTasks && !isMobile" name="FINAL">
+          <template #label>
+            <span>决赛评审 <el-badge :value="stageTabCount('FINAL')" :hidden="stageTabCount('FINAL') === 0" type="primary" /></span>
+          </template>
+        </el-tab-pane>
+      </el-tabs>
+      <el-button type="primary" plain size="small" @click="loadData" class="refresh-btn">刷新</el-button>
     </div>
 
     <!-- 待评分区域 -->
@@ -60,11 +77,11 @@
       <template #header>
         <div class="section-header pending-header">
           <span>待评分任务</span>
-          <el-tag type="warning" round>{{ pendingTasks.length }}</el-tag>
+          <el-tag type="warning" round>{{ pendingTasksFiltered.length }}</el-tag>
         </div>
       </template>
-      <el-empty v-if="pendingTasks.length === 0 && !loading" description="暂无待评分任务" :image-size="80" />
-      <div v-for="task in pendingTasks" :key="task.id" class="task-row" :class="{ 'task-row-draft': task.status === 'DRAFT' }">
+      <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分任务" :image-size="80" />
+      <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row" :class="{ 'task-row-draft': task.status === 'DRAFT' }">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">
           <span v-if="task.total != null" class="task-score pending-score">{{ task.total }} 分</span>
@@ -89,11 +106,11 @@
       <template #header>
         <div class="section-header scored-header">
           <span>已提交任务</span>
-          <el-tag type="success" round>{{ scoredTasks.length }}</el-tag>
+          <el-tag type="success" round>{{ scoredTasksFiltered.length }}</el-tag>
         </div>
       </template>
-      <el-empty v-if="scoredTasks.length === 0 && !loading" description="暂无已提交任务" :image-size="80" />
-      <div v-for="task in scoredTasks" :key="task.id" class="task-row">
+      <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已提交任务" :image-size="80" />
+      <div v-for="task in scoredTasksFiltered" :key="task.id" class="task-row">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">
           <span v-if="task.total != null" class="task-score scored-score">{{ task.total }} 分</span>
@@ -109,14 +126,14 @@
     </el-card>
 
     <!-- 已规避区域（有规避任务时才显示） -->
-    <el-card v-if="recusedTasks.length > 0" shadow="never" class="section-card">
+    <el-card v-if="recusedTasksFiltered.length > 0" shadow="never" class="section-card">
       <template #header>
         <div class="section-header recused-header">
           <span>已规避任务</span>
-          <el-tag type="info" round>{{ recusedTasks.length }}</el-tag>
+          <el-tag type="info" round>{{ recusedTasksFiltered.length }}</el-tag>
         </div>
       </template>
-      <div v-for="task in recusedTasks" :key="task.id" class="task-row task-row-muted">
+      <div v-for="task in recusedTasksFiltered" :key="task.id" class="task-row task-row-muted">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">
           <el-tag type="info" size="small">已规避</el-tag>
@@ -186,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore } from '@/api/review'
@@ -222,37 +239,52 @@ const recuseRules = {
   ]
 }
 
-const filteredTasks = computed(() => tasks.value)
+// ── 阶段 Tab ─────────────────────────────────────────────────────
+const activeStageTab = ref('BOOK')
 
+// 是否存在决赛任务（动态显示 FINAL tab）
+const hasFinalTasks = computed(() => tasks.value.some(t => t.stage === 'FINAL'))
 
-// 排序由后端保证（DRAFT total倒序 → SCORED total倒序 → PENDING/CONFIRMED/RETURNED → RECUSED）
-// 前端仅按状态分区，保持 API 返回顺序
+// 当前 tab 对应的待处理任务数（用于 badge 提示）
+const stageTabCount = (stage) =>
+  tasks.value.filter(t => t.stage === stage && ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status)).length
+
+// 按当前 Tab 过滤全量任务
+const filteredTasks = computed(() => tasks.value.filter(t => t.stage === activeStageTab.value))
+
+// ── 各状态分区（均基于 filteredTasks，随 Tab 切换）─────────────────
 
 // 待评分：DRAFT + PENDING + CONFIRMED + RETURNED
 const pendingTasks = computed(() =>
+  tasks.value.filter(t => ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status))
+)
+const pendingTasksFiltered = computed(() =>
   filteredTasks.value.filter(t => ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status))
 )
 
 // 已提交：SCORED / COMPLETED
 const scoredTasks = computed(() =>
+  tasks.value.filter(t => ['SCORED', 'COMPLETED'].includes(t.status))
+)
+const scoredTasksFiltered = computed(() =>
   filteredTasks.value.filter(t => ['SCORED', 'COMPLETED'].includes(t.status))
 )
 
 // 已规避
 const recusedTasks = computed(() =>
+  tasks.value.filter(t => t.status === 'RECUSED')
+)
+const recusedTasksFiltered = computed(() =>
   filteredTasks.value.filter(t => t.status === 'RECUSED')
 )
 
-// 统计（优先用接口数据，回退用本地计算）
-const computedStats = computed(() => {
-  const s = taskStats.value
-  return {
-    total: s.total ?? tasks.value.length,
-    pendingSubmit: s.pendingSubmit ?? pendingTasks.value.length,
-    scored: s.scored ?? scoredTasks.value.length,
-    recused: s.recused ?? recusedTasks.value.length
-  }
-})
+// 统计卡片跟着当前 Tab 联动，始终反映当前阶段的数字
+const computedStats = computed(() => ({
+  total: filteredTasks.value.length,
+  pendingSubmit: pendingTasksFiltered.value.length,
+  scored: scoredTasksFiltered.value.length,
+  recused: recusedTasksFiltered.value.length
+}))
 
 // 草稿任务（横幅提醒基于全量任务，不受 stage 筛选影响）
 const draftTasks = computed(() => tasks.value.filter(t => t.status === 'DRAFT'))
@@ -492,8 +524,22 @@ const handleSubmitScore = async (task) => {
   }
 }
 
+// ── 移动端检测 ─────────────────────────────────────────────────────
+const isMobile = ref(window.innerWidth <= 768)
+const onResize = () => { isMobile.value = window.innerWidth <= 768 }
+
+// 移动端自动锁定到面谈 Tab
+watch(isMobile, (mobile) => {
+  if (mobile) activeStageTab.value = 'INTERVIEW'
+}, { immediate: true })
+
 onMounted(() => {
+  window.addEventListener('resize', onResize)
   loadData()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', onResize)
 })
 </script>
 
@@ -570,6 +616,21 @@ onMounted(() => {
   border-top: 3px solid #909399;
   .stat-value { color: #909399; }
   &::after { background: linear-gradient(90deg, #c8cacc, #909399); }
+}
+
+/* 阶段 Tab 栏 */
+.stage-tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  .stage-tabs {
+    flex: 1;
+    :deep(.el-tabs__header) { margin-bottom: 0; }
+    :deep(.el-tabs__item) { font-size: 15px; font-weight: 500; }
+    :deep(.el-badge__content) { transform: translateY(-4px) translateX(4px); }
+  }
+  .refresh-btn { flex-shrink: 0; margin-left: 12px; }
 }
 
 /* 分区卡片 */
@@ -730,6 +791,58 @@ onMounted(() => {
     color: #606266;
     line-height: 1.8;
     margin: 0;
+  }
+}
+
+/* ── 移动端适配 ── */
+@media (max-width: 768px) {
+  .stats-row {
+    .el-col {
+      padding: 0 4px !important;
+    }
+    .stat-card {
+      padding: 10px 6px;
+      .stat-value { font-size: 22px; }
+      .stat-label { font-size: 11px; }
+    }
+  }
+
+  .draft-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+
+    .el-button { width: 100%; }
+  }
+
+  .task-row {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 0;
+  }
+
+  .task-name {
+    max-width: 100%;
+    width: 100%;
+    white-space: normal;
+    word-break: break-all;
+    font-size: 13px;
+  }
+
+  .task-inline-meta {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .meta-text {
+    max-width: 160px;
+  }
+
+  .task-actions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-left: 0;
   }
 }
 </style>

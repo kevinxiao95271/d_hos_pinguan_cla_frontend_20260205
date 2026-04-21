@@ -2,13 +2,14 @@
   <el-container class="main-layout">
     <el-header class="header">
       <div class="header-left">
+        <el-icon v-if="isMobile" class="hamburger" @click="drawerOpen = true"><Expand /></el-icon>
         <h1 class="title">浙江省医院品管大赛平台</h1>
       </div>
       <div class="header-right">
         <el-dropdown @command="handleCommand">
           <span class="user-info">
             <el-icon><User /></el-icon>
-            <span>{{ userStore.userName }}</span>
+            <span class="user-name">{{ userStore.userName }}</span>
             <span class="role-tag">{{ roleText }}</span>
           </span>
           <template #dropdown>
@@ -22,9 +23,47 @@
         </el-dropdown>
       </div>
     </el-header>
-    
+
+    <!-- 移动端抽屉菜单 -->
+    <el-drawer v-model="drawerOpen" direction="ltr" size="240px" :with-header="false">
+      <el-menu
+        :default-active="activeMenu"
+        :router="true"
+        @select="drawerOpen = false"
+        class="drawer-menu"
+      >
+        <template v-for="item in menuItems" :key="item.path">
+          <el-sub-menu v-if="item.children" :index="item.path" class="level-1-submenu">
+            <template #title>
+              <el-icon><component :is="item.icon" /></el-icon>
+              <span>{{ item.title }}</span>
+            </template>
+            <template v-for="child in item.children" :key="child.path">
+              <el-sub-menu v-if="child.children" :index="child.path" class="level-2-submenu">
+                <template #title>
+                  <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
+                  <span>{{ child.title }}</span>
+                </template>
+                <el-menu-item v-for="grandchild in child.children" :key="grandchild.path" :index="grandchild.path" class="level-3-item">
+                  {{ grandchild.title }}
+                </el-menu-item>
+              </el-sub-menu>
+              <el-menu-item v-else :index="child.path" class="level-2-item">
+                <el-icon v-if="child.icon"><component :is="child.icon" /></el-icon>
+                {{ child.title }}
+              </el-menu-item>
+            </template>
+          </el-sub-menu>
+          <el-menu-item v-else :index="item.path" class="level-1-item">
+            <el-icon><component :is="item.icon" /></el-icon>
+            <span>{{ item.title }}</span>
+          </el-menu-item>
+        </template>
+      </el-menu>
+    </el-drawer>
+
     <el-container class="content-container">
-      <el-aside :width="sidebarWidth" class="sidebar">
+      <el-aside v-if="!isMobile" :width="sidebarWidth" class="sidebar">
         <el-menu
           :default-active="activeMenu"
           :router="true"
@@ -70,22 +109,23 @@
           </template>
         </el-menu>
       </el-aside>
-      
+
       <el-main class="main-content">
         <router-view />
       </el-main>
     </el-container>
-    
+
     <!-- Token 调试器 (仅开发环境显示) -->
     <TokenDebugger />
   </el-container>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { Expand } from '@element-plus/icons-vue'
 import TokenDebugger from '@/components/TokenDebugger.vue'
 
 const router = useRouter()
@@ -94,6 +134,13 @@ const userStore = useUserStore()
 
 const isCollapse = ref(false)
 const sidebarWidth = computed(() => isCollapse.value ? '64px' : '220px')
+
+// 移动端检测
+const isMobile = ref(window.innerWidth <= 768)
+const drawerOpen = ref(false)
+const onResize = () => { isMobile.value = window.innerWidth <= 768 }
+onMounted(() => window.addEventListener('resize', onResize))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const roleText = computed(() => {
   const roleMap = {
@@ -252,21 +299,41 @@ const handleCommand = (command) => {
     padding: 0 20px;
     
     .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .hamburger {
+        font-size: 22px;
+        color: #1890ff;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+
       .title {
         font-size: 20px;
         font-weight: 600;
         color: #1890ff;
         margin: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     }
-    
+
     .header-right {
+      flex-shrink: 0;
+
       .user-info {
         display: flex;
         align-items: center;
         gap: 8px;
         cursor: pointer;
-        
+
+        .user-name {
+          white-space: nowrap;
+        }
+
         .role-tag {
           padding: 2px 8px;
           background: #e6f7ff;
@@ -274,8 +341,28 @@ const handleCommand = (command) => {
           border-radius: 4px;
           font-size: 12px;
           color: #1890ff;
+          white-space: nowrap;
         }
       }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .header {
+      padding: 0 12px;
+
+      .header-left .title {
+        font-size: 15px;
+      }
+
+      .header-right .user-info {
+        .user-name { display: none; }
+        .role-tag  { display: none; }
+      }
+    }
+
+    .main-content {
+      padding: 12px 8px;
     }
   }
   
@@ -434,6 +521,32 @@ const handleCommand = (command) => {
       background: #f0f2f5;
       overflow-y: auto;
     }
+  }
+}
+
+// 抽屉菜单继承侧边栏深色风格
+:global(.drawer-menu) {
+  height: 100%;
+  background: linear-gradient(180deg, #001d3d 0%, #000e1f 100%) !important;
+  border-right: none;
+
+  .el-menu-item,
+  .el-sub-menu__title {
+    color: #e8f4ff;
+
+    &:hover {
+      background: rgba(24, 144, 255, 0.15) !important;
+      color: #fff !important;
+    }
+
+    &.is-active {
+      background: rgba(24, 144, 255, 0.25) !important;
+      color: #fff !important;
+    }
+  }
+
+  .el-menu--inline {
+    background: rgba(0, 0, 0, 0.2) !important;
   }
 }
 </style>

@@ -9,6 +9,12 @@ const routes = [
     meta: { title: '登录 - 浙江省品管大赛' }
   },
   {
+    path: '/mobile-qr',
+    name: 'MobileQr',
+    component: () => import('@/views/MobileQr.vue'),
+    meta: { title: '面谈评审专家扫码入口', public: true }
+  },
+  {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/Register.vue'),
