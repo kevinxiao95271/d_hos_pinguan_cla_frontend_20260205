@@ -86,10 +86,10 @@
     />
   </el-dialog>
 
-  <!-- 诚信须知强制阅读弹窗 -->
+  <!-- 诚信须知强制阅读弹窗（支持多份按队列阅读） -->
   <el-dialog
     v-model="showNoticeDialog"
-    title="浙江省医院品管大赛专家须知"
+    :title="currentNoticeTitle"
     width="82%"
     top="3vh"
     :close-on-click-modal="false"
@@ -100,7 +100,9 @@
       请认真阅读以下专家须知，阅读完毕后方可继续使用系统。
     </div>
     <iframe
-      :src="noticePdfUrl"
+      v-if="currentNoticePdfUrl"
+      :key="currentNoticeKey"
+      :src="currentNoticePdfUrl"
       style="width:100%; height:72vh; border:none;"
     />
     <template #footer>
@@ -120,13 +122,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import { loginWithPassword, confirmIntegrityNotice } from '@/api/auth'
 import { ensureCurrentCompetition } from '@/utils/competition'
+import {
+  getIntegrityNoticeMeta,
+  resolvePendingIntegrityNoticeKeys
+} from '@/config/integrityNotices'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -158,12 +164,25 @@ const rules = {
   ]
 }
 
-// 诚信须知
+// 诚信须知（pendingIntegrityQueue 顺序即阅读顺序）
 const showNoticeDialog = ref(false)
+const pendingIntegrityQueue = ref([])
 const noticeCountdown = ref(0)
 const confirmingNotice = ref(false)
-const noticePdfUrl = `${import.meta.env.BASE_URL}integrity_notice.pdf`
+const baseUrl = import.meta.env.BASE_URL
 let noticeTimer = null
+
+const currentNoticeKey = computed(() => pendingIntegrityQueue.value[0] || '')
+const currentNoticeMeta = computed(() =>
+  currentNoticeKey.value ? getIntegrityNoticeMeta(currentNoticeKey.value) : null
+)
+const currentNoticeTitle = computed(
+  () => currentNoticeMeta.value?.title || '浙江省医院品管大赛专家须知'
+)
+const currentNoticePdfUrl = computed(() => {
+  const file = currentNoticeMeta.value?.pdfFile
+  return file ? `${baseUrl}${file}` : ''
+})
 
 const startNoticeCountdown = () => {
   noticeCountdown.value = 5
@@ -189,13 +208,20 @@ const navigateAfterLogin = async (role) => {
 }
 
 const confirmNotice = async () => {
+  const key = currentNoticeKey.value
+  if (!key) return
   confirmingNotice.value = true
   try {
-    await confirmIntegrityNotice()
+    await confirmIntegrityNotice({ noticeKey: key })
   } catch {
     // 后端未实现时忽略错误，不阻塞流程
   } finally {
     confirmingNotice.value = false
+  }
+  pendingIntegrityQueue.value.shift()
+  if (pendingIntegrityQueue.value.length > 0) {
+    startNoticeCountdown()
+    return
   }
   showNoticeDialog.value = false
   await navigateAfterLogin(userStore.role)
@@ -212,8 +238,10 @@ const handleLogin = async () => {
       userStore.setUserInfo(res.data)
       ElMessage.success('登录成功')
 
-      // 仅评审专家且未确认时弹出强制阅读
-      if (userStore.role === 'REVIEWER' && res.data.noticeConfirmed === false) {
+      // 评审专家：新字段 pendingIntegrityNoticeKeys 优先；否则回退旧 noticeConfirmed
+      const pendingKeys = resolvePendingIntegrityNoticeKeys(res.data)
+      if (userStore.role === 'REVIEWER' && pendingKeys.length > 0) {
+        pendingIntegrityQueue.value = [...pendingKeys]
         showNoticeDialog.value = true
         startNoticeCountdown()
       } else {

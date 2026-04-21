@@ -61,11 +61,13 @@ export function getCurrentUser() {
 
 /**
  * 确认已阅读诚信须知
+ * @param {{ noticeKey?: string }} [data] 多类型须知时必传，如 BOOK / INTERVIEW；旧后端可省略
  */
-export function confirmIntegrityNotice() {
+export function confirmIntegrityNotice(data) {
   return request({
     url: '/auth/notice/confirm',
-    method: 'post'
+    method: 'post',
+    data: data && Object.keys(data).length ? data : undefined
   })
 }
 
