@@ -299,15 +299,11 @@
             </template>
           </div>
 
-          <el-form-item v-if="!isViewMode">
-            <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">
-              保存
-            </el-button>
-            <span style="display:inline-block; min-width:150px; margin-left:10px; vertical-align:middle;">
+          <el-form-item v-if="!isViewMode" class="action-btn-row">
+            <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">保存</el-button>
+            <span class="draft-saved-holder">
               <transition name="el-fade-in">
-                <el-tag v-if="draftSavedAt" type="success">
-                  草稿已保存 {{ draftSavedAt }}
-                </el-tag>
+                <el-tag v-if="draftSavedAt" type="success">草稿已保存 {{ draftSavedAt }}</el-tag>
               </transition>
             </span>
             <el-button
@@ -323,7 +319,7 @@
         </el-form>
 
         <!-- 返回按钮移到表单外，避免被表单的 disabled 影响 -->
-        <div style="margin-top: 20px; text-align: left; padding-left: 200px;">
+        <div class="back-btn-wrap">
           <el-button @click="goBack">返回任务列表</el-button>
         </div>
         </div>
@@ -1168,6 +1164,19 @@ watch(() => route.query.registrationId, (newId, oldId) => {
   }
 }
 
+.draft-saved-holder {
+  display: inline-block;
+  min-width: 150px;
+  margin-left: 10px;
+  vertical-align: middle;
+}
+
+.back-btn-wrap {
+  margin-top: 20px;
+  text-align: left;
+  padding-left: 200px;
+}
+
 /* ── 移动端评分页适配 ── */
 @media (max-width: 768px) {
   .review-page {
@@ -1218,6 +1227,34 @@ watch(() => route.query.registrationId, (newId, oldId) => {
       .el-button {
         width: 100%;
       }
+    }
+
+    // 移动端：保存靠左，申请规避+返回靠右
+    .action-btn-row :deep(.el-form-item__content) {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: nowrap;
+
+      // 保存按钮留在左边
+      > .el-button:first-child {
+        flex-shrink: 0;
+      }
+
+      // 草稿已保存提示隐藏（空间不够）
+      .draft-saved-holder {
+        display: none;
+      }
+
+      // 申请规避靠右
+      > .el-button:last-child {
+        margin-left: auto !important;
+      }
+    }
+
+    .back-btn-wrap {
+      padding-left: 0;
+      text-align: right;
     }
 
     // 总分展示放大
