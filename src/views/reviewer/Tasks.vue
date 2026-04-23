@@ -45,7 +45,7 @@
           :loading="submittingAll"
           @click="submitAllDrafts"
         >
-          一键提交全部评审项目
+          一键提交本阶段评审项目
         </el-button>
       </div>
     </transition>
@@ -286,15 +286,15 @@ const computedStats = computed(() => ({
   recused: recusedTasksFiltered.value.length
 }))
 
-// 草稿任务（横幅提醒基于全量任务，不受 stage 筛选影响）
-const draftTasks = computed(() => tasks.value.filter(t => t.status === 'DRAFT'))
+// 草稿任务（跟当前 Tab 联动，随阶段切换）
+const draftTasks = computed(() => filteredTasks.value.filter(t => t.status === 'DRAFT'))
 
 const submitAllDrafts = async () => {
   const drafts = draftTasks.value
   if (!drafts.length) return
 
-  // 检查是否还有未评分任务（PENDING / CONFIRMED / RETURNED 没有草稿的）
-  const unscoredTasks = pendingTasks.value.filter(t => !['DRAFT'].includes(t.status))
+  // 检查当前 Tab 下是否还有未评分任务（PENDING / CONFIRMED / RETURNED 没有草稿的）
+  const unscoredTasks = pendingTasksFiltered.value.filter(t => !['DRAFT'].includes(t.status))
   if (unscoredTasks.length > 0) {
     await ElMessageBox.alert(
       `还有 ${unscoredTasks.length} 个项目未评审，请全部完成后再提交。`,
@@ -306,8 +306,8 @@ const submitAllDrafts = async () => {
 
   try {
     await ElMessageBox.confirm(
-      `共 ${drafts.length} 项草稿评分将被正式提交，提交后不可修改。确认继续？`,
-      '一键提交全部评审项目',
+      `当前阶段共 ${drafts.length} 项草稿评分将被正式提交，提交后不可修改。确认继续？`,
+      '一键提交本阶段评审项目',
       { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
     )
     submittingAll.value = true

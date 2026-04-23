@@ -15,7 +15,7 @@ export const INTEGRITY_NOTICES = {
   },
   [INTEGRITY_NOTICE_KEYS.INTERVIEW]: {
     title: '浙江省医院品管大赛面谈环节专家须知',
-    pdfFile: 'integrity_notice_interview.pdf'
+    pdfFile: 'interview_notice.pdf'
   }
 }
 
