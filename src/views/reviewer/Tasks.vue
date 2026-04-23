@@ -35,8 +35,7 @@
         <div class="draft-banner-left">
           <span class="draft-banner-icon">⚠️</span>
           <div>
-            <div class="draft-banner-title">您有 {{ draftTasks.length }} 项评分草稿尚未提交</div>
-            <div class="draft-banner-sub">评分已自动保存，请确认无误后完成提交，避免遗漏</div>
+            <div class="draft-banner-title">各项目评分已自动保存，请确认无误后完成提交，避免遗漏</div>
           </div>
         </div>
         <el-button
@@ -76,11 +75,11 @@
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
         <div class="section-header pending-header">
-          <span>待评分任务</span>
+          <span>待评分项目</span>
           <el-tag type="warning" round>{{ pendingTasksFiltered.length }}</el-tag>
         </div>
       </template>
-      <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分任务" :image-size="80" />
+      <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分项目" :image-size="80" />
       <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row" :class="{ 'task-row-draft': task.status === 'DRAFT' }">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">
@@ -105,11 +104,11 @@
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
         <div class="section-header scored-header">
-          <span>已提交任务</span>
+          <span>已评分项目</span>
           <el-tag type="success" round>{{ scoredTasksFiltered.length }}</el-tag>
         </div>
       </template>
-      <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已提交任务" :image-size="80" />
+      <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已评分项目" :image-size="80" />
       <div v-for="task in scoredTasksFiltered" :key="task.id" class="task-row">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">

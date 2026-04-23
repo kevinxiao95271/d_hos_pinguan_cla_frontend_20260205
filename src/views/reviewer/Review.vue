@@ -38,76 +38,6 @@
             </el-collapse-item>
           </el-collapse>
           
-          <!-- 项目详情折叠面板（分三块，默认全部折叠） -->
-          <el-collapse v-if="projectDetail" v-model="activeCollapse" style="margin-bottom: 20px;">
-
-            <!-- 活动说明 -->
-            <el-collapse-item v-if="projectDetail.activityInfo" title="活动说明" name="activity">
-              <el-descriptions :column="2" border size="small">
-                <el-descriptions-item label="活动主题" :span="2">{{ projectDetail.activityInfo.theme }}</el-descriptions-item>
-                <el-descriptions-item label="关键词" :span="2">{{ projectDetail.activityInfo.keywords }}</el-descriptions-item>
-                <el-descriptions-item label="主题类型">{{ projectDetail.activityInfo.subjectTypeLabel || projectDetail.activityInfo.subjectTypeCode || '未填写' }}</el-descriptions-item>
-                <el-descriptions-item label="运用手法">{{ projectDetail.activityInfo.methodLabel || projectDetail.activityInfo.methodCode || '未填写' }}</el-descriptions-item>
-                <el-descriptions-item label="改善就医环境">{{ getExperienceImproveDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
-                <el-descriptions-item label="医疗质量相关主题">{{ getQualityTopicDisplay(projectDetail.activityInfo) }}</el-descriptions-item>
-                <el-descriptions-item label="平均工作年限">{{ projectDetail.activityInfo.avgWorkYears || '-' }} 年</el-descriptions-item>
-                <el-descriptions-item label="平均年龄">{{ projectDetail.activityInfo.avgAge || '-' }} 岁</el-descriptions-item>
-                <el-descriptions-item label="是否跨部门">
-                  <el-tag :type="projectDetail.activityInfo.crossDepartment ? 'success' : 'info'" size="small">
-                    {{ projectDetail.activityInfo.crossDepartment ? '是' : '否' }}
-                  </el-tag>
-                </el-descriptions-item>
-                <el-descriptions-item label="数字化/AI相关">
-                  <el-tag :type="projectDetail.activityInfo.relatedToDigitalAi ? 'success' : 'info'" size="small">
-                    {{ projectDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}
-                  </el-tag>
-                </el-descriptions-item>
-              </el-descriptions>
-              <!-- 成员信息 -->
-              <div v-if="projectDetail.members && projectDetail.members.length > 0" style="margin-top: 16px;">
-                <div style="font-weight:600; margin-bottom:8px; color:#606266">项目成员</div>
-                <el-table :data="projectDetail.members" border size="small">
-                  <el-table-column prop="name" label="姓名" width="120" />
-                  <el-table-column prop="title" label="职称" width="150" />
-                  <el-table-column prop="department" label="科室" />
-                  <el-table-column prop="role" label="角色" width="100">
-                    <template #default="{ row }">{{ row.role === 'PARTICIPANT' ? '参与人员' : '辅导员' }}</template>
-                  </el-table-column>
-                </el-table>
-              </div>
-            </el-collapse-item>
-
-            <!-- 项目摘要 -->
-            <el-collapse-item v-if="projectDetail.summary" title="项目摘要" name="summary">
-              <el-descriptions :column="1" border size="small">
-                <el-descriptions-item v-if="projectDetail.summary.theme" label="主题">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.theme }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item label="计划">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.plan || '-' }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item label="问题结构与对策措施探讨">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.problem || '-' }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item label="对策行动过程">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.action || '-' }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item label="成果表现">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.success || '-' }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item label="讨论总结">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.discussion || '-' }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item v-if="projectDetail.summary.operation" label="运作">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.operation }}</div>
-                </el-descriptions-item>
-                <el-descriptions-item v-if="projectDetail.summary.presentation" label="展示">
-                  <div style="white-space: pre-wrap;">{{ projectDetail.summary.presentation }}</div>
-                </el-descriptions-item>
-              </el-descriptions>
-            </el-collapse-item>
-
-          </el-collapse>
 
           <!-- 材料文件（书审阶段显示，面谈阶段隐藏） -->
           <div v-if="taskInfo.stage !== 'INTERVIEW'" class="materials-section">
@@ -333,6 +263,7 @@
               <span class="total-score-unit">/ 100 分</span>
             </div>
 
+            <template v-if="!isInterviewStage">
             <div class="bottom-item">
               <div class="bottom-label">亮点</div>
               <el-form-item prop="highlights" label-width="0" style="margin-bottom:0">
@@ -365,15 +296,20 @@
                 还需补充 {{ 60 - form.shortcomings.length }} 字
               </div>
             </div>
+            </template>
           </div>
 
           <el-form-item v-if="!isViewMode">
             <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">
-              保存草稿
+              保存
             </el-button>
-            <el-tag v-if="draftSavedAt" type="success" style="margin-left: 10px">
-              草稿已保存 {{ draftSavedAt }}
-            </el-tag>
+            <span style="display:inline-block; min-width:150px; margin-left:10px; vertical-align:middle;">
+              <transition name="el-fade-in">
+                <el-tag v-if="draftSavedAt" type="success">
+                  草稿已保存 {{ draftSavedAt }}
+                </el-tag>
+              </transition>
+            </span>
             <el-button
               v-if="canRecuse"
               type="warning"
@@ -552,6 +488,7 @@ const rules = {
   shortcomings: [
     {
       validator: (rule, value, callback) => {
+        if (isInterviewStage.value) { callback(); return }
         if (!value || value.trim().length === 0) {
           callback(new Error('不足之处为必填项，请至少例举三条'))
         } else if (value.length < 60) {
@@ -647,6 +584,7 @@ const loadData = async () => {
           form.shortcomings = data.weakness || ''
           if (!data.submittedAt) {
             draftSavedAt.value = data.updatedAt ? dayjs(data.updatedAt).format('HH:mm:ss') : '已保存'
+            setTimeout(() => { draftSavedAt.value = '' }, 2000)
           }
         }
       } catch (error) {
@@ -752,6 +690,7 @@ const saveDraft = async () => {
       : await saveBookReviewDraft(data)
     if (res && res.success !== false) {
       draftSavedAt.value = dayjs().format('HH:mm:ss')
+      setTimeout(() => { draftSavedAt.value = '' }, 2000)
     }
   } catch (e) {
     // 草稿接口未实现时静默失败，不打扰用户

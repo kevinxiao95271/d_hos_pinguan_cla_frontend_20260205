@@ -22,6 +22,7 @@
         <el-form-item>
           <el-button type="primary" @click="loadData">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
+          <el-button v-if="userStore.isOps" type="success" plain :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
         </el-form-item>
       </el-form>
       
@@ -169,7 +170,11 @@ import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import { flattenScoreListRows, filterScoreRows } from '@/utils/scoreListFlatten'
+import { useUserStore } from '@/stores/user'
+import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
+
+const userStore = useUserStore()
 
 const { stagesList, currentStageKey } = useCompetitionStages()
 
@@ -293,6 +298,30 @@ const confirmReturn = async () => {
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
+}
+
+const exportExcel = () => {
+  const rows = scores.value.map(r => ({
+    '项目编号': r.registrationId ?? '',
+    '项目名称': r.projectName ?? '',
+    '医疗机构': r.institutionName ?? '',
+    '机构等级': r.institutionLevel ?? '',
+    '分组': r.groupCode ?? '',
+    '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(1)) : '',
+    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
+    '评委姓名': r.reviewerName ?? '',
+    '评委机构': r.reviewerInstitutionName ?? '',
+    '主题': r.topic != null ? Number(Number(r.topic).toFixed(1)) : '',
+    '过程': r.process != null ? Number(Number(r.process).toFixed(1)) : '',
+    '运作': r.interviewOperation != null ? Number(Number(r.interviewOperation).toFixed(1)) : '',
+    '成效': r.result != null ? Number(Number(r.result).toFixed(1)) : '',
+    '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
+    '提交时间': formatDate(r.submittedAt)
+  }))
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '面谈得分')
+  XLSX.writeFile(wb, `面谈得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
 }
 
 function formatScore1(v) {

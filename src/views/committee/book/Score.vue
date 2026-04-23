@@ -30,6 +30,7 @@
         <el-form-item>
           <el-button type="primary" @click="loadData">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
+          <el-button v-if="userStore.isOps" type="success" plain :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
         </el-form-item>
       </el-form>
       
@@ -195,7 +196,11 @@ import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import { flattenScoreListRows, filterScoreRows } from '@/utils/scoreListFlatten'
+import { useUserStore } from '@/stores/user'
+import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
+
+const userStore = useUserStore()
 
 const { stagesList, currentStageKey } = useCompetitionStages()
 
@@ -340,6 +345,34 @@ function formatScore1(v) {
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
+}
+
+const exportExcel = () => {
+  const rows = scores.value.map(r => ({
+    '项目编号': r.registrationId ?? '',
+    '项目名称': r.projectName ?? '',
+    '医疗机构': r.institutionName ?? '',
+    '机构等级': r.institutionLevel ?? '',
+    '组别': getGroupTypeText(r.groupType),
+    '分组': r.groupCode ?? '',
+    '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(1)) : '',
+    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
+    '评委姓名': r.reviewerName ?? '',
+    '评委机构': r.reviewerInstitutionName ?? '',
+    '计划': r.plan != null ? Number(Number(r.plan).toFixed(1)) : '',
+    '问题': r.problem != null ? Number(Number(r.problem).toFixed(1)) : '',
+    '行动': r.action != null ? Number(Number(r.action).toFixed(1)) : '',
+    '成效': r.success != null ? Number(Number(r.success).toFixed(1)) : '',
+    '回顾': r.review != null ? Number(Number(r.review).toFixed(1)) : '',
+    '运作': r.operation != null ? Number(Number(r.operation).toFixed(1)) : '',
+    '展示': r.presentation != null ? Number(Number(r.presentation).toFixed(1)) : '',
+    '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
+    '提交时间': formatDate(r.submittedAt)
+  }))
+  const ws = XLSX.utils.json_to_sheet(rows)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '书审得分')
+  XLSX.writeFile(wb, `书审得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
 }
 
 onMounted(() => {
