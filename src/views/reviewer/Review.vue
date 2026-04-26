@@ -303,9 +303,17 @@
             <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">保存</el-button>
             <span class="draft-saved-holder">
               <transition name="el-fade-in">
-                <el-tag v-if="draftSavedAt" type="success">草稿已保存 {{ draftSavedAt }}</el-tag>
+                <el-tag v-if="draftSavedAt" type="success">{{ isMobile ? '已保存' : `草稿已保存 ${draftSavedAt}` }}</el-tag>
               </transition>
             </span>
+            <el-button
+              type="primary"
+              :loading="submitting"
+              style="margin-left: 10px"
+              @click="submitScore"
+            >
+              提交评分
+            </el-button>
             <el-button
               v-if="canRecuse"
               type="warning"
@@ -372,9 +380,9 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document } from '@element-plus/icons-vue'
-import { getReviewScore, getInterviewScore, saveBookReviewDraft, saveInterviewDraft } from '@/api/review'
+import { getReviewScore, getInterviewScore, saveBookReviewDraft, saveInterviewDraft, submitInterviewScore, submitReviewScore } from '@/api/review'
 import { recuseReviewTask } from '@/api/review'
 import { getRecuseReasons } from '@/api/dictionary'
 import { getRegistrationDetail } from '@/api/registration'
@@ -693,6 +701,34 @@ const saveDraft = async () => {
     console.warn('草稿保存失败（后端未实现）:', e?.response?.status)
   } finally {
     draftSaving.value = false
+  }
+}
+
+// 单项提交
+const submitting = ref(false)
+
+const submitScore = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确认正式提交评分？提交后不可修改。`,
+      '提交评分',
+      { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
+    )
+    submitting.value = true
+    const data = buildSubmitData()
+    const res = isInterviewStage.value
+      ? await submitInterviewScore(data)
+      : await submitReviewScore(data)
+    if (res.success) {
+      ElMessage.success('评分已提交')
+      router.push('/reviewer/dashboard')
+    } else {
+      ElMessage.error(res.message || '提交失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || '提交失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -1241,9 +1277,10 @@ watch(() => route.query.registrationId, (newId, oldId) => {
         flex-shrink: 0;
       }
 
-      // 草稿已保存提示隐藏（空间不够）
+      // 移动端草稿提示显示为简短"已保存"
       .draft-saved-holder {
-        display: none;
+        min-width: unset;
+        margin-left: 6px;
       }
 
       // 申请规避靠右

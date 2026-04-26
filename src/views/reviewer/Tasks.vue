@@ -1,7 +1,7 @@
 <template>
   <div class="tasks-page">
 
-    <!-- 统计卡片：总任务 → 已评审 → 待评审 → 已规避 -->
+    <!-- 统计卡片：总任务 → 待评分 → 已评分 → 已提交 -->
     <el-row :gutter="12" class="stats-row">
       <el-col :span="6">
         <div class="stat-card stat-total">
@@ -10,28 +10,28 @@
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="stat-card stat-scored">
-          <span class="stat-value">{{ computedStats.scored }}</span>
-          <span class="stat-label">已评审</span>
-        </div>
-      </el-col>
-      <el-col :span="6">
         <div class="stat-card stat-pending">
           <span class="stat-value">{{ computedStats.pendingSubmit }}</span>
-          <span class="stat-label">待评审</span>
+          <span class="stat-label">待评分</span>
         </div>
       </el-col>
       <el-col :span="6">
-        <div class="stat-card stat-recused">
-          <span class="stat-value">{{ computedStats.recused }}</span>
-          <span class="stat-label">已规避</span>
+        <div class="stat-card stat-draft">
+          <span class="stat-value">{{ computedStats.drafted }}</span>
+          <span class="stat-label">已评分</span>
+        </div>
+      </el-col>
+      <el-col :span="6">
+        <div class="stat-card stat-scored">
+          <span class="stat-value">{{ computedStats.scored }}</span>
+          <span class="stat-label">已提交</span>
         </div>
       </el-col>
     </el-row>
 
-    <!-- 草稿待提交横幅 -->
+    <!-- 草稿待提交横幅（面谈阶段改为单项提交，不显示此横幅） -->
     <transition name="banner-fade">
-      <div v-if="draftTasks.length > 0" class="draft-banner">
+      <div v-if="draftTasks.length > 0 && activeStageTab !== 'INTERVIEW'" class="draft-banner">
         <div class="draft-banner-left">
           <span class="draft-banner-icon">⚠️</span>
           <div>
@@ -71,7 +71,7 @@
       <el-button type="primary" plain size="small" @click="loadData" class="refresh-btn">刷新</el-button>
     </div>
 
-    <!-- 待评分区域 -->
+    <!-- 待评分区域（PENDING / CONFIRMED / RETURNED） -->
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
         <div class="section-header pending-header">
@@ -80,12 +80,10 @@
         </div>
       </template>
       <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分项目" :image-size="80" />
-      <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row" :class="{ 'task-row-draft': task.status === 'DRAFT' }">
+      <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">
-          <span v-if="task.total != null" class="task-score pending-score">{{ task.total }} 分</span>
-          <el-tag v-if="task.status === 'DRAFT'" type="primary" size="small">草稿</el-tag>
-          <el-tag v-else-if="task.status === 'RETURNED'" type="danger" size="small">已退回，请重评</el-tag>
+          <el-tag v-if="task.status === 'RETURNED'" type="danger" size="small">已退回，请重评</el-tag>
           <el-tag v-else-if="task.status === 'CONFIRMED'" size="small">已确认</el-tag>
           <el-tag v-else type="warning" size="small">待评审</el-tag>
           <span class="meta-sep">·</span>
@@ -93,22 +91,46 @@
           <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
         </div>
         <div class="task-actions">
-          <el-button v-if="['PENDING','CONFIRMED'].includes(task.status)" type="primary" size="small" @click="goToReview(task)">评分</el-button>
-          <el-button v-if="['DRAFT','RETURNED'].includes(task.status)" size="small" @click="goToReview(task)">继续评分</el-button>
-          <el-button v-if="['PENDING','CONFIRMED','DRAFT','RETURNED'].includes(task.status)" type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+          <el-button type="primary" size="small" @click="goToReview(task)">评分</el-button>
+          <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
         </div>
       </div>
     </el-card>
 
-    <!-- 已评分区域 -->
+    <!-- 已评分区域（DRAFT：已打分保存草稿，待提交） -->
+    <el-card shadow="never" class="section-card" v-loading="loading">
+      <template #header>
+        <div class="section-header draft-header">
+          <span>已评分项目</span>
+          <el-tag type="primary" round>{{ draftTasksFiltered.length }}</el-tag>
+        </div>
+      </template>
+      <el-empty v-if="draftTasksFiltered.length === 0 && !loading" description="暂无已评分项目" :image-size="80" />
+      <div v-for="task in draftTasksFiltered" :key="task.id" class="task-row task-row-draft">
+        <span class="task-name">{{ task.projectName || '-' }}</span>
+        <div class="task-inline-meta">
+          <span v-if="task.total != null" class="task-score pending-score">{{ task.total }} 分</span>
+          <el-tag type="primary" size="small">草稿</el-tag>
+          <span class="meta-sep">·</span>
+          <span class="meta-text">{{ task.institutionName || '-' }}</span>
+          <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
+        </div>
+        <div class="task-actions">
+          <el-button size="small" @click="goToReview(task)">继续评分</el-button>
+          <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 已提交区域（SCORED / COMPLETED） -->
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
         <div class="section-header scored-header">
-          <span>已评分项目</span>
+          <span>已提交项目</span>
           <el-tag type="success" round>{{ scoredTasksFiltered.length }}</el-tag>
         </div>
       </template>
-      <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已评分项目" :image-size="80" />
+      <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已提交项目" :image-size="80" />
       <div v-for="task in scoredTasksFiltered" :key="task.id" class="task-row">
         <span class="task-name">{{ task.projectName || '-' }}</span>
         <div class="task-inline-meta">
@@ -253,12 +275,17 @@ const filteredTasks = computed(() => tasks.value.filter(t => t.stage === activeS
 
 // ── 各状态分区（均基于 filteredTasks，随 Tab 切换）─────────────────
 
-// 待评分：DRAFT + PENDING + CONFIRMED + RETURNED
+// 待评分：PENDING + CONFIRMED + RETURNED（未打过分）
 const pendingTasks = computed(() =>
-  tasks.value.filter(t => ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status))
+  tasks.value.filter(t => ['PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status))
 )
 const pendingTasksFiltered = computed(() =>
-  filteredTasks.value.filter(t => ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status))
+  filteredTasks.value.filter(t => ['PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status))
+)
+
+// 已评分草稿：DRAFT（已打分，尚未提交）
+const draftTasksFiltered = computed(() =>
+  filteredTasks.value.filter(t => t.status === 'DRAFT')
 )
 
 // 已提交：SCORED / COMPLETED
@@ -270,9 +297,6 @@ const scoredTasksFiltered = computed(() =>
 )
 
 // 已规避
-const recusedTasks = computed(() =>
-  tasks.value.filter(t => t.status === 'RECUSED')
-)
 const recusedTasksFiltered = computed(() =>
   filteredTasks.value.filter(t => t.status === 'RECUSED')
 )
@@ -281,11 +305,12 @@ const recusedTasksFiltered = computed(() =>
 const computedStats = computed(() => ({
   total: filteredTasks.value.length,
   pendingSubmit: pendingTasksFiltered.value.length,
+  drafted: draftTasksFiltered.value.length,
   scored: scoredTasksFiltered.value.length,
   recused: recusedTasksFiltered.value.length
 }))
 
-// 草稿任务（跟当前 Tab 联动，随阶段切换）
+// 草稿任务（跟当前 Tab 联动，用于一键提交横幅判断）
 const draftTasks = computed(() => filteredTasks.value.filter(t => t.status === 'DRAFT'))
 
 const submitAllDrafts = async () => {
@@ -611,6 +636,12 @@ onUnmounted(() => {
   .stat-value { color: #67C23A; }
   &::after { background: linear-gradient(90deg, #b3e19d, #67C23A); }
 }
+.stat-draft {
+  border-top: 3px solid #409EFF;
+  .stat-value { color: #409EFF; }
+  &::after { background: linear-gradient(90deg, #a0cfff, #409EFF); }
+}
+
 .stat-recused {
   border-top: 3px solid #909399;
   .stat-value { color: #909399; }
@@ -646,6 +677,7 @@ onUnmounted(() => {
 }
 
 .pending-header { color: #E6A23C; }
+.draft-header   { color: #409EFF; }
 .scored-header  { color: #67C23A; }
 .recused-header { color: #909399; }
 
