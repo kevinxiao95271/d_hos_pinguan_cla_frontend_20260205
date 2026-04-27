@@ -37,32 +37,35 @@
 
       <el-form label-width="120px">
         <el-form-item label="当前场景">
-          <span class="scene-current-value">{{ stageShortlistTitle }}</span>
-          <el-button
-            type="primary"
-            :loading="computing"
-            style="margin-left: 16px"
-            @click="handleComputeRanking"
-          >
-            计算排名
-          </el-button>
-          <el-tooltip
-            :content="canExportScoreSheet ? '下载当前场景打分明细（.xlsx）' : '请先点击「计算排名」生成快照后再导出'"
-            placement="top"
-          >
-            <span style="margin-left: 8px; display: inline-block">
+          <div style="display: flex; align-items: center; width: 100%; gap: 0;">
+            <span class="scene-current-value">{{ stageShortlistTitle }}</span>
+            <el-text type="warning" style="margin-left: 10px; font-size: 12px;" size="small">
+              仅写入「{{ stageLabel }}」快照
+            </el-text>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
               <el-button
-                :disabled="!canExportScoreSheet"
-                :loading="exportingScoreSheet"
-                @click="handleExportScoreSheet"
+                type="primary"
+                :loading="computing"
+                @click="handleComputeRanking"
               >
-                导出打分 Excel
+                计算排名
               </el-button>
-            </span>
-          </el-tooltip>
-          <el-text type="info" style="margin-left: 12px" size="small">
-            仅写入「{{ stageLabel }}」快照
-          </el-text>
+              <el-tooltip
+                :content="canExportScoreSheet ? '下载当前场景打分明细（.xlsx）' : '请先点击「计算排名」生成快照后再导出'"
+                placement="top"
+              >
+                <span style="display: inline-block">
+                  <el-button
+                    :disabled="!canExportScoreSheet"
+                    :loading="exportingScoreSheet"
+                    @click="handleExportScoreSheet"
+                  >
+                    导出打分 Excel
+                  </el-button>
+                </span>
+              </el-tooltip>
+            </div>
+          </div>
         </el-form-item>
 
         <!-- 书审：范围 + 仅「各组独立」时展示基层/综合配置 -->
