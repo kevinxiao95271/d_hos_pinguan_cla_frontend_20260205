@@ -83,10 +83,14 @@
         </el-button>
       </div>
     </template>
-    <iframe
-      :src="guidePdfUrl"
-      style="width:100%; height:75vh; border:none;"
-    />
+    <div class="pdf-scroll-wrap">
+      <div v-if="guidePdfLoading" class="pdf-loading">加载中...</div>
+      <VuePdfEmbed
+        :source="guidePdfUrl"
+        @loaded="guidePdfLoading = false"
+        @loading-failed="guidePdfLoading = false"
+      />
+    </div>
   </el-dialog>
 
   <!-- 移动端扫码入口弹窗 -->
@@ -102,8 +106,8 @@
   <el-dialog
     v-model="showNoticeDialog"
     :title="currentNoticeTitle"
-    width="82%"
-    top="3vh"
+    width="92%"
+    top="2vh"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     :show-close="false"
@@ -111,12 +115,15 @@
     <div style="margin-bottom: 10px; color: #e6a23c; font-weight: 600;">
       请认真阅读以下专家须知，阅读完毕后方可继续使用系统。
     </div>
-    <iframe
-      v-if="currentNoticePdfUrl"
-      :key="currentNoticeKey"
-      :src="currentNoticePdfUrl"
-      style="width:100%; height:72vh; border:none;"
-    />
+    <div v-if="currentNoticePdfUrl" class="pdf-scroll-wrap">
+      <div v-if="noticePdfLoading" class="pdf-loading">加载中...</div>
+      <VuePdfEmbed
+        :key="currentNoticeKey"
+        :source="currentNoticePdfUrl"
+        @loaded="noticePdfLoading = false"
+        @loading-failed="noticePdfLoading = false"
+      />
+    </div>
     <template #footer>
       <div style="display:flex; align-items:center; justify-content:flex-end;">
         <el-button
@@ -140,6 +147,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import QrcodeVue from 'qrcode.vue'
+import VuePdfEmbed from 'vue-pdf-embed'
 import { loginWithPassword, confirmIntegrityNotice } from '@/api/auth'
 import { ensureCurrentCompetition } from '@/utils/competition'
 import {
@@ -179,6 +187,7 @@ const rules = {
 
 // 诚信须知（pendingIntegrityQueue 顺序即阅读顺序）
 const showNoticeDialog = ref(false)
+const noticePdfLoading = ref(true)
 const pendingIntegrityQueue = ref([])
 const noticeCountdown = ref(0)
 const confirmingNotice = ref(false)
@@ -233,6 +242,7 @@ const confirmNotice = async () => {
   }
   pendingIntegrityQueue.value.shift()
   if (pendingIntegrityQueue.value.length > 0) {
+    noticePdfLoading.value = true
     startNoticeCountdown()
     return
   }
@@ -295,6 +305,7 @@ const openFullscreen = () => {
 
 // 报名系统操作说明 PDF
 const showGuidePdf = ref(false)
+const guidePdfLoading = ref(true)
 const guidePdfUrl = `${import.meta.env.BASE_URL}registration_guide.pdf`
 const downloadGuidePdf = () => {
   const a = document.createElement('a')
@@ -349,6 +360,21 @@ const downloadGuidePdf = () => {
       }
     }
   }
+}
+
+.pdf-scroll-wrap {
+  max-height: 72vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.pdf-loading {
+  text-align: center;
+  padding: 40px 0;
+  color: #909399;
+  font-size: 14px;
 }
 
 @media (max-width: 480px) {
