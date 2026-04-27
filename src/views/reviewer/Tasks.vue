@@ -117,6 +117,7 @@
         </div>
         <div class="task-actions">
           <el-button size="small" @click="goToReview(task)">继续评分</el-button>
+          <el-button type="primary" size="small" :loading="submittingId === task.id" @click="submitSingleDraft(task)">提交评分</el-button>
           <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
         </div>
       </div>
@@ -312,6 +313,47 @@ const computedStats = computed(() => ({
 
 // 草稿任务（跟当前 Tab 联动，用于一键提交横幅判断）
 const draftTasks = computed(() => filteredTasks.value.filter(t => t.status === 'DRAFT'))
+
+// 单项提交（列表页直接提交草稿）
+const submittingId = ref(null)
+
+const submitSingleDraft = async (task) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认提交《${task.projectName}》的评分？提交后不可修改。`,
+      '提交评分',
+      { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
+    )
+    submittingId.value = task.id
+    const isInterview = task.stage === 'INTERVIEW'
+    const scoreRes = isInterview
+      ? await getInterviewScore(task.id)
+      : await getReviewScore(task.id)
+    if (!scoreRes.success || !scoreRes.data) {
+      ElMessage.error('加载评分数据失败，请进入评分页确认后再提交')
+      return
+    }
+    const submitData = { reviewTaskId: task.id, ...scoreRes.data }
+    delete submitData.id
+    delete submitData.status
+    delete submitData.submittedAt
+    delete submitData.createdAt
+    delete submitData.updatedAt
+    const res = isInterview
+      ? await submitInterviewScore(submitData)
+      : await submitReviewScore(submitData)
+    if (res.success) {
+      ElMessage.success(`《${task.projectName}》评分已提交`)
+      loadData()
+    } else {
+      ElMessage.error(res.message || '提交失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || '提交失败')
+  } finally {
+    submittingId.value = null
+  }
+}
 
 const submitAllDrafts = async () => {
   const drafts = draftTasks.value
