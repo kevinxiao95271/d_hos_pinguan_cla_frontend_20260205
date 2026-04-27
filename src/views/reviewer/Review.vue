@@ -307,6 +307,7 @@
               </transition>
             </span>
             <el-button
+              v-if="isInterviewStage"
               type="primary"
               :loading="submitting"
               style="margin-left: 10px"
