@@ -5,7 +5,6 @@
       <div class="qr-subtitle">面谈评审专家请扫码登录</div>
       <qrcode-vue :value="mobileLoginUrl" :size="qrSize" level="H" class="qr-code" />
       <div class="qr-hint">使用手机扫描上方二维码，以专家账号登录后即可打分</div>
-      <div class="qr-url">{{ mobileLoginUrl }}</div>
     </div>
   </div>
 </template>
@@ -66,9 +65,4 @@ const qrSize = computed(() => Math.min(window.innerWidth, window.innerHeight) * 
   line-height: 1.6;
 }
 
-.qr-url {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.5px;
-}
 </style>

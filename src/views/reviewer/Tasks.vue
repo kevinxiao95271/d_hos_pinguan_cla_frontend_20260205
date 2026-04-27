@@ -74,25 +74,28 @@
     <!-- 待评分区域（PENDING / CONFIRMED / RETURNED） -->
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
-        <div class="section-header pending-header">
+        <div class="section-header pending-header section-header-clickable" @click="sec.pending = !sec.pending">
           <span>待评分项目</span>
           <el-tag type="warning" round>{{ pendingTasksFiltered.length }}</el-tag>
+          <span class="section-arrow" :class="{ collapsed: sec.pending }">›</span>
         </div>
       </template>
-      <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分项目" :image-size="80" />
-      <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row">
-        <span class="task-name">{{ task.projectName || '-' }}</span>
-        <div class="task-inline-meta">
-          <el-tag v-if="task.status === 'RETURNED'" type="danger" size="small">已退回，请重评</el-tag>
-          <el-tag v-else-if="task.status === 'CONFIRMED'" size="small">已确认</el-tag>
-          <el-tag v-else type="warning" size="small">待评审</el-tag>
-          <span class="meta-sep">·</span>
-          <span class="meta-text">{{ task.institutionName || '-' }}</span>
-          <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
-        </div>
-        <div class="task-actions">
-          <el-button type="primary" size="small" @click="goToReview(task)">评分</el-button>
-          <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+      <div v-show="!sec.pending">
+        <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分项目" :image-size="80" />
+        <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row">
+          <span class="task-name">{{ task.projectName || '-' }}</span>
+          <div class="task-inline-meta">
+            <el-tag v-if="task.status === 'RETURNED'" type="danger" size="small">已退回，请重评</el-tag>
+            <el-tag v-else-if="task.status === 'CONFIRMED'" size="small">已确认</el-tag>
+            <el-tag v-else type="warning" size="small">待评审</el-tag>
+            <span class="meta-sep">·</span>
+            <span class="meta-text">{{ task.institutionName || '-' }}</span>
+            <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
+          </div>
+          <div class="task-actions">
+            <el-button type="primary" size="small" @click="goToReview(task)">评分</el-button>
+            <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+          </div>
         </div>
       </div>
     </el-card>
@@ -100,25 +103,28 @@
     <!-- 已评分区域（DRAFT：已打分保存草稿，待提交） -->
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
-        <div class="section-header draft-header">
+        <div class="section-header draft-header section-header-clickable" @click="sec.draft = !sec.draft">
           <span>已评分项目</span>
           <el-tag type="primary" round>{{ draftTasksFiltered.length }}</el-tag>
+          <span class="section-arrow" :class="{ collapsed: sec.draft }">›</span>
         </div>
       </template>
-      <el-empty v-if="draftTasksFiltered.length === 0 && !loading" description="暂无已评分项目" :image-size="80" />
-      <div v-for="task in draftTasksFiltered" :key="task.id" class="task-row task-row-draft">
-        <span class="task-name">{{ task.projectName || '-' }}</span>
-        <div class="task-inline-meta">
-          <span v-if="task.total != null" class="task-score pending-score">{{ task.total }} 分</span>
-          <el-tag type="primary" size="small">草稿</el-tag>
-          <span class="meta-sep">·</span>
-          <span class="meta-text">{{ task.institutionName || '-' }}</span>
-          <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
-        </div>
-        <div class="task-actions">
-          <el-button size="small" @click="goToReview(task)">继续评分</el-button>
-          <el-button type="primary" size="small" :loading="submittingId === task.id" @click="submitSingleDraft(task)">提交评分</el-button>
-          <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+      <div v-show="!sec.draft">
+        <el-empty v-if="draftTasksFiltered.length === 0 && !loading" description="暂无已评分项目" :image-size="80" />
+        <div v-for="task in draftTasksFiltered" :key="task.id" class="task-row task-row-draft">
+          <span class="task-name">{{ task.projectName || '-' }}</span>
+          <div class="task-inline-meta">
+            <span v-if="task.total != null" class="task-score pending-score">{{ task.total }} 分</span>
+            <el-tag type="primary" size="small">草稿</el-tag>
+            <span class="meta-sep">·</span>
+            <span class="meta-text">{{ task.institutionName || '-' }}</span>
+            <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
+          </div>
+          <div class="task-actions">
+            <el-button size="small" @click="goToReview(task)">继续评分</el-button>
+            <el-button type="primary" size="small" :loading="submittingId === task.id" @click="submitSingleDraft(task)">提交评分</el-button>
+            <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+          </div>
         </div>
       </div>
     </el-card>
@@ -126,23 +132,26 @@
     <!-- 已提交区域（SCORED / COMPLETED） -->
     <el-card shadow="never" class="section-card" v-loading="loading">
       <template #header>
-        <div class="section-header scored-header">
+        <div class="section-header scored-header section-header-clickable" @click="sec.scored = !sec.scored">
           <span>已提交项目</span>
           <el-tag type="success" round>{{ scoredTasksFiltered.length }}</el-tag>
+          <span class="section-arrow" :class="{ collapsed: sec.scored }">›</span>
         </div>
       </template>
-      <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已提交项目" :image-size="80" />
-      <div v-for="task in scoredTasksFiltered" :key="task.id" class="task-row">
-        <span class="task-name">{{ task.projectName || '-' }}</span>
-        <div class="task-inline-meta">
-          <span v-if="task.total != null" class="task-score scored-score">{{ task.total }} 分</span>
-          <el-tag type="success" size="small">已提交</el-tag>
-          <span class="meta-sep">·</span>
-          <span class="meta-text">{{ task.institutionName || '-' }}</span>
-          <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
-        </div>
-        <div class="task-actions">
-          <el-button size="small" @click="viewScore(task)">查看评分</el-button>
+      <div v-show="!sec.scored">
+        <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已提交项目" :image-size="80" />
+        <div v-for="task in scoredTasksFiltered" :key="task.id" class="task-row">
+          <span class="task-name">{{ task.projectName || '-' }}</span>
+          <div class="task-inline-meta">
+            <span v-if="task.total != null" class="task-score scored-score">{{ task.total }} 分</span>
+            <el-tag type="success" size="small">已提交</el-tag>
+            <span class="meta-sep">·</span>
+            <span class="meta-text">{{ task.institutionName || '-' }}</span>
+            <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
+          </div>
+          <div class="task-actions">
+            <el-button size="small" @click="viewScore(task)">查看评分</el-button>
+          </div>
         </div>
       </div>
     </el-card>
@@ -313,6 +322,17 @@ const computedStats = computed(() => ({
 
 // 草稿任务（跟当前 Tab 联动，用于一键提交横幅判断）
 const draftTasks = computed(() => filteredTasks.value.filter(t => t.status === 'DRAFT'))
+
+// 分区折叠状态：count=0 时自动折叠，可手动点击展开
+const sec = reactive({ pending: false, draft: false, scored: false })
+
+watch(loading, (val) => {
+  if (!val) {
+    sec.pending = pendingTasksFiltered.value.length === 0
+    sec.draft   = draftTasksFiltered.value.length === 0
+    sec.scored  = scoredTasksFiltered.value.length === 0
+  }
+})
 
 // 单项提交（列表页直接提交草稿）
 const submittingId = ref(null)
@@ -722,6 +742,26 @@ onUnmounted(() => {
 .draft-header   { color: #409EFF; }
 .scored-header  { color: #67C23A; }
 .recused-header { color: #909399; }
+
+.section-header-clickable {
+  cursor: pointer;
+  user-select: none;
+  &:hover { opacity: 0.8; }
+}
+
+.section-arrow {
+  margin-left: auto;
+  font-size: 18px;
+  color: #c0c4cc;
+  transform: rotate(90deg);
+  display: inline-block;
+  transition: transform 0.2s;
+  line-height: 1;
+
+  &.collapsed {
+    transform: rotate(0deg);
+  }
+}
 
 /* 草稿横幅 */
 .draft-banner {
