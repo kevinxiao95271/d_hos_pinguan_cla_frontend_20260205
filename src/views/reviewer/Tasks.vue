@@ -121,9 +121,9 @@
             <el-tag v-if="task.institutionLevel" type="success" size="small">{{ task.institutionLevel }}</el-tag>
           </div>
           <div class="task-actions">
-            <el-button size="small" @click="goToReview(task)">继续评分</el-button>
-            <el-button type="primary" size="small" :loading="submittingId === task.id" @click="submitSingleDraft(task)">提交评分</el-button>
-            <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
+          <el-button size="small" @click="goToReview(task)">继续评分</el-button>
+          <el-button v-if="task.stage === 'INTERVIEW'" type="primary" size="small" :loading="submittingId === task.id" @click="submitSingleDraft(task)">提交评分</el-button>
+          <el-button type="warning" size="small" plain @click="openRecuseDialog(task)">规避</el-button>
           </div>
         </div>
       </div>
@@ -334,6 +334,18 @@ watch(loading, (val) => {
   }
 })
 
+// 书审必填校验（从 API 草稿数据中检查，返回错误信息或 null）
+const validateBookScore = (scoreData, projectName) => {
+  const weakness = (scoreData.weakness || '').trim()
+  if (!weakness) {
+    return `《${projectName}》「不足之处」为必填项，请先进入评分页填写后再提交`
+  }
+  if (weakness.length < 60) {
+    return `《${projectName}》「不足之处」至少需填写 60 字（当前 ${weakness.length} 字），请先进入评分页补充`
+  }
+  return null
+}
+
 // 单项提交（列表页直接提交草稿）
 const submittingId = ref(null)
 
@@ -352,6 +364,11 @@ const submitSingleDraft = async (task) => {
     if (!scoreRes.success || !scoreRes.data) {
       ElMessage.error('加载评分数据失败，请进入评分页确认后再提交')
       return
+    }
+    // 书审必填校验
+    if (!isInterview) {
+      const err = validateBookScore(scoreRes.data, task.projectName)
+      if (err) { ElMessage.warning(err); return }
     }
     const submitData = { reviewTaskId: task.id, ...scoreRes.data }
     delete submitData.id
@@ -409,6 +426,11 @@ const submitAllDrafts = async () => {
           errors.push(`《${task.projectName}》加载评分失败`)
           continue
         }
+        // 书审必填校验
+        if (!isInterview) {
+          const err = validateBookScore(scoreRes.data, task.projectName)
+          if (err) { errors.push(err); continue }
+        }
         const submitData = { reviewTaskId: task.id, ...scoreRes.data }
         delete submitData.id
         delete submitData.status
@@ -428,7 +450,12 @@ const submitAllDrafts = async () => {
       }
     }
     if (errors.length) {
-      ElMessage.warning(`${successCount} 项提交成功，${errors.length} 项失败：${errors.join('；')}`)
+      const errHtml = errors.map((e, i) => `<div style="margin:6px 0;line-height:1.6">${i + 1}. ${e}</div>`).join('')
+      await ElMessageBox.alert(
+        `<div><b>${successCount} 项提交成功，${errors.length} 项需处理：</b>${errHtml}</div>`,
+        '提交结果',
+        { dangerouslyUseHTMLString: true, confirmButtonText: '知道了', type: 'warning' }
+      )
     } else {
       showThankYouDialog.value = true
     }

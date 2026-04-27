@@ -710,6 +710,8 @@ const submitting = ref(false)
 
 const submitScore = async () => {
   try {
+    // 先做表单校验，不通过则拦截
+    await formRef.value.validate()
     await ElMessageBox.confirm(
       `确认正式提交评分？提交后不可修改。`,
       '提交评分',
