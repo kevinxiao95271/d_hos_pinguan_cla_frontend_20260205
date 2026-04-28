@@ -67,6 +67,15 @@
         
         <el-table-column prop="reviewerInstitutionName" label="评委机构" min-width="180" show-overflow-tooltip />
         
+        <el-table-column prop="total" label="总分" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag v-if="row.total != null" type="success" size="large">
+              {{ formatScore1(row.total) }}
+            </el-tag>
+            <span v-else style="color:#c0c4cc">-</span>
+          </template>
+        </el-table-column>
+
         <el-table-column label="评分详情（面谈）" width="380">
           <template #default="{ row }">
             <div class="score-details">
@@ -87,14 +96,6 @@
                 <span class="value">{{ formatScore1(row.result) }}</span>
               </div>
             </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="total" label="总分" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag type="success" size="large">
-              {{ formatScore1(row.total) }}
-            </el-tag>
           </template>
         </el-table-column>
         
