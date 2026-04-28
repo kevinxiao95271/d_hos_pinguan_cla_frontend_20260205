@@ -244,6 +244,18 @@ const router = useRouter()
 
 const tasks = ref([])
 const loading = ref(false)
+
+// 面谈阶段项目排序（按分组安排表从上至下的顺序）
+const INTERVIEW_ORDER = [20260749,20260143,20260688,20260558,20260927,20260286,20260384,20260946,20260860,20260854,20260594,20260717,20260231,20260593,20260444,20260369,20260354,20260789,20260545,20260831,20260673,20260130,20260888,20260926,20260740,20260387,20260771,20260147,20260475,20260295,20260307,20260114,20260694,20260004,20260706,20260383,20260528,20260193,20260474,20260842,20260928,20260328,20260268,20260581,20260816,20260424,20260956,20260759,20260559,20260879,20260846,20260106,20260105,20260347,20260821,20260571,20260760,20260007,20260460,20260743,20260496,20260679,20260565,20260550,20260420,20260890,20260547,20260237,20260637,20260728,20260704,20260866,20260329,20260723,20260035,20260580,20260515,20260684,20260786,20260485,20260880,20260839,20260171,20260921]
+const interviewOrderMap = new Map(INTERVIEW_ORDER.map((id, i) => [id, i]))
+const sortByInterviewOrder = (list) => {
+  return [...list].sort((a, b) => {
+    if (a.stage !== 'INTERVIEW' || b.stage !== 'INTERVIEW') return 0
+    const ia = interviewOrderMap.has(a.registrationId) ? interviewOrderMap.get(a.registrationId) : 9999
+    const ib = interviewOrderMap.has(b.registrationId) ? interviewOrderMap.get(b.registrationId) : 9999
+    return ia - ib
+  })
+}
 const submitting = ref(false)
 const submittingAll = ref(false)
 const taskStats = ref({})
@@ -478,12 +490,15 @@ const loadData = async () => {
       const raw = tasksRes.value.data
       const list = Array.isArray(raw) ? raw : (raw?.list || raw?.records || raw?.content || [])
       console.log('📋 任务列表原始数据 stage 分布:', list.map(t => ({ id: t.reviewTaskId || t.id, stage: t.stage, status: t.status })))
-      tasks.value = list.map(task => ({
+      const mapped = list.map(task => ({
         ...task,
         id: task.reviewTaskId || task.id,
         // 兼容后端 stage 字段为 null/undefined 的书审任务（书审是默认阶段）
         stage: task.stage || task.reviewStage || task.stageType || 'BOOK'
       }))
+      // 面谈阶段任务按分组安排表顺序排列；弃赛项目前端隐藏
+      const INTERVIEW_HIDDEN = new Set([20260237])
+      tasks.value = sortByInterviewOrder(mapped.filter(t => !(t.stage === 'INTERVIEW' && INTERVIEW_HIDDEN.has(t.registrationId))))
     } else if (tasksRes.status === 'fulfilled') {
       ElMessage.error(tasksRes.value.message || '加载失败')
     }

@@ -188,25 +188,57 @@
 
           <!-- 面谈评分 -->
           <template v-else>
-            <div class="scoring-header">
-              <span>项目评分（100 分）</span>
-              <el-button size="small" type="warning" plain :icon="Document" :disabled="false" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
+            <!-- 总分输入 -->
+            <div class="interview-score-block">
+              <div class="interview-score-row">
+                <span class="interview-score-label">评分</span>
+                <el-form-item prop="interviewTotalInput" label-width="0" style="margin-bottom:0; display:inline-block">
+                  <el-input-number
+                    v-model="form.interviewTotalInput"
+                    :min="0"
+                    :max="100"
+                    :step="0.5"
+                    :precision="1"
+                    :disabled="isViewMode"
+                    size="large"
+                    style="width:150px"
+                  />
+                </el-form-item>
+                <span class="interview-score-unit">/ 100 分</span>
+              </div>
             </div>
 
-            <div class="score-item-card">
+            <!-- 操作按钮 -->
+            <el-form-item v-if="!isViewMode" class="action-btn-row" style="margin-top:20px">
+              <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">保存</el-button>
+              <span class="draft-saved-holder">
+                <transition name="el-fade-in">
+                  <el-tag v-if="draftSavedAt" type="success">{{ isMobile ? '已保存' : `草稿已保存 ${draftSavedAt}` }}</el-tag>
+                </transition>
+              </span>
+              <el-button type="primary" :loading="submitting" style="margin-left:10px" @click="submitScore">提交评分</el-button>
+              <el-button v-if="canRecuse" type="warning" plain style="margin-left:10px" @click="openRecuseDialog">申请规避</el-button>
+            </el-form-item>
+            <div class="back-btn-wrap" style="margin-bottom:24px">
+              <el-button @click="goBack">返回任务列表</el-button>
+            </div>
+
+            <!-- 评分标准参考 -->
+            <el-divider content-position="left" style="margin-top:8px">评分标准（供参考）</el-divider>
+            <div style="margin-bottom:12px">
+              <el-button size="small" type="warning" plain :icon="Document" @click="openScoringStandard('interview')">查看评分标准文件</el-button>
+            </div>
+
+            <div class="score-item-card criteria-only">
               <div class="score-item-criteria">
                 <div class="criteria-title">选题 <span class="criteria-max">满分 10 分</span></div>
                 <ol class="criteria-list">
                   <li>迫切性、实用性、可行性</li>
                 </ol>
               </div>
-              <div class="score-item-right">
-                <el-slider v-model="form.topicScore" :min="0" :max="10" :step="0.5" :marks="marks10" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
-                <div class="score-display"><span class="score-num">{{ form.topicScore }}</span><span class="score-denom">/ 10</span></div>
-              </div>
             </div>
 
-            <div class="score-item-card">
+            <div class="score-item-card criteria-only">
               <div class="score-item-criteria">
                 <div class="criteria-title">改善过程的确实性 <span class="criteria-max">满分 40 分</span></div>
                 <ol class="criteria-list">
@@ -216,13 +248,9 @@
                   <li>项目所用改善工具的适用性、运用的正确及熟练程度</li>
                 </ol>
               </div>
-              <div class="score-item-right">
-                <el-slider v-model="form.processScore" :min="0" :max="40" :step="0.5" :marks="marks40" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
-                <div class="score-display"><span class="score-num">{{ form.processScore }}</span><span class="score-denom">/ 40</span></div>
-              </div>
             </div>
 
-            <div class="score-item-card">
+            <div class="score-item-card criteria-only">
               <div class="score-item-criteria">
                 <div class="criteria-title">整体运作 <span class="criteria-max">满分 20 分</span></div>
                 <ol class="criteria-list">
@@ -233,13 +261,9 @@
                   <li>该团队改善活动的经历与经验</li>
                 </ol>
               </div>
-              <div class="score-item-right">
-                <el-slider v-model="form.interviewOperationScore" :min="0" :max="20" :step="0.5" :marks="marks20" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
-                <div class="score-display"><span class="score-num">{{ form.interviewOperationScore }}</span><span class="score-denom">/ 20</span></div>
-              </div>
             </div>
 
-            <div class="score-item-card">
+            <div class="score-item-card criteria-only">
               <div class="score-item-criteria">
                 <div class="criteria-title">改善成果 <span class="criteria-max">满分 30 分</span></div>
                 <ol class="criteria-list">
@@ -248,16 +272,12 @@
                   <li>项目成果对医院或患者的贡献（有形及无形效益）</li>
                 </ol>
               </div>
-              <div class="score-item-right">
-                <el-slider v-model="form.resultScore" :min="0" :max="30" :step="0.5" :marks="marks30" :disabled="isViewMode" :format-tooltip="v => v + ' 分'" class="score-slider" />
-                <div class="score-display"><span class="score-num">{{ form.resultScore }}</span><span class="score-denom">/ 30</span></div>
-              </div>
             </div>
           </template>
 
           <!-- 总分 / 亮点 / 不足 — 靠左对齐 -->
           <div class="bottom-section">
-            <div class="bottom-item total-score-row">
+            <div v-if="!isInterviewStage" class="bottom-item total-score-row">
               <span class="bottom-label">总分</span>
               <span class="total-score-value">{{ totalScore.toFixed(1) }}</span>
               <span class="total-score-unit">/ 100 分</span>
@@ -299,22 +319,13 @@
             </template>
           </div>
 
-          <el-form-item v-if="!isViewMode" class="action-btn-row">
+          <el-form-item v-if="!isViewMode && !isInterviewStage" class="action-btn-row">
             <el-button type="primary" plain :loading="draftSaving" @click="saveDraft">保存</el-button>
             <span class="draft-saved-holder">
               <transition name="el-fade-in">
                 <el-tag v-if="draftSavedAt" type="success">{{ isMobile ? '已保存' : `草稿已保存 ${draftSavedAt}` }}</el-tag>
               </transition>
             </span>
-            <el-button
-              v-if="isInterviewStage"
-              type="primary"
-              :loading="submitting"
-              style="margin-left: 10px"
-              @click="submitScore"
-            >
-              提交评分
-            </el-button>
             <el-button
               v-if="canRecuse"
               type="warning"
@@ -328,7 +339,7 @@
         </el-form>
 
         <!-- 返回按钮移到表单外，避免被表单的 disabled 影响 -->
-        <div class="back-btn-wrap">
+        <div v-if="!isInterviewStage" class="back-btn-wrap">
           <el-button @click="goBack">返回任务列表</el-button>
         </div>
         </div>
@@ -446,10 +457,12 @@ const form = reactive({
   reviewScore: 10,
   operationScore: 10,
   presentationScore: 15,
-  // 面谈字段（默认满分）
+  // 面谈字段（仅保留作存储中转，实际输入改为 interviewTotalInput）
   topicScore: 10,
   processScore: 40,
   interviewOperationScore: 20,
+  // 面谈总分直接输入（专家输入，按权重拆解后再存四个维度）
+  interviewTotalInput: 80,
   // 公共字段
   highlights: '',
   shortcomings: ''
@@ -457,10 +470,22 @@ const form = reactive({
 
 const isInterviewStage = computed(() => taskInfo.stage === 'INTERVIEW')
 
+// 将总分按权重拆解到四个面谈维度（0.5 粒度，尾差补到权重最大的过程维度）
+const splitInterviewScore = (total) => {
+  const roundHalf = (v) => Math.round(v * 2) / 2
+  const t = Number(total) || 0
+  const topic     = roundHalf(t * 0.10)
+  const operation = roundHalf(t * 0.20)
+  const result    = roundHalf(t * 0.30)
+  const diff      = Math.round((t - topic - operation - result) * 10) / 10
+  const process   = Math.round(diff * 2) / 2  // 尾差归入过程维度
+  return { topic, process, operation, result }
+}
+
+const splitScores = computed(() => splitInterviewScore(form.interviewTotalInput))
+
 const totalScore = computed(() => {
-  if (isInterviewStage.value) {
-    return form.topicScore + form.processScore + form.interviewOperationScore + form.resultScore
-  }
+  if (isInterviewStage.value) return form.interviewTotalInput || 0
   return form.planScore +
          form.problemAnalysisScore +
          form.implementationScore +
@@ -484,10 +509,20 @@ const rules = {
   reviewScore: [{ type: 'number', min: 0, max: 10, message: '检讨得分范围为0-10分', trigger: 'blur' }],
   operationScore: [{ type: 'number', min: 0, max: 10, message: '整体运作得分范围为0-10分', trigger: 'blur' }],
   presentationScore: [{ type: 'number', min: 0, max: 15, message: '资料呈现得分范围为0-15分', trigger: 'blur' }],
-  // 面谈分值规则
-  topicScore: [{ type: 'number', min: 0, max: 10, message: '选题得分范围为0-10分', trigger: 'blur' }],
-  processScore: [{ type: 'number', min: 0, max: 40, message: '改善过程得分范围为0-40分', trigger: 'blur' }],
-  interviewOperationScore: [{ type: 'number', min: 0, max: 20, message: '整体运作得分范围为0-20分', trigger: 'blur' }],
+  // 面谈总分输入规则
+  interviewTotalInput: [
+    {
+      validator: (rule, value, callback) => {
+        if (!isInterviewStage.value) { callback(); return }
+        if (value == null || value === '') { callback(new Error('请输入总分')); return }
+        const n = Number(value)
+        if (isNaN(n) || n < 0 || n > 100) { callback(new Error('总分范围为 0–100 分')); return }
+        if (Math.round(n * 2) !== n * 2) { callback(new Error('总分步进为 0.5 分')); return }
+        callback()
+      },
+      trigger: 'blur'
+    }
+  ],
   // 评价字段
   highlights: [{ max: 1000, message: '亮点不能超过1000字', trigger: 'blur' }],
   shortcomings: [
@@ -576,6 +611,8 @@ const loadData = async () => {
             form.processScore = data.process || 0
             form.interviewOperationScore = data.operation || data.interviewOperation || 0
             form.resultScore = data.result || 0
+            // 反推总分供直接输入框显示
+            form.interviewTotalInput = form.topicScore + form.processScore + form.interviewOperationScore + form.resultScore
           } else {
             form.planScore = data.plan || 0
             form.problemAnalysisScore = data.problem || 0
@@ -593,9 +630,9 @@ const loadData = async () => {
           }
         }
       } catch (error) {
-        // 无已有评分，默认满分
+        // 无已有评分，面谈默认80分，书审默认满分
         if (taskInfo.stage === 'INTERVIEW') {
-          Object.assign(form, INTERVIEW_MAX)
+          form.interviewTotalInput = 80
         } else {
           Object.assign(form, BOOK_MAX)
         }
@@ -665,12 +702,13 @@ const buildSubmitData = () => {
     weakness: form.shortcomings || undefined
   }
   if (isInterviewStage.value) {
+    const s = splitInterviewScore(form.interviewTotalInput)
     return {
       ...base,
-      topic: form.topicScore,
-      process: form.processScore,
-      operation: form.interviewOperationScore,   // API 字段名是 operation，不是 interviewOperation
-      result: form.resultScore
+      topic: s.topic,
+      process: s.process,
+      operation: s.operation,
+      result: s.result
     }
   }
   return {
@@ -1201,6 +1239,42 @@ watch(() => route.query.registrationId, (newId, oldId) => {
     font-size: 14px;
     color: #909399;
   }
+}
+
+.interview-score-block {
+  padding: 20px 24px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  margin-bottom: 8px;
+
+  .interview-score-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .interview-score-label {
+    font-size: 16px;
+    font-weight: 600;
+    color: #303133;
+    white-space: nowrap;
+  }
+
+  .interview-score-unit {
+    font-size: 15px;
+    color: #606266;
+  }
+
+  .split-hint {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #909399;
+    b { color: #409eff; }
+  }
+}
+
+.criteria-only {
+  .score-item-right { display: none; }
 }
 
 .draft-saved-holder {
