@@ -141,6 +141,23 @@ export function getReviewers(params) {
   })
 }
 
+export function exportReviewers() {
+  return request({
+    url: '/admin/reviewers/export',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+export function downloadReviewerIdCards() {
+  return request({
+    url: '/admin/reviewers/id-cards/download',
+    method: 'get',
+    responseType: 'blob',
+    timeout: 120000
+  })
+}
+
 /**
  * 获取评委详情
  */

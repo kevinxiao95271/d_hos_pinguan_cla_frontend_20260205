@@ -220,22 +220,6 @@
           </el-button>
         </el-form-item>
 
-        <el-form-item label="评委组">
-          <el-input
-            v-model="reviewerForm.reviewerGroupCode"
-            placeholder="如：GROUP_A"
-            maxlength="50"
-          />
-        </el-form-item>
-
-        <el-form-item label="面试组">
-          <el-input
-            v-model="reviewerForm.interviewGroupCode"
-            placeholder="如：INTERVIEW_1"
-            maxlength="50"
-          />
-        </el-form-item>
-
         <el-form-item label="专家背景">
           <el-input
             v-model="reviewerForm.expertBackground"
@@ -362,8 +346,6 @@ const reviewerForm = reactive({
   name: '',
   title: '',
   institutionId: null,
-  reviewerGroupCode: '',
-  interviewGroupCode: '',
   expertBackground: ''
 })
 
@@ -471,8 +453,6 @@ const showCreateReviewerDialog = () => {
     name: '',
     title: '',
     institutionId: null,
-    reviewerGroupCode: '',
-    interviewGroupCode: '',
     expertBackground: ''
   })
   selectedReviewerInstitution.value = null
@@ -500,8 +480,6 @@ const handleCreateReviewer = async () => {
       name: reviewerForm.name,
       title: reviewerForm.title || null,
       institutionId: reviewerForm.institutionId,
-      reviewerGroupCode: reviewerForm.reviewerGroupCode || null,
-      interviewGroupCode: reviewerForm.interviewGroupCode || null,
       expertBackground: reviewerForm.expertBackground || null
     }
 

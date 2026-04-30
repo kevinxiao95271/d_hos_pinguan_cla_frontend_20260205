@@ -38,6 +38,12 @@
         <el-form-item>
           <el-button type="primary" @click="loadData">查询</el-button>
           <el-button @click="resetFilters">重置</el-button>
+          <el-button type="success" plain :loading="exporting" :disabled="reviewers.length === 0" @click="exportExcel">
+            导出 Excel
+          </el-button>
+          <el-button type="warning" plain :loading="downloadingIdCards" @click="downloadIdCards">
+            下载身份证照片
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -253,9 +259,10 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
-import { getReviewers, createReviewer, updateReviewer, deleteReviewer } from '@/api/review'
+import { getReviewers, createReviewer, updateReviewer, deleteReviewer, exportReviewers, downloadReviewerIdCards } from '@/api/review'
 import { autocomplete, searchInstitutions } from '@/api/institution'
 import { getReviewerProfile, updateReviewerProfile, adminChangeReviewerInstitution, adminGetReviewerInstitutionHistory } from '@/api/reviewerProfile'
+import dayjs from 'dayjs'
 
 // ── 枚举（与 Profile.vue 保持一致） ─────────────────────────────────
 const TITLE_OPTIONS = ['初级', '中级', '副高', '正高']
@@ -767,6 +774,49 @@ watch(drawerTab, (tab) => {
   if (tab === 'profile') loadProfile(id)
   if (tab === 'institution') loadInstHistory(id)
 })
+
+// ── 导出 / 下载 ──────────────────────────────────────────────────────
+const exporting = ref(false)
+const downloadingIdCards = ref(false)
+
+const downloadIdCards = async () => {
+  downloadingIdCards.value = true
+  ElMessage.info('正在打包身份证照片，请稍候…')
+  try {
+    const blob = await downloadReviewerIdCards()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `身份证照片_${dayjs().format('YYYYMMDD')}.zip`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('下载成功')
+  } catch (e) {
+    console.error('下载失败:', e)
+    ElMessage.error('下载失败')
+  } finally {
+    downloadingIdCards.value = false
+  }
+}
+
+const exportExcel = async () => {
+  exporting.value = true
+  try {
+    const blob = await exportReviewers()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `评审专家_${dayjs().format('YYYYMMDD')}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch (e) {
+    console.error('导出失败:', e)
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
 
 onMounted(() => {
   loadData()

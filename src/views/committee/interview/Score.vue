@@ -1,48 +1,45 @@
 <template>
   <div class="score-page">
-    <stage-progress :current-stage="currentStageKey" :stages="stagesList" />
-    
-    <el-card>
+    <div class="stage-progress-collapsible">
+      <div class="stage-progress-toggle" @click="stageProgressVisible = !stageProgressVisible">
+        <span>赛事阶段进度</span>
+        <el-icon :style="{ transform: stageProgressVisible ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }">
+          <ArrowDown />
+        </el-icon>
+      </div>
+      <transition name="collapse">
+        <stage-progress v-if="stageProgressVisible" :current-stage="currentStageKey" :stages="stagesList" />
+      </transition>
+    </div>
+
+    <el-card class="score-card">
       <template #header>
         <div class="card-header">
           <span>面谈得分列表</span>
+          <div class="filter-inline">
+            <el-input v-model="filters.reviewerName" clearable placeholder="评委姓名" size="small" style="width: 120px" @clear="loadData" @keyup.enter="loadData" />
+            <el-input v-model="filters.institutionName" clearable placeholder="医疗机构" size="small" style="width: 160px" @clear="loadData" @keyup.enter="loadData" />
+            <el-button type="primary" size="small" @click="loadData">查询</el-button>
+            <el-button size="small" @click="resetFilters">重置</el-button>
+            <el-button v-if="userStore.isOps || userStore.isCommittee" type="success" plain size="small" :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
+          </div>
         </div>
       </template>
       
-      <!-- 筛选条件 -->
-      <el-form :model="filters" inline style="margin-bottom: 20px">
-        <el-form-item label="评委姓名">
-          <el-input v-model="filters.reviewerName" clearable placeholder="输入评委姓名" style="width: 150px" @clear="loadData" @keyup.enter="loadData" />
-        </el-form-item>
-        
-        <el-form-item label="医疗机构">
-          <el-input v-model="filters.institutionName" clearable placeholder="输入机构名称" style="width: 200px" @clear="loadData" @keyup.enter="loadData" />
-        </el-form-item>
-        
-        <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-          <el-button v-if="userStore.isOps" type="success" plain :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
-        </el-form-item>
-      </el-form>
-      
-      <!-- 统计信息 -->
-      <el-alert
-        v-if="scores.length > 0"
-        :title="`共 ${scores.length} 条评委评分记录`"
-        type="info"
-        :closable="false"
-        style="margin-bottom: 20px"
-      />
-      
-      <!-- 评分列表 -->
-      <el-table
-        v-loading="loading"
-        :data="scores"
-        border
-        stripe
-        style="width: 100%"
-      >
+      <!-- 评分列表：顶部 + 底部双向滚动轨 -->
+      <div class="dual-scroll-wrapper">
+        <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
+          <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
+        </div>
+        <el-table
+          ref="tableRef"
+          v-loading="loading"
+          :data="scores"
+          border
+          stripe
+          style="width: 100%"
+          max-height="calc(100vh - 200px)"
+        >
         <el-table-column prop="registrationId" label="项目编号" width="80" align="center" />
         
         <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
@@ -116,8 +113,12 @@
             </el-button>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
       
+      <!-- 统计信息 -->
+      <div v-if="scores.length > 0" class="score-count-bar">共 {{ scores.length }} 条评委评分记录</div>
+
       <!-- 空状态 -->
       <el-empty v-if="!loading && scores.length === 0" description="暂无评分记录" />
     </el-card>
@@ -164,8 +165,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { getInterviewScores, returnScore } from '@/api/review'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
@@ -176,6 +178,55 @@ import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 
 const userStore = useUserStore()
+
+const stageProgressVisible = ref(false)
+
+// 双向滚动轨同步
+const tableRef = ref(null)
+const topScrollRef = ref(null)
+const topScrollInnerRef = ref(null)
+let tableBodyEl = null
+let isSyncingTop = false
+let isSyncingTable = false
+let scrollResizeObserver = null
+
+const getTableBodyEl = () => tableRef.value?.$el?.querySelector('.el-scrollbar__wrap')
+
+const onTopScroll = () => {
+  if (isSyncingTable) return
+  isSyncingTop = true
+  const el = getTableBodyEl()
+  if (el) el.scrollLeft = topScrollRef.value.scrollLeft
+  isSyncingTop = false
+}
+
+const onTableBodyScroll = () => {
+  if (isSyncingTop) return
+  isSyncingTable = true
+  if (topScrollRef.value) topScrollRef.value.scrollLeft = tableBodyEl.scrollLeft
+  isSyncingTable = false
+}
+
+const updateTopScrollWidth = () => {
+  const el = getTableBodyEl()
+  if (el && topScrollInnerRef.value) {
+    topScrollInnerRef.value.style.width = el.scrollWidth + 'px'
+  }
+}
+
+const initDualScroll = () => {
+  tableBodyEl = getTableBodyEl()
+  if (!tableBodyEl) return
+  tableBodyEl.addEventListener('scroll', onTableBodyScroll)
+  updateTopScrollWidth()
+  scrollResizeObserver = new ResizeObserver(updateTopScrollWidth)
+  scrollResizeObserver.observe(tableBodyEl)
+}
+
+onBeforeUnmount(() => {
+  if (tableBodyEl) tableBodyEl.removeEventListener('scroll', onTableBodyScroll)
+  if (scrollResizeObserver) scrollResizeObserver.disconnect()
+})
 
 const { stagesList, currentStageKey } = useCompetitionStages()
 
@@ -230,6 +281,7 @@ const loadData = async () => {
         reviewerName: filters.reviewerName,
         institutionName: filters.institutionName
       })
+      nextTick(updateTopScrollWidth)
     } else {
       ElMessage.error(res.message || '加载失败')
     }
@@ -333,16 +385,110 @@ function formatScore1(v) {
 
 onMounted(() => {
   loadData()
+  nextTick(() => {
+    initDualScroll()
+  })
 })
 </script>
 
 <style scoped lang="scss">
+.stage-progress-collapsible {
+  margin-bottom: 16px;
+
+  .stage-progress-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #909399;
+    padding: 4px 8px;
+    border-radius: 4px;
+    user-select: none;
+    margin-bottom: 6px;
+    &:hover { color: #409eff; background: #f0f7ff; }
+  }
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform-origin: top;
+}
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  transform: scaleY(0.85);
+}
+
+.dual-scroll-wrapper {
+  position: relative;
+
+  // 纵向滚动条（el-table 内部）—— 深色常显、宽度固定不扩张
+  :deep(.el-scrollbar__bar.is-vertical),
+  :deep(.el-scrollbar__bar.is-vertical:hover) {
+    width: 10px !important;
+    opacity: 1 !important;
+    right: 0;
+  }
+  :deep(.el-scrollbar__bar.is-vertical .el-scrollbar__thumb) {
+    background: #6b7280;
+    border-radius: 5px;
+    opacity: 1 !important;
+    &:hover { background: #374151; }
+  }
+  :deep(.el-scrollbar__wrap) {
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #e5e7eb;
+  }
+}
+
+.dual-scroll-track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  &::-webkit-scrollbar { height: 8px; }
+  &::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 4px; }
+  &::-webkit-scrollbar-thumb { background: #c0c4cc; border-radius: 4px;
+    &:hover { background: #909399; }
+  }
+}
+.dual-scroll-top {
+  margin-bottom: 2px;
+}
+.dual-scroll-inner {
+  height: 1px;
+  min-width: 100%;
+}
+
+.score-count-bar {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
+  text-align: right;
+}
+
 .score-page {
   padding: 20px;
-  
+
+  .score-card {
+    :deep(.el-card__header) { padding: 10px 16px; }
+    :deep(.el-card__body) { padding: 12px 16px; }
+  }
+
   .card-header {
-    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
     font-weight: 600;
+
+    .filter-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: normal;
+    }
   }
   
   .score-details {
