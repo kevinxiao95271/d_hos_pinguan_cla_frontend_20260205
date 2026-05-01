@@ -353,6 +353,7 @@ const exportExcel = () => {
     '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
     '评委姓名': r.reviewerName ?? '',
     '评委机构': r.reviewerInstitutionName ?? '',
+    '评审状态': ({ PENDING: '待评分', DRAFT: '草稿', SCORED: '已评分', RETURNED: '已驳回', RECUSED: '已回避' }[r.status] || r.status || ''),
     '主题': r.topic != null ? Number(Number(r.topic).toFixed(1)) : '',
     '过程': r.process != null ? Number(Number(r.process).toFixed(1)) : '',
     '运作': r.interviewOperation != null ? Number(Number(r.interviewOperation).toFixed(1)) : '',

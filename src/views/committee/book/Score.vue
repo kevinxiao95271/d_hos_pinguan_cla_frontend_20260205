@@ -301,6 +301,7 @@ const exportExcel = () => {
     '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
     '评委姓名': r.reviewerName ?? '',
     '评委机构': r.reviewerInstitutionName ?? '',
+    '评审状态': ({ PENDING: '待评分', DRAFT: '草稿', SCORED: '已评分', RETURNED: '已驳回', RECUSED: '已回避' }[r.status] || r.status || ''),
     '计划': r.plan != null ? Number(Number(r.plan).toFixed(1)) : '',
     '问题': r.problem != null ? Number(Number(r.problem).toFixed(1)) : '',
     '行动': r.action != null ? Number(Number(r.action).toFixed(1)) : '',
