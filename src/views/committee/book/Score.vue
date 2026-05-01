@@ -23,7 +23,7 @@
               <el-option label="进阶组" value="ADVANCED" />
             </el-select>
             <el-select v-model="filters.reviewerStatus" clearable placeholder="评审状态" size="small" style="width: 110px" @change="loadData">
-              <el-option label="待接受" value="PENDING" />
+              <el-option label="待评分" value="PENDING" />
               <el-option label="草稿" value="DRAFT" />
               <el-option label="已评分" value="SCORED" />
               <el-option label="已驳回" value="RETURNED" />
