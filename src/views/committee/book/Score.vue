@@ -70,7 +70,6 @@
             </template>
           </el-table-column>
           <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
-          <el-table-column prop="reviewerInstitutionName" label="评委机构" min-width="180" show-overflow-tooltip />
           <el-table-column prop="total" label="总分" width="90" align="center">
             <template #default="{ row }">
               <el-tag type="success" size="large">{{ formatScore1(row.total) }}</el-tag>
