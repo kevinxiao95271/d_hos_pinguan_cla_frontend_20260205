@@ -22,8 +22,15 @@
               <el-option label="综合组" value="COMPREHENSIVE" />
               <el-option label="进阶组" value="ADVANCED" />
             </el-select>
+            <el-select v-model="filters.reviewerStatus" clearable placeholder="评审状态" size="small" style="width: 110px" @change="loadData">
+              <el-option label="待接受" value="PENDING" />
+              <el-option label="草稿" value="DRAFT" />
+              <el-option label="已评分" value="SCORED" />
+              <el-option label="已驳回" value="RETURNED" />
+              <el-option label="已回避" value="RECUSED" />
+            </el-select>
+            <el-input v-model="filters.keyword" clearable placeholder="项目名 / 机构名" size="small" style="width: 160px" @clear="loadData" @keyup.enter="loadData" />
             <el-input v-model="filters.reviewerName" clearable placeholder="评委姓名" size="small" style="width: 120px" @clear="loadData" @keyup.enter="loadData" />
-            <el-input v-model="filters.institutionName" clearable placeholder="医疗机构" size="small" style="width: 160px" @clear="loadData" @keyup.enter="loadData" />
             <el-button type="primary" size="small" @click="loadData">查询</el-button>
             <el-button size="small" @click="resetFilters">重置</el-button>
             <el-button v-if="userStore.isOps || userStore.isCommittee" type="success" plain size="small" :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
@@ -64,6 +71,11 @@
           </el-table-column>
           <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
           <el-table-column prop="reviewerInstitutionName" label="评委机构" min-width="180" show-overflow-tooltip />
+          <el-table-column prop="total" label="总分" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag type="success" size="large">{{ formatScore1(row.total) }}</el-tag>
+            </template>
+          </el-table-column>
           <el-table-column label="评分详情" width="400">
             <template #default="{ row }">
               <div class="score-details">
@@ -77,17 +89,12 @@
               </div>
             </template>
           </el-table-column>
-          <el-table-column prop="total" label="总分" width="90" align="center">
-            <template #default="{ row }">
-              <el-tag type="success" size="large">{{ formatScore1(row.total) }}</el-tag>
-            </template>
-          </el-table-column>
           <el-table-column prop="submittedAt" label="提交时间" width="160" align="center">
             <template #default="{ row }">{{ formatDate(row.submittedAt) }}</template>
           </el-table-column>
           <el-table-column label="操作" width="100" align="center" fixed="right">
             <template #default="{ row }">
-              <el-button type="danger" size="small" @click="handleReturn(row)">驳回</el-button>
+              <el-button type="danger" size="small" :disabled="row.status !== 'SCORED'" @click="handleReturn(row)">驳回</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -128,7 +135,7 @@ import { getBookScores, returnScore } from '@/api/review'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
-import { flattenScoreListRows, filterScoreRows } from '@/utils/scoreListFlatten'
+import { flattenScoreListRows } from '@/utils/scoreListFlatten'
 import { useUserStore } from '@/stores/user'
 import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
@@ -143,8 +150,9 @@ const scores = ref([])
 
 const filters = reactive({
   groupType: '',
-  reviewerName: '',
-  institutionName: ''
+  reviewerStatus: '',
+  keyword: '',
+  reviewerName: ''
 })
 
 const returnDialogVisible = ref(false)
@@ -211,16 +219,15 @@ const loadData = async () => {
   if (!competitionId) { ElMessage.warning('请先选择赛事'); return }
   loading.value = true
   try {
-    const params = { competitionId, ...filters }
-    Object.keys(params).forEach(key => { if (!params[key]) delete params[key] })
+    const params = { competitionId }
+    if (filters.groupType) params.groupType = filters.groupType
+    if (filters.reviewerStatus) params.reviewerStatus = filters.reviewerStatus
+    if (filters.keyword && filters.keyword.trim()) params.keyword = filters.keyword.trim()
+    if (filters.reviewerName && filters.reviewerName.trim()) params.reviewerName = filters.reviewerName.trim()
+
     const res = await getBookScores(params)
     if (res.success) {
-      const flat = flattenScoreListRows(res.data || [], 'BOOK')
-      scores.value = filterScoreRows(flat, {
-        reviewerName: filters.reviewerName,
-        institutionName: filters.institutionName,
-        groupType: filters.groupType || undefined
-      })
+      scores.value = flattenScoreListRows(res.data || [], 'BOOK')
       nextTick(updateTopScrollWidth)
     } else {
       ElMessage.error(res.message || '加载失败')
@@ -235,8 +242,9 @@ const loadData = async () => {
 
 const resetFilters = () => {
   filters.groupType = ''
+  filters.reviewerStatus = ''
+  filters.keyword = ''
   filters.reviewerName = ''
-  filters.institutionName = ''
   loadData()
 }
 
