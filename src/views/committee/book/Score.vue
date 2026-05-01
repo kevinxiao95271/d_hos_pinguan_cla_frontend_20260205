@@ -1,196 +1,129 @@
 <template>
   <div class="score-page">
-    <stage-progress :current-stage="currentStageKey" :stages="stagesList" />
-    
-    <el-card>
+    <div class="stage-progress-collapsible">
+      <div class="stage-progress-toggle" @click="stageProgressVisible = !stageProgressVisible">
+        <span>赛事阶段进度</span>
+        <el-icon :style="{ transform: stageProgressVisible ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }">
+          <ArrowDown />
+        </el-icon>
+      </div>
+      <transition name="collapse">
+        <stage-progress v-if="stageProgressVisible" :current-stage="currentStageKey" :stages="stagesList" />
+      </transition>
+    </div>
+
+    <el-card class="score-card">
       <template #header>
         <div class="card-header">
           <span>书审得分列表</span>
+          <div class="filter-inline">
+            <el-select v-model="filters.groupType" clearable placeholder="全部组别" size="small" style="width: 110px" @change="loadData">
+              <el-option label="基层组" value="BASIC" />
+              <el-option label="综合组" value="COMPREHENSIVE" />
+              <el-option label="进阶组" value="ADVANCED" />
+            </el-select>
+            <el-input v-model="filters.reviewerName" clearable placeholder="评委姓名" size="small" style="width: 120px" @clear="loadData" @keyup.enter="loadData" />
+            <el-input v-model="filters.institutionName" clearable placeholder="医疗机构" size="small" style="width: 160px" @clear="loadData" @keyup.enter="loadData" />
+            <el-button type="primary" size="small" @click="loadData">查询</el-button>
+            <el-button size="small" @click="resetFilters">重置</el-button>
+            <el-button v-if="userStore.isOps || userStore.isCommittee" type="success" plain size="small" :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
+          </div>
         </div>
       </template>
-      
-      <!-- 筛选条件 -->
-      <el-form :model="filters" inline style="margin-bottom: 20px">
-        <el-form-item label="组别">
-          <el-select v-model="filters.groupType" clearable placeholder="全部组别" style="width: 150px" @change="loadData">
-            <el-option label="基层组" value="BASIC" />
-            <el-option label="综合组" value="COMPREHENSIVE" />
-            <el-option label="进阶组" value="ADVANCED" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="评委姓名">
-          <el-input v-model="filters.reviewerName" clearable placeholder="输入评委姓名" style="width: 150px" @clear="loadData" @keyup.enter="loadData" />
-        </el-form-item>
-        
-        <el-form-item label="医疗机构">
-          <el-input v-model="filters.institutionName" clearable placeholder="输入机构名称" style="width: 200px" @clear="loadData" @keyup.enter="loadData" />
-        </el-form-item>
-        
-        <el-form-item>
-          <el-button type="primary" @click="loadData">查询</el-button>
-          <el-button @click="resetFilters">重置</el-button>
-          <el-button v-if="userStore.isOps" type="success" plain :disabled="scores.length === 0" @click="exportExcel">导出 Excel</el-button>
-        </el-form-item>
-      </el-form>
-      
-      <!-- 统计信息 -->
-      <el-alert
-        v-if="scores.length > 0"
-        :title="`共 ${scores.length} 条评委评分记录`"
-        type="info"
-        :closable="false"
-        style="margin-bottom: 20px"
-      />
-      
-      <!-- 评分列表 -->
-      <el-table
-        v-loading="loading"
-        :data="scores"
-        border
-        stripe
-        style="width: 100%"
-      >
-        <el-table-column prop="registrationId" label="项目编号" width="80" align="center" />
-        
-        <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
-        
-        <el-table-column prop="institutionName" label="医疗机构" min-width="200" show-overflow-tooltip />
-        
-        <el-table-column prop="institutionLevel" label="机构等级" width="110" align="center" />
-        
-        <el-table-column prop="groupType" label="组别" width="90" align="center">
-          <template #default="{ row }">
-            {{ getGroupTypeText(row.groupType) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="groupCode" label="分组" width="80" align="center" />
 
-        <el-table-column label="项目均分" width="88" align="center">
-          <template #default="{ row }">{{ formatScore1(row.avgTotal) }}</template>
-        </el-table-column>
-        <el-table-column label="评委进度" width="100" align="center">
-          <template #default="{ row }">
-            {{ row.scoredCount != null ? row.scoredCount : '-' }} /
-            {{ row.totalReviewers != null ? row.totalReviewers : '-' }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
-        
-        <el-table-column prop="reviewerInstitutionName" label="评委机构" min-width="180" show-overflow-tooltip />
-        
-        <el-table-column label="评分详情" width="400">
-          <template #default="{ row }">
-            <div class="score-details">
-              <div class="score-item">
-                <span class="label">计划:</span>
-                <span class="value">{{ formatScore1(row.plan) }}</span>
+      <!-- 评分列表：顶部 + 底部双向滚动轨 -->
+      <div class="dual-scroll-wrapper">
+        <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
+          <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
+        </div>
+        <el-table
+          ref="tableRef"
+          v-loading="loading"
+          :data="scores"
+          border
+          stripe
+          style="width: 100%"
+          max-height="calc(100vh - 200px)"
+        >
+          <el-table-column prop="registrationId" label="项目编号" width="80" align="center" />
+          <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="institutionName" label="医疗机构" min-width="200" show-overflow-tooltip />
+          <el-table-column prop="institutionLevel" label="机构等级" width="110" align="center" />
+          <el-table-column prop="groupType" label="组别" width="90" align="center">
+            <template #default="{ row }">{{ getGroupTypeText(row.groupType) }}</template>
+          </el-table-column>
+          <el-table-column prop="groupCode" label="分组" width="80" align="center" />
+          <el-table-column label="项目均分" width="88" align="center">
+            <template #default="{ row }">{{ formatScore1(row.avgTotal) }}</template>
+          </el-table-column>
+          <el-table-column label="评委进度" width="100" align="center">
+            <template #default="{ row }">
+              {{ row.scoredCount != null ? row.scoredCount : '-' }} /
+              {{ row.totalReviewers != null ? row.totalReviewers : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
+          <el-table-column prop="reviewerInstitutionName" label="评委机构" min-width="180" show-overflow-tooltip />
+          <el-table-column label="评分详情" width="400">
+            <template #default="{ row }">
+              <div class="score-details">
+                <div class="score-item"><span class="label">计划:</span><span class="value">{{ formatScore1(row.plan) }}</span></div>
+                <div class="score-item"><span class="label">问题:</span><span class="value">{{ formatScore1(row.problem) }}</span></div>
+                <div class="score-item"><span class="label">行动:</span><span class="value">{{ formatScore1(row.action) }}</span></div>
+                <div class="score-item"><span class="label">成效:</span><span class="value">{{ formatScore1(row.success) }}</span></div>
+                <div class="score-item"><span class="label">回顾:</span><span class="value">{{ formatScore1(row.review) }}</span></div>
+                <div class="score-item"><span class="label">运作:</span><span class="value">{{ formatScore1(row.operation) }}</span></div>
+                <div class="score-item"><span class="label">展示:</span><span class="value">{{ formatScore1(row.presentation) }}</span></div>
               </div>
-              <div class="score-item">
-                <span class="label">问题:</span>
-                <span class="value">{{ formatScore1(row.problem) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">行动:</span>
-                <span class="value">{{ formatScore1(row.action) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">成效:</span>
-                <span class="value">{{ formatScore1(row.success) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">回顾:</span>
-                <span class="value">{{ formatScore1(row.review) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">运作:</span>
-                <span class="value">{{ formatScore1(row.operation) }}</span>
-              </div>
-              <div class="score-item">
-                <span class="label">展示:</span>
-                <span class="value">{{ formatScore1(row.presentation) }}</span>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="total" label="总分" width="90" align="center">
-          <template #default="{ row }">
-            <el-tag type="success" size="large">
-              {{ formatScore1(row.total) }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="submittedAt" label="提交时间" width="160" align="center">
-          <template #default="{ row }">
-            {{ formatDate(row.submittedAt) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="100" align="center" fixed="right">
-          <template #default="{ row }">
-            <el-button
-              type="danger"
-              size="small"
-              @click="handleReturn(row)"
-            >
-              驳回
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      
+            </template>
+          </el-table-column>
+          <el-table-column prop="total" label="总分" width="90" align="center">
+            <template #default="{ row }">
+              <el-tag type="success" size="large">{{ formatScore1(row.total) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="submittedAt" label="提交时间" width="160" align="center">
+            <template #default="{ row }">{{ formatDate(row.submittedAt) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="100" align="center" fixed="right">
+            <template #default="{ row }">
+              <el-button type="danger" size="small" @click="handleReturn(row)">驳回</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+
+      <!-- 统计信息 -->
+      <div v-if="scores.length > 0" class="score-count-bar">共 {{ scores.length }} 条评委评分记录</div>
+
       <!-- 空状态 -->
       <el-empty v-if="!loading && scores.length === 0" description="暂无评分记录" />
     </el-card>
-    
+
     <!-- 驳回对话框 -->
-    <el-dialog
-      v-model="returnDialogVisible"
-      title="驳回评分"
-      width="500px"
-    >
+    <el-dialog v-model="returnDialogVisible" title="驳回评分" width="500px">
       <el-form :model="returnForm" :rules="returnRules" ref="returnFormRef" label-width="80px">
-        <el-form-item label="项目名称">
-          <span>{{ currentScore?.projectName }}</span>
-        </el-form-item>
-        
-        <el-form-item label="评委">
-          <span>{{ currentScore?.reviewerName }}</span>
-        </el-form-item>
-        
+        <el-form-item label="项目名称"><span>{{ currentScore?.projectName }}</span></el-form-item>
+        <el-form-item label="评委"><span>{{ currentScore?.reviewerName }}</span></el-form-item>
         <el-form-item label="总分">
           <el-tag type="success">{{ formatScore1(currentScore?.total) }} 分</el-tag>
         </el-form-item>
-        
         <el-form-item label="驳回原因" prop="reason">
-          <el-input
-            v-model="returnForm.reason"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入驳回原因"
-            maxlength="200"
-            show-word-limit
-          />
+          <el-input v-model="returnForm.reason" type="textarea" :rows="4" placeholder="请输入驳回原因" maxlength="200" show-word-limit />
         </el-form-item>
       </el-form>
-      
       <template #footer>
         <el-button @click="returnDialogVisible = false">取消</el-button>
-        <el-button type="danger" :loading="returning" @click="confirmReturn">
-          确认驳回
-        </el-button>
+        <el-button type="danger" :loading="returning" @click="confirmReturn">确认驳回</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { getBookScores, returnScore } from '@/api/review'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
@@ -201,8 +134,9 @@ import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 
 const userStore = useUserStore()
-
 const { stagesList, currentStageKey } = useCompetitionStages()
+
+const stageProgressVisible = ref(false)
 
 const loading = ref(false)
 const scores = ref([])
@@ -217,11 +151,7 @@ const returnDialogVisible = ref(false)
 const returning = ref(false)
 const currentScore = ref(null)
 const returnFormRef = ref(null)
-
-const returnForm = reactive({
-  reason: ''
-})
-
+const returnForm = reactive({ reason: '' })
 const returnRules = {
   reason: [
     { required: true, message: '请输入驳回原因', trigger: 'blur' },
@@ -229,29 +159,61 @@ const returnRules = {
   ]
 }
 
+// 双向滚动轨同步
+const tableRef = ref(null)
+const topScrollRef = ref(null)
+const topScrollInnerRef = ref(null)
+let tableBodyEl = null
+let isSyncingTop = false
+let isSyncingTable = false
+let scrollResizeObserver = null
+
+const getTableBodyEl = () => tableRef.value?.$el?.querySelector('.el-scrollbar__wrap')
+
+const onTopScroll = () => {
+  if (isSyncingTable) return
+  isSyncingTop = true
+  const el = getTableBodyEl()
+  if (el) el.scrollLeft = topScrollRef.value.scrollLeft
+  isSyncingTop = false
+}
+
+const onTableBodyScroll = () => {
+  if (isSyncingTop) return
+  isSyncingTable = true
+  if (topScrollRef.value) topScrollRef.value.scrollLeft = tableBodyEl.scrollLeft
+  isSyncingTable = false
+}
+
+const updateTopScrollWidth = () => {
+  const el = getTableBodyEl()
+  if (el && topScrollInnerRef.value) {
+    topScrollInnerRef.value.style.width = el.scrollWidth + 'px'
+  }
+}
+
+const initDualScroll = () => {
+  tableBodyEl = getTableBodyEl()
+  if (!tableBodyEl) return
+  tableBodyEl.addEventListener('scroll', onTableBodyScroll)
+  updateTopScrollWidth()
+  scrollResizeObserver = new ResizeObserver(updateTopScrollWidth)
+  scrollResizeObserver.observe(tableBodyEl)
+}
+
+onBeforeUnmount(() => {
+  if (tableBodyEl) tableBodyEl.removeEventListener('scroll', onTableBodyScroll)
+  if (scrollResizeObserver) scrollResizeObserver.disconnect()
+})
+
 const loadData = async () => {
   const competitionId = await getCurrentCompetitionId()
-  if (!competitionId) {
-    ElMessage.warning('请先选择赛事')
-    return
-  }
-  
+  if (!competitionId) { ElMessage.warning('请先选择赛事'); return }
   loading.value = true
   try {
-    const params = {
-      competitionId,
-      ...filters
-    }
-    
-    // 移除空值
-    Object.keys(params).forEach(key => {
-      if (!params[key]) {
-        delete params[key]
-      }
-    })
-    
+    const params = { competitionId, ...filters }
+    Object.keys(params).forEach(key => { if (!params[key]) delete params[key] })
     const res = await getBookScores(params)
-    
     if (res.success) {
       const flat = flattenScoreListRows(res.data || [], 'BOOK')
       scores.value = filterScoreRows(flat, {
@@ -259,6 +221,7 @@ const loadData = async () => {
         institutionName: filters.institutionName,
         groupType: filters.groupType || undefined
       })
+      nextTick(updateTopScrollWidth)
     } else {
       ElMessage.error(res.message || '加载失败')
     }
@@ -286,66 +249,38 @@ const handleReturn = (score) => {
 const confirmReturn = async () => {
   try {
     await returnFormRef.value.validate()
-    
     await ElMessageBox.confirm(
       `确认驳回【${currentScore.value.projectName}】的评分？评分记录将被删除，任务状态将变为"待重评"。`,
       '确认驳回',
-      {
-        confirmButtonText: '确认驳回',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
+      { confirmButtonText: '确认驳回', cancelButtonText: '取消', type: 'warning' }
     )
-    
     const taskId = currentScore.value.reviewTaskId
-    if (taskId == null) {
-      ElMessage.error('缺少 reviewTaskId，无法驳回')
-      return
-    }
-
+    if (taskId == null) { ElMessage.error('缺少 reviewTaskId，无法驳回'); return }
     returning.value = true
-    const res = await returnScore({
-      reviewTaskId: taskId,
-      reason: returnForm.reason
-    })
-    
+    const res = await returnScore({ reviewTaskId: taskId, reason: returnForm.reason })
     if (res.success) {
       ElMessage.success('驳回成功')
       returnDialogVisible.value = false
-      loadData() // 重新加载数据
+      loadData()
     } else {
       ElMessage.error(res.message || '驳回失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('驳回失败:', error)
-      ElMessage.error('驳回失败')
-    }
+    if (error !== 'cancel') { console.error('驳回失败:', error); ElMessage.error('驳回失败') }
   } finally {
     returning.value = false
   }
 }
 
-const getGroupTypeText = (type) => {
-  const map = {
-    'BASIC': '基层组',
-    'COMPREHENSIVE': '综合组',
-    'ADVANCED': '进阶组'
-  }
-  return map[type] || type
-}
+const getGroupTypeText = (type) => ({ BASIC: '基层组', COMPREHENSIVE: '综合组', ADVANCED: '进阶组' }[type] || type)
 
-/** 分项/总分可能为 null，避免 toFixed 抛错 */
 function formatScore1(v) {
   if (v == null || v === '') return '-'
   const n = Number(v)
   return Number.isFinite(n) ? n.toFixed(1) : '-'
 }
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
-}
+const formatDate = (dateStr) => dateStr ? dayjs(dateStr).format('YYYY-MM-DD HH:mm') : '-'
 
 const exportExcel = () => {
   const rows = scores.value.map(r => ({
@@ -377,38 +312,114 @@ const exportExcel = () => {
 
 onMounted(() => {
   loadData()
+  nextTick(() => { initDualScroll() })
 })
 </script>
 
 <style scoped lang="scss">
+.stage-progress-collapsible {
+  margin-bottom: 16px;
+  .stage-progress-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #909399;
+    padding: 4px 8px;
+    border-radius: 4px;
+    user-select: none;
+    margin-bottom: 6px;
+    &:hover { color: #409eff; background: #f0f7ff; }
+  }
+}
+
+.collapse-enter-active,
+.collapse-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  transform-origin: top;
+}
+.collapse-enter-from,
+.collapse-leave-to {
+  opacity: 0;
+  transform: scaleY(0.85);
+}
+
 .score-page {
   padding: 20px;
-  
-  .card-header {
-    font-size: 18px;
-    font-weight: 600;
+
+  .score-card {
+    :deep(.el-card__header) { padding: 10px 16px; }
+    :deep(.el-card__body) { padding: 12px 16px; }
   }
-  
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 600;
+
+    .filter-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: normal;
+    }
+  }
+
+  .score-count-bar {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #909399;
+    text-align: right;
+  }
+
   .score-details {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    
     .score-item {
       display: flex;
       align-items: center;
       font-size: 13px;
-      
-      .label {
-        color: #909399;
-        margin-right: 4px;
-      }
-      
-      .value {
-        color: #409eff;
-        font-weight: 500;
-      }
+      .label { color: #909399; margin-right: 4px; }
+      .value { color: #409eff; font-weight: 500; }
     }
   }
 }
+
+.dual-scroll-wrapper {
+  position: relative;
+
+  :deep(.el-scrollbar__bar.is-vertical),
+  :deep(.el-scrollbar__bar.is-vertical:hover) {
+    width: 10px !important;
+    opacity: 1 !important;
+    right: 0;
+  }
+  :deep(.el-scrollbar__bar.is-vertical .el-scrollbar__thumb) {
+    background: #6b7280;
+    border-radius: 5px;
+    opacity: 1 !important;
+    &:hover { background: #374151; }
+  }
+  :deep(.el-scrollbar__wrap) {
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #e5e7eb;
+  }
+}
+
+.dual-scroll-track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  &::-webkit-scrollbar { height: 8px; }
+  &::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 4px; }
+  &::-webkit-scrollbar-thumb { background: #c0c4cc; border-radius: 4px;
+    &:hover { background: #909399; }
+  }
+}
+.dual-scroll-top { margin-bottom: 2px; }
+.dual-scroll-inner { height: 1px; min-width: 100%; }
 </style>
