@@ -48,28 +48,9 @@
           max-height="calc(100vh - 200px)"
         >
         <el-table-column prop="registrationId" label="项目编号" width="80" align="center" />
-        
         <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
-        
         <el-table-column prop="institutionName" label="医疗机构" min-width="200" show-overflow-tooltip />
-        
-        <el-table-column prop="institutionLevel" label="机构等级" width="110" align="center" />
-        
         <el-table-column prop="groupCode" label="分组" width="80" align="center" />
-
-        <el-table-column label="项目均分" width="88" align="center">
-          <template #default="{ row }">{{ formatScore1(row.avgTotal) }}</template>
-        </el-table-column>
-        <el-table-column label="评委进度" width="100" align="center">
-          <template #default="{ row }">
-            {{ row.scoredCount != null ? row.scoredCount : '-' }} /
-            {{ row.totalReviewers != null ? row.totalReviewers : '-' }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
-        
-        
         <el-table-column prop="total" label="总分" width="90" align="center">
           <template #default="{ row }">
             <el-tag v-if="row.total != null" type="success" size="large">
@@ -78,7 +59,22 @@
             <span v-else style="color:#c0c4cc">-</span>
           </template>
         </el-table-column>
-
+        <el-table-column label="项目均分" width="88" align="center">
+          <template #default="{ row }">{{ formatScore1(row.avgTotal) }}</template>
+        </el-table-column>
+        <el-table-column prop="reviewerName" label="评委姓名" width="100" align="center" />
+        <el-table-column label="评委进度" width="100" align="center">
+          <template #default="{ row }">
+            {{ row.scoredCount != null ? row.scoredCount : '-' }} /
+            {{ row.totalReviewers != null ? row.totalReviewers : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="submittedAt" label="提交时间" width="160" align="center">
+          <template #default="{ row }">
+            {{ formatDate(row.submittedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="institutionLevel" label="机构等级" width="110" align="center" />
         <el-table-column label="评分详情（面谈）" width="380">
           <template #default="{ row }">
             <div class="score-details">
@@ -102,13 +98,7 @@
           </template>
         </el-table-column>
         
-        <el-table-column prop="submittedAt" label="提交时间" width="160" align="center">
-          <template #default="{ row }">
-            {{ formatDate(row.submittedAt) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="操作" width="100" align="center" fixed="right">
+        <el-table-column label="操作" width="100" align="center">
           <template #default="{ row }">
             <el-button type="danger" size="small" :disabled="row.status !== 'SCORED'" @click="handleReturn(row)">驳回</el-button>
           </template>

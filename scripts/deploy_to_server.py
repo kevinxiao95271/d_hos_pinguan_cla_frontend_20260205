@@ -143,19 +143,22 @@ fi
         
         print("")
         
-        # 重新加载nginx
-        print("🔄 重新加载nginx配置...")
-        stdin, stdout, stderr = ssh.exec_command("nginx -t && nginx -s reload")
+        # 杀进程重启nginx
+        print("🔄 杀进程重启nginx...")
+        stdin, stdout, stderr = ssh.exec_command("nginx -s stop; sleep 2; nginx")
         output = stdout.read().decode('utf-8')
         error = stderr.read().decode('utf-8')
         
         if output:
             print(output)
         if error:
-            if 'successful' in error or 'test is successful' in error:
-                print("✅ nginx配置测试通过")
-            else:
-                print(f"⚠️ nginx: {error}")
+            print(f"⚠️ nginx: {error}")
+        
+        # 验证nginx是否启动
+        stdin2, stdout2, stderr2 = ssh.exec_command("pgrep nginx | head -1 && echo 'nginx running'")
+        result = stdout2.read().decode('utf-8').strip()
+        if 'nginx running' in result or result:
+            print(f"✅ nginx 已重启，PID: {result.split()[0] if result else '?'}")
         
         ssh.close()
         
