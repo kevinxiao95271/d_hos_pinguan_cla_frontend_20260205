@@ -23,12 +23,17 @@
         <el-button type="primary" :loading="computing" @click="handleCompute">
           计算排名
         </el-button>
-        <el-text v-if="snapshotTime" type="info" size="small" style="margin-left: 12px">
-          最近快照：{{ snapshotTime }}
+        <el-text v-if="computing" type="primary" size="small" style="margin-left: 12px">
+          {{ computeStatusText }}
         </el-text>
-        <el-text v-else type="warning" size="small" style="margin-left: 12px">
-          暂无快照，请先「计算排名」
-        </el-text>
+        <template v-else>
+          <el-text v-if="snapshotTime" type="info" size="small" style="margin-left: 12px">
+            最近快照：{{ snapshotTime }}
+          </el-text>
+          <el-text v-else type="warning" size="small" style="margin-left: 12px">
+            暂无快照，请先「计算排名」
+          </el-text>
+        </template>
       </div>
     </el-card>
 
@@ -167,7 +172,7 @@
       </el-table>
 
       <div v-if="!loading && filteredRows.length === 0" style="padding: 20px 0">
-        <el-empty description="暂无数据，请先「计算排名」" />
+        <el-empty description="暂无排名数据，请先触发算分计算" />
       </div>
       <div v-if="filteredRows.length > 0" style="padding: 8px 0; color: #909399; font-size: 13px">
         共 {{ filteredRows.length }} 条
@@ -199,14 +204,19 @@ import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
-import { getRankings, computeRanking } from '@/api/shortlist'
+import { getRankings } from '@/api/shortlist'
+import { useComputeRanking } from '@/composables/useComputeRanking'
 import { getCurrentCompetitionIdSync } from '@/utils/competition'
 
 const competitionId = ref(getCurrentCompetitionIdSync())
 const { stagesList, currentStageKey } = useCompetitionStages()
 
 const loading = ref(false)
-const computing = ref(false)
+
+const { computing, statusText: computeStatusText, triggerCompute } = useComputeRanking(
+  async () => { await loadData() },
+  (err) => { ElMessage.error(err || '计算失败') }
+)
 const rows = ref([])
 const filterGroupType = ref('')
 const filterKeyword = ref('')
@@ -249,29 +259,13 @@ async function loadData() {
   }
 }
 
-async function handleCompute() {
+function handleCompute() {
   if (!competitionId.value) { ElMessage.warning('请先选择赛事'); return }
-  computing.value = true
-  try {
-    const res = await computeRanking({
-      competitionId: competitionId.value,
-      stage: 'INTERVIEW',
-      interviewOnly: true
-    })
-    if (res.success) {
-      ElMessage.success(
-        typeof res.data === 'number' ? `计算完成，已写入 ${res.data} 条快照` : '计算完成'
-      )
-      await loadData()
-    } else {
-      ElMessage.error(res.message || '计算失败')
-    }
-  } catch (e) {
-    console.error(e)
-    ElMessage.error('计算排名失败')
-  } finally {
-    computing.value = false
-  }
+  triggerCompute({
+    competitionId: competitionId.value,
+    stage: 'INTERVIEW',
+    interviewOnly: true
+  })
 }
 
 function applyFilter() { loadData() }

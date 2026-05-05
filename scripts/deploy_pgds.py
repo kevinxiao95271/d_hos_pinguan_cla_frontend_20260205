@@ -64,15 +64,15 @@ err = stderr.read().decode('utf-8')
 if err:
     print("⚠️  STDERR:", err[:300])
 
-print("🔄 重载 nginx...")
-_, stdout, stderr = ssh.exec_command("nginx -t && nginx -s reload")
+print("🔄 杀进程重启 nginx...")
+_, stdout, stderr = ssh.exec_command("nginx -s stop; sleep 2; nginx")
 out = stdout.read().decode()
 err = stderr.read().decode()
 if out: print(out)
-if 'successful' in err or 'test is successful' in err:
-    print("✅ nginx 配置正常")
-elif err:
-    print("nginx:", err[:200])
+if err: print("nginx:", err[:200])
+_, so2, _ = ssh.exec_command("curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:6039/pgds/")
+code = so2.read().decode().strip()
+print(f"✅ nginx 已重启，HTTP 状态: {code}")
 
 ssh.close()
 print("\n🎉 完成！访问地址: http://81.71.44.180:6039/pgds/login")

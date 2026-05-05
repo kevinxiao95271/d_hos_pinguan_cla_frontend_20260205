@@ -43,6 +43,7 @@
               仅写入「{{ stageLabel }}」快照
             </el-text>
             <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+              <el-text v-if="computing" type="primary" size="small">{{ computeStatusText }}</el-text>
               <el-button
                 type="primary"
                 :loading="computing"
@@ -462,6 +463,16 @@
           </div>
         </div>
       </template>
+
+      <el-alert
+        v-if="!loading && currentRankEmpty"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 12px"
+      >
+        暂无排名数据，请先触发算分计算
+      </el-alert>
 
       <el-table
         :data="filteredProjects"
@@ -1006,11 +1017,11 @@ import {
   getAdvancedRankingConfig,
   saveAdvancedRankingConfig,
   saveShortlistConfig,
-  computeRanking,
   exportScoreSheet,
   setShortlistOverride,
   deleteShortlistOverride
 } from '@/api/shortlist'
+import { useComputeRanking } from '@/composables/useComputeRanking'
 import { getRegistrationReviewDetails } from '@/api/registration'
 import { getAdminReviewTasks } from '@/api/admin'
 import { getReviewScore } from '@/api/review'
@@ -1024,8 +1035,19 @@ const ruleCollapseActive = ref([])
 
 /** 排名快照阶段：与后台 stage 一致 */
 const rankStage = ref('BOOK')
-const computing = ref(false)
+
+/** 当前 stage 对应的排名快照是否为空（用于提示用户触发算分） */
+const bookRankEmpty  = ref(false)
+const interviewRankEmpty = ref(false)
+const currentRankEmpty = computed(() =>
+  rankStage.value === 'BOOK' ? bookRankEmpty.value : interviewRankEmpty.value
+)
 const exportingScoreSheet = ref(false)
+
+const { computing, statusText: computeStatusText, triggerCompute } = useComputeRanking(
+  async () => { await loadData() },
+  (err) => { ElMessage.error(err || '计算失败') }
+)
 const configLoading = ref(false)
 const serverConfig = ref([])
 
@@ -1493,31 +1515,11 @@ async function saveGroupConfig(row) {
   }
 }
 
-async function handleComputeRanking() {
-  computing.value = true
-  try {
-    // 与后台约定：不传 groupType，一次计算当前 stage 下各组（如书审下基层+综合+进阶）的调整分与快照
-    const body = {
-      competitionId: competitionId.value,
-      stage: rankStage.value
-    }
-    const res = await computeRanking(body)
-    if (res.success) {
-      ElMessage.success(
-        typeof res.data === 'number'
-          ? `排名计算完成，已写入 ${res.data} 条快照`
-          : '排名计算完成'
-      )
-      await loadData()
-    } else {
-      ElMessage.error(res.message || '计算失败')
-    }
-  } catch (e) {
-    console.error(e)
-    ElMessage.error('计算排名失败')
-  } finally {
-    computing.value = false
-  }
+function handleComputeRanking() {
+  triggerCompute({
+    competitionId: competitionId.value,
+    stage: rankStage.value
+  })
 }
 
 async function handleExportScoreSheet() {
@@ -1599,12 +1601,15 @@ async function loadData() {
         bookMap.set(r.registrationId, r.avgTotal != null ? Number(r.avgTotal) : null)
       })
     }
+    bookRankEmpty.value = bookMap.size === 0
+
     const interviewMap = new Map()
     if (intRes.success && Array.isArray(intRes.data)) {
       intRes.data.forEach(r => {
         interviewMap.set(r.registrationId, r.avgTotal != null ? Number(r.avgTotal) : null)
       })
     }
+    interviewRankEmpty.value = interviewMap.size === 0
 
     if (!slRes.success) {
       ElMessage.error(slRes.message || '加载入围名单失败')

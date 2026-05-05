@@ -13,16 +13,30 @@ export function getRankings(params) {
 }
 
 /**
- * 触发系数调整排名计算并写入快照
+ * 触发系数调整排名计算（异步 job）
  * @param {Object} data - { competitionId, stage, groupType?, interviewOnly? }
  *   interviewOnly=true  → 纯面谈排名，快照写入 INTERVIEW_ONLY，查询时用 stage=INTERVIEW_ONLY
  *   interviewOnly=false → 合分排名（书审+面谈），快照写入 INTERVIEW
+ * @returns {{ jobId, status, snapshotCount, error, startedAt, finishedAt }}
  */
 export function computeRanking(data) {
   return request({
     url: '/admin/reviews/compute-ranking',
     method: 'post',
     data
+  })
+}
+
+/**
+ * 轮询排名计算 job 状态
+ * @param {string} jobId - computeRanking 返回的 jobId
+ * @returns {{ jobId, status: 'RUNNING'|'SUCCESS'|'FAILED', snapshotCount, error, startedAt, finishedAt }}
+ */
+export function getComputeRankingStatus(jobId) {
+  return request({
+    url: '/admin/reviews/compute-ranking/status',
+    method: 'get',
+    params: { jobId }
   })
 }
 
