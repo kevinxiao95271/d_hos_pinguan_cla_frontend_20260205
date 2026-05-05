@@ -207,6 +207,7 @@ const menuItems = computed(() => {
         ]
       },
       // 一级：入围管理（无子项）
+      { path: '/committee/interview-stage/interview-only-ranking', title: '纯面谈排名', icon: 'DataLine' },
       { path: '/committee/interview-stage/shortlist', title: '入围管理', icon: 'Select' },
       // 一级：决赛阶段
       {

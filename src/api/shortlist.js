@@ -14,7 +14,9 @@ export function getRankings(params) {
 
 /**
  * 触发系数调整排名计算并写入快照
- * @param {Object} data - { competitionId, stage, groupType? }
+ * @param {Object} data - { competitionId, stage, groupType?, interviewOnly? }
+ *   interviewOnly=true  → 纯面谈排名，快照写入 INTERVIEW_ONLY，查询时用 stage=INTERVIEW_ONLY
+ *   interviewOnly=false → 合分排名（书审+面谈），快照写入 INTERVIEW
  */
 export function computeRanking(data) {
   return request({

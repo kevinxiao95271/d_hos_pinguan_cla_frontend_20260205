@@ -161,6 +161,12 @@ const routes = [
         component: () => import('@/views/committee/interview/Shortlist.vue'),
         meta: { title: '入围管理', parent: '面谈阶段' }
       },
+      {
+        path: 'interview-stage/interview-only-ranking',
+        name: 'InterviewOnlyRanking',
+        component: () => import('@/views/committee/interview/InterviewOnlyRanking.vue'),
+        meta: { title: '纯面谈排名', parent: '面谈阶段' }
+      },
       // 决赛阶段子路由
       {
         path: 'final-stage/group',
