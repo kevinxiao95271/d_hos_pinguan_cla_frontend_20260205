@@ -43,7 +43,16 @@
               仅写入「{{ stageLabel }}」快照
             </el-text>
             <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
-              <el-text v-if="computing" type="primary" size="small">{{ computeStatusText }}</el-text>
+              <div v-if="computing" style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 220px;">
+                <el-progress
+                  :percentage="computeProgress"
+                  :striped="true"
+                  :striped-flow="true"
+                  :duration="10"
+                  style="width: 220px;"
+                />
+                <el-text type="primary" size="small">{{ computeProgressMsg || computeStatusText }}</el-text>
+              </div>
               <el-button
                 type="primary"
                 :loading="computing"
@@ -1044,7 +1053,7 @@ const currentRankEmpty = computed(() =>
 )
 const exportingScoreSheet = ref(false)
 
-const { computing, statusText: computeStatusText, triggerCompute } = useComputeRanking(
+const { computing, statusText: computeStatusText, progress: computeProgress, progressMsg: computeProgressMsg, triggerCompute } = useComputeRanking(
   async () => { await loadData() },
   (err) => { ElMessage.error(err || '计算失败') }
 )

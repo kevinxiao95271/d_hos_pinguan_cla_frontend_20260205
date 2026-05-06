@@ -11,15 +11,19 @@ const MAX_WAIT_MS  = 120000  // 最多等待 2 分钟
  * @param {Function} [onError]  - (errMsg: string) => void        失败回调（可选）
  *
  * 返回：
- *   computing   - Ref<Boolean>  按钮 loading 状态
- *   statusText  - Ref<String>   进度文案（可直接绑定到页面）
- *   triggerCompute(data)        触发计算，data = { competitionId, stage, groupType?, interviewOnly? }
+ *   computing    - Ref<Boolean>  按钮 loading 状态
+ *   statusText   - Ref<String>   进度文案（可直接绑定到页面）
+ *   progress     - Ref<Number>   进度百分比 0~100
+ *   progressMsg  - Ref<String>   后端返回的进度阶段描述
+ *   triggerCompute(data)         触发计算，data = { competitionId, stage, groupType?, interviewOnly? }
  */
 export function useComputeRanking(onSuccess, onError) {
-  const computing  = ref(false)
-  const statusText = ref('')
-  let pollTimer    = null
-  let startTime    = 0
+  const computing   = ref(false)
+  const statusText  = ref('')
+  const progress    = ref(0)
+  const progressMsg = ref('')
+  let pollTimer     = null
+  let startTime     = 0
 
   function stopPolling() {
     if (pollTimer) {
@@ -50,23 +54,28 @@ export function useComputeRanking(onSuccess, onError) {
           return
         }
 
-        const { status, snapshotCount, error } = res.data
+        const { status, snapshotCount, error, progress: pct, progressMsg: pMsg } = res.data
+        if (pct != null)  progress.value    = pct
+        if (pMsg != null) progressMsg.value = pMsg
+
         if (status === 'SUCCESS') {
           stopPolling()
-          computing.value  = false
-          statusText.value = `计算完成，共写入 ${snapshotCount} 条快照`
+          computing.value   = false
+          progress.value    = 100
+          progressMsg.value = 'SUCCESS'
+          statusText.value  = `计算完成，共写入 ${snapshotCount} 条快照`
           onSuccess?.(snapshotCount)
         } else if (status === 'FAILED') {
           stopPolling()
-          computing.value  = false
-          statusText.value = `计算失败：${error}`
+          computing.value   = false
+          statusText.value  = `计算失败：${error}`
           onError?.(error)
         }
         // RUNNING：继续等待，不做任何操作
       } catch (e) {
         stopPolling()
-        computing.value  = false
-        statusText.value = `网络异常：${e.message}`
+        computing.value   = false
+        statusText.value  = `网络异常：${e.message}`
         onError?.(e.message)
       }
     }, POLL_INTERVAL)
@@ -74,8 +83,10 @@ export function useComputeRanking(onSuccess, onError) {
 
   async function triggerCompute(data) {
     if (computing.value) return
-    computing.value  = true
-    statusText.value = '正在提交任务...'
+    computing.value   = true
+    progress.value    = 0
+    progressMsg.value = '任务已启动'
+    statusText.value  = '正在提交任务...'
 
     try {
       const res = await computeRanking(data)
@@ -96,7 +107,8 @@ export function useComputeRanking(onSuccess, onError) {
         return
       }
 
-      statusText.value = '计算中，请稍候...'
+      statusText.value  = '计算中，请稍候...'
+      progressMsg.value = '初始化中...'
       startPolling(jobId)
     } catch (e) {
       computing.value  = false
@@ -105,5 +117,5 @@ export function useComputeRanking(onSuccess, onError) {
     }
   }
 
-  return { computing, statusText, triggerCompute }
+  return { computing, statusText, progress, progressMsg, triggerCompute }
 }
