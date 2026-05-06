@@ -284,7 +284,7 @@ const getGroupTypeText = (type) => ({ BASIC: '基层组', COMPREHENSIVE: '综合
 function formatScore1(v) {
   if (v == null || v === '') return '-'
   const n = Number(v)
-  return Number.isFinite(n) ? n.toFixed(1) : '-'
+  return Number.isFinite(n) ? n.toFixed(2) : '-'
 }
 
 const formatDate = (dateStr) => dateStr ? dayjs(dateStr).format('YYYY-MM-DD HH:mm') : '-'
@@ -294,12 +294,14 @@ const exportExcel = () => {
     '项目编号': r.registrationId ?? '',
     '项目名称': r.projectName ?? '',
     '医疗机构': r.institutionName ?? '',
+    '分组': r.groupCode ?? '',
+    '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
+    '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(2)) : '',
+    '评委姓名': r.reviewerName ?? '',
+    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
+    '提交时间': formatDate(r.submittedAt),
     '机构等级': r.institutionLevel ?? '',
     '组别': getGroupTypeText(r.groupType),
-    '分组': r.groupCode ?? '',
-    '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(1)) : '',
-    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
-    '评委姓名': r.reviewerName ?? '',
     '评委机构': r.reviewerInstitutionName ?? '',
     '评审状态': ({ PENDING: '待评分', DRAFT: '草稿', SCORED: '已评分', RETURNED: '已驳回', RECUSED: '已回避' }[r.status] || r.status || ''),
     '计划': r.plan != null ? Number(Number(r.plan).toFixed(1)) : '',
@@ -309,8 +311,6 @@ const exportExcel = () => {
     '回顾': r.review != null ? Number(Number(r.review).toFixed(1)) : '',
     '运作': r.operation != null ? Number(Number(r.operation).toFixed(1)) : '',
     '展示': r.presentation != null ? Number(Number(r.presentation).toFixed(1)) : '',
-    '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
-    '提交时间': formatDate(r.submittedAt)
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()

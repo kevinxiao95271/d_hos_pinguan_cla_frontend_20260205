@@ -337,19 +337,19 @@ const exportExcel = () => {
     '项目编号': r.registrationId ?? '',
     '项目名称': r.projectName ?? '',
     '医疗机构': r.institutionName ?? '',
-    '机构等级': r.institutionLevel ?? '',
     '分组': r.groupCode ?? '',
-    '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(1)) : '',
-    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
+    '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
+    '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(2)) : '',
     '评委姓名': r.reviewerName ?? '',
+    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
+    '提交时间': formatDate(r.submittedAt),
+    '机构等级': r.institutionLevel ?? '',
     '评委机构': r.reviewerInstitutionName ?? '',
     '评审状态': ({ PENDING: '待评分', DRAFT: '草稿', SCORED: '已评分', RETURNED: '已驳回', RECUSED: '已回避' }[r.status] || r.status || ''),
     '主题': r.topic != null ? Number(Number(r.topic).toFixed(1)) : '',
     '过程': r.process != null ? Number(Number(r.process).toFixed(1)) : '',
     '运作': r.interviewOperation != null ? Number(Number(r.interviewOperation).toFixed(1)) : '',
     '成效': r.result != null ? Number(Number(r.result).toFixed(1)) : '',
-    '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
-    '提交时间': formatDate(r.submittedAt)
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()
@@ -360,7 +360,7 @@ const exportExcel = () => {
 function formatScore1(v) {
   if (v == null || v === '') return '-'
   const n = Number(v)
-  return Number.isFinite(n) ? n.toFixed(1) : '-'
+  return Number.isFinite(n) ? n.toFixed(2) : '-'
 }
 
 onMounted(() => {
