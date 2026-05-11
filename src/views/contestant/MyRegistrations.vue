@@ -156,6 +156,22 @@
       </template>
     </el-dialog>
 
+    <!-- 现场竞赛通知（所有参赛者可见） -->
+    <el-card style="margin-top: 20px;">
+      <template #header>
+        <span style="font-size:16px; font-weight:600;">现场竞赛通知</span>
+      </template>
+      <div class="notice-file-links">
+        <el-link
+          underline="never"
+          style="color: #67b3e8;"
+          @click="openNoticeFile({ name: '关于举办2026年浙江省医院品管大赛现场竞赛的通知', url: `${base}competition_notice.pdf` })"
+        >
+          📄 关于举办2026年浙江省医院品管大赛现场竞赛的通知
+        </el-link>
+      </div>
+    </el-card>
+
     <!-- 面谈通知文件区（仅进阶组可见） -->
     <el-card v-if="hasAdvancedGroup" style="margin-top: 20px;">
       <template #header>
