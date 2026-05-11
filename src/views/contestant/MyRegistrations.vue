@@ -64,7 +64,7 @@
                 size="small"
                 @click="viewResults(row.id)"
               >
-                查看评审结果
+                查看反馈
               </el-button>
 
               <!-- 缴费三件套：仅已提交 -->
