@@ -3,59 +3,33 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>评审结果</span>
+          <span>已发布反馈</span>
           <el-tag type="info">{{ projectName }}</el-tag>
         </div>
       </template>
       
       <div v-loading="loading">
-        <el-empty v-if="!loading && results.length === 0" description="暂无评审结果" />
+        <el-empty v-if="!loading && results.length === 0" description="暂无已发布反馈" />
         
         <div v-else>
-          <!-- 书审结果 -->
           <div v-for="(result, index) in results" :key="index" style="margin-bottom: 30px;">
             <el-card shadow="hover">
               <template #header>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <span style="font-weight: 600;">
-                    {{ getStageText(result.stage) }} - 评委：{{ result.reviewerName || '匿名' }}
-                  </span>
-                  <el-tag type="success">总分: {{ (result.totalScore || 0).toFixed(1) }}</el-tag>
+                  <span style="font-weight: 600;">{{ getStageText(result.stage) }}反馈</span>
+                  <el-tag type="success">已发布</el-tag>
                 </div>
               </template>
-              
-              <el-descriptions :column="2" border>
-                <el-descriptions-item label="计划">
-                  {{ (result.planScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="问题结构与对策措施探讨">
-                  {{ (result.problemAnalysisScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="对策实施">
-                  {{ (result.implementationScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="成果表现">
-                  {{ (result.resultScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="检讨">
-                  {{ (result.reviewScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="整体运作">
-                  {{ (result.operationScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="资料呈现" :span="2">
-                  {{ (result.presentationScore || 0).toFixed(1) }} 分
-                </el-descriptions-item>
-              </el-descriptions>
-              
-              <el-divider />
-              
+
               <el-descriptions :column="1" border>
                 <el-descriptions-item label="亮点">
-                  <div style="white-space: pre-wrap;">{{ result.highlights || '-' }}</div>
+                  <div style="white-space: pre-wrap;">{{ result.finalHighlight || '-' }}</div>
                 </el-descriptions-item>
                 <el-descriptions-item label="不足之处">
-                  <div style="white-space: pre-wrap;">{{ result.shortcomings || '-' }}</div>
+                  <div style="white-space: pre-wrap;">{{ result.finalWeakness || '-' }}</div>
+                </el-descriptions-item>
+                <el-descriptions-item label="发布时间">
+                  {{ formatDate(result.publishedAt) }}
                 </el-descriptions-item>
               </el-descriptions>
             </el-card>
@@ -74,7 +48,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getRegistrationReviewResults, getRegistrationDetail } from '@/api/registration'
+import { getPublishedFeedback, getRegistrationDetail } from '@/api/registration'
+import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
@@ -93,16 +68,16 @@ const loadData = async () => {
       projectName.value = detailRes.data.projectName
     }
     
-    // 加载评审结果
-    const resultsRes = await getRegistrationReviewResults(registrationId.value)
+    // 加载已发布反馈（只读最终稿）
+    const resultsRes = await getPublishedFeedback(registrationId.value)
     if (resultsRes.success) {
       results.value = resultsRes.data || []
     } else {
       ElMessage.error(resultsRes.message || '加载失败')
     }
   } catch (error) {
-    console.error('加载评审结果失败:', error)
-    ElMessage.error('加载评审结果失败')
+    console.error('加载已发布反馈失败:', error)
+    ElMessage.error('加载已发布反馈失败')
   } finally {
     loading.value = false
   }
@@ -115,6 +90,11 @@ const getStageText = (stage) => {
     'FINAL': '决赛'
   }
   return map[stage] || stage
+}
+
+const formatDate = (value) => {
+  if (!value) return '-'
+  return dayjs(value).format('YYYY-MM-DD HH:mm:ss')
 }
 
 const goBack = () => {

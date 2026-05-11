@@ -189,6 +189,17 @@ export function getReviewerScores(id, stage = null) {
 }
 
 /**
+ * 获取报名已发布反馈（参赛者只读）
+ * GET /api/registrations/{id}/published-feedback
+ */
+export function getPublishedFeedback(id) {
+  return request({
+    url: `/registrations/${id}/published-feedback`,
+    method: 'get'
+  })
+}
+
+/**
  * 获取报名列表（支持筛选）
  */
 export function getRegistrations(params) {

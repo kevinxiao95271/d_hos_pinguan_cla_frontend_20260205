@@ -190,71 +190,32 @@
           
           <!-- 书审结果 -->
           <div v-if="activeTab === 'book'" class="tab-content">
-            <div v-if="bookReview">
-              <el-descriptions title="书审得分" :column="2" border>
-                <el-descriptions-item label="计划">
-                  {{ typeof bookReview.planScore === 'number' ? bookReview.planScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="问题结构与对策措施探讨">
-                  {{ typeof bookReview.problemScore === 'number' ? bookReview.problemScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="对策实施">
-                  {{ typeof bookReview.actionScore === 'number' ? bookReview.actionScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="成果表现">
-                  {{ typeof bookReview.successScore === 'number' ? bookReview.successScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="检讨">
-                  {{ typeof bookReview.discussionScore === 'number' ? bookReview.discussionScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="整体运作">
-                  {{ typeof bookReview.operationScore === 'number' ? bookReview.operationScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="资料呈现">
-                  {{ typeof bookReview.presentationScore === 'number' ? bookReview.presentationScore.toFixed(1) : '-' }} 分
-                </el-descriptions-item>
-                <el-descriptions-item label="总分">
-                  <el-tag type="success" size="large">
-                    {{ typeof bookReview.totalScore === 'number' ? bookReview.totalScore.toFixed(1) : '-' }} 分
-                  </el-tag>
-                </el-descriptions-item>
-              </el-descriptions>
-              
-              <el-divider content-position="left">亮点</el-divider>
+            <template v-if="getPublishedFeedbackByStage('BOOK')">
+              <el-divider content-position="left">组委会最终发布反馈</el-divider>
               <div class="feedback-text">
-                {{ bookReview.highlights || '暂无' }}
+                <div><strong>亮点：</strong>{{ getPublishedFeedbackByStage('BOOK').finalHighlight || '暂无' }}</div>
+                <div style="margin-top: 8px;"><strong>不足：</strong>{{ getPublishedFeedbackByStage('BOOK').finalWeakness || '暂无' }}</div>
+                <div style="margin-top: 8px; color: #909399;">
+                  发布时间：{{ formatDate(getPublishedFeedbackByStage('BOOK').publishedAt) }}
+                </div>
               </div>
-              
-              <el-divider content-position="left">不足之处</el-divider>
-              <div class="feedback-text">
-                {{ bookReview.improvements || '暂无' }}
-              </div>
-            </div>
-            <el-empty v-else description="暂无书审结果" />
+            </template>
+            <el-empty v-else description="暂无已发布反馈" />
           </div>
           
           <!-- 面谈结果 -->
           <div v-if="activeTab === 'interview'" class="tab-content">
-            <div v-if="interviewReview">
-              <el-descriptions title="面谈得分" :column="1" border>
-                <el-descriptions-item label="总分">
-                  <el-tag type="success" size="large">
-                    {{ typeof interviewReview.totalScore === 'number' ? interviewReview.totalScore.toFixed(1) : '-' }} 分
-                  </el-tag>
-                </el-descriptions-item>
-              </el-descriptions>
-              
-              <el-divider content-position="left">亮点</el-divider>
+            <template v-if="getPublishedFeedbackByStage('INTERVIEW')">
+              <el-divider content-position="left">组委会最终发布反馈</el-divider>
               <div class="feedback-text">
-                {{ interviewReview.highlights || '暂无' }}
+                <div><strong>亮点：</strong>{{ getPublishedFeedbackByStage('INTERVIEW').finalHighlight || '暂无' }}</div>
+                <div style="margin-top: 8px;"><strong>不足：</strong>{{ getPublishedFeedbackByStage('INTERVIEW').finalWeakness || '暂无' }}</div>
+                <div style="margin-top: 8px; color: #909399;">
+                  发布时间：{{ formatDate(getPublishedFeedbackByStage('INTERVIEW').publishedAt) }}
+                </div>
               </div>
-              
-              <el-divider content-position="left">不足之处</el-divider>
-              <div class="feedback-text">
-                {{ interviewReview.improvements || '暂无' }}
-              </div>
-            </div>
-            <el-empty v-else description="暂无面谈结果" />
+            </template>
+            <el-empty v-else description="暂无已发布反馈" />
           </div>
           
           <!-- 决赛成绩 -->
@@ -286,7 +247,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getRegistration, getRegistrationReviewDetails } from '@/api/registration'
+import { getRegistration, getRegistrationReviewDetails, getPublishedFeedback } from '@/api/registration'
 import { getCompetition } from '@/api/competition'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import StageProgress from '@/components/StageProgress.vue'
@@ -326,9 +287,8 @@ const mentors = computed(() => {
   return registration.members?.filter(m => m.role === 'MENTOR') || []
 })
 
-const bookReview = ref(null)
-const interviewReview = ref(null)
 const finalReview = ref(null)
+const publishedFeedback = ref([])
 
 const stagesList = computed(() => {
   return [
@@ -414,9 +374,13 @@ const loadData = async () => {
     // 加载评审详情
     const reviewRes = await getRegistrationReviewDetails(registrationId.value)
     if (reviewRes.success && reviewRes.data) {
-      bookReview.value = reviewRes.data.BOOK
-      interviewReview.value = reviewRes.data.INTERVIEW
       finalReview.value = reviewRes.data.FINAL
+    }
+
+    // 加载已发布反馈（参赛者只读）
+    const feedbackRes = await getPublishedFeedback(registrationId.value)
+    if (feedbackRes.success) {
+      publishedFeedback.value = feedbackRes.data || []
     }
   } catch (error) {
     console.error('加载数据失败:', error)
@@ -490,6 +454,10 @@ const formatDate = (date) => {
 const formatDateRange = (start, end) => {
   if (!start || !end) return ''
   return `${dayjs(start).format('MM-DD')} ~ ${dayjs(end).format('MM-DD')}`
+}
+
+const getPublishedFeedbackByStage = (stage) => {
+  return publishedFeedback.value.find(item => item.stage === stage) || null
 }
 
 const handleTabChange = (key) => {

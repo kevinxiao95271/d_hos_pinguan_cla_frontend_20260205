@@ -160,6 +160,67 @@ export function getReviewFeedback(params) {
 }
 
 /**
+ * 组委会：按项目获取反馈汇总（已脱敏）
+ * GET /api/admin/reviews/project-feedback?competitionId=&stage=BOOK
+ */
+export function getProjectFeedback(params) {
+  return request({
+    url: '/admin/reviews/project-feedback',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 组委会：项目反馈筛选项（组别/分组联动）
+ * GET /api/admin/reviews/project-feedback/filter-options?competitionId=&stage=BOOK&groupType=
+ */
+export function getProjectFeedbackFilterOptions(params) {
+  return request({
+    url: '/admin/reviews/project-feedback/filter-options',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 组委会：编辑单个项目反馈
+ * PUT /api/admin/reviews/project-feedback/{registrationId}?stage=BOOK
+ */
+export function updateProjectFeedback(registrationId, data, stage = 'BOOK') {
+  return request({
+    url: `/admin/reviews/project-feedback/${registrationId}`,
+    method: 'put',
+    params: { stage },
+    data
+  })
+}
+
+/**
+ * 组委会：发布/撤回单个项目反馈
+ * POST /api/admin/reviews/project-feedback/{registrationId}/publish?stage=BOOK&published=true|false
+ */
+export function publishProjectFeedback(registrationId, stage = 'BOOK', published = true) {
+  return request({
+    url: `/admin/reviews/project-feedback/${registrationId}/publish`,
+    method: 'post',
+    params: { stage, published }
+  })
+}
+
+/**
+ * 组委会：按赛事批量发布/撤回反馈
+ * POST /api/admin/reviews/project-feedback/publish?competitionId=&stage=BOOK&published=true|false
+ */
+export function batchPublishProjectFeedback(competitionId, stage = 'BOOK', published = true) {
+  return request({
+    url: '/admin/reviews/project-feedback/publish',
+    method: 'post',
+    params: { competitionId, stage, published }
+  })
+}
+
+/**
  * 退回评分
  */
 export function returnReviewScore(data) {
