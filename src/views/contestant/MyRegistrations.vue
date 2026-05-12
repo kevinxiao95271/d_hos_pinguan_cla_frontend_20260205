@@ -61,6 +61,7 @@
               <el-button size="small" @click="viewDetail(row.id)">查看详情</el-button>
               <el-button
                 v-if="row.status === 'SUBMITTED'"
+                type="warning"
                 size="small"
                 @click="viewResults(row.id)"
               >
@@ -70,7 +71,7 @@
               <!-- 缴费三件套：仅已提交 -->
               <template v-if="row.status === 'SUBMITTED'">
                 <el-button
-                  type="warning"
+                  class="payment-btn-muted"
                   size="small"
                   @click="goToPay"
                 >
@@ -476,5 +477,18 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 0;
+}
+
+.payment-btn-muted.el-button {
+  color: #475569;
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.payment-btn-muted.el-button:hover,
+.payment-btn-muted.el-button:focus-visible {
+  color: #334155;
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
 }
 </style>
