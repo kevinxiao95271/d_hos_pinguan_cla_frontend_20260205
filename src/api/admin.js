@@ -221,6 +221,38 @@ export function batchPublishProjectFeedback(competitionId, stage = 'BOOK', publi
 }
 
 /**
+ * 组委会：批量保存项目意见草稿
+ * PUT /api/admin/reviews/project-feedback/batch?stage=BOOK
+ */
+export function batchSaveFeedbackDrafts(items, stage = 'BOOK') {
+  return request({
+    url: '/admin/reviews/project-feedback/batch',
+    method: 'put',
+    params: { stage },
+    data: { items }
+  })
+}
+
+/**
+ * 组委会：导出项目意见反馈 Excel
+ * GET /api/admin/reviews/project-feedback/export
+ */
+export function exportFeedbackExcel(competitionId, filters = {}) {
+  const params = { competitionId, stage: 'BOOK' }
+  if (filters.groupType) params.groupType = filters.groupType
+  if (filters.groupCode) params.groupCode = filters.groupCode
+  if (filters.projectName) params.projectName = filters.projectName
+  if (filters.institutionName) params.institutionName = filters.institutionName
+  if (typeof filters.published === 'boolean') params.published = filters.published
+  return request({
+    url: '/admin/reviews/project-feedback/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+
+/**
  * 退回评分
  */
 export function returnReviewScore(data) {

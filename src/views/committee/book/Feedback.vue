@@ -7,6 +7,80 @@
         <div class="card-header">
           <span>专家意见反馈</span>
           <div class="actions">
+            <!-- 导出 Excel -->
+            <el-button
+              size="small"
+              plain
+              :loading="exporting"
+              :disabled="!rows.length"
+              @click="handleExport"
+            >
+              导出 Excel
+            </el-button>
+
+            <!-- 批量符号替换 Popover -->
+            <el-popover
+              v-model:visible="batchPopoverVisible"
+              placement="bottom-end"
+              :width="340"
+              trigger="click"
+            >
+              <template #reference>
+                <el-button
+                  size="small"
+                  plain
+                  :loading="batchSaving"
+                  :disabled="!rows.length"
+                >
+                  批量符号替换
+                </el-button>
+              </template>
+
+              <div class="batch-replace-panel">
+                <div class="batch-replace-title">作用于当前筛选结果（{{ rows.length }} 条）的亮点和不足字段</div>
+
+                <!-- A：数字序号 → 自定义符号 -->
+                <div class="batch-replace-section">
+                  <div class="batch-replace-label">① 行首数字序号 → 符号</div>
+                  <div class="batch-replace-desc">如 <code>1.</code> <code>2、</code> <code>3。</code> 等替换为指定字符</div>
+                  <div class="batch-replace-row">
+                    <span>替换为</span>
+                    <el-input v-model="digitReplaceChar" size="small" style="width:60px" maxlength="2" />
+                    <el-button
+                      type="primary"
+                      size="small"
+                      :loading="batchSaving"
+                      @click="handleBatchDigitReplace"
+                    >
+                      全量替换并保存
+                    </el-button>
+                  </div>
+                </div>
+
+                <el-divider style="margin: 10px 0" />
+
+                <!-- B：行首字符 → 另一字符 -->
+                <div class="batch-replace-section">
+                  <div class="batch-replace-label">② 行首指定符号替换</div>
+                  <div class="batch-replace-desc">只替换每行行首的字符，不动内容</div>
+                  <div class="batch-replace-row">
+                    <span>从</span>
+                    <el-input v-model="charReplaceFrom" size="small" style="width:52px" maxlength="2" placeholder="▶" />
+                    <span>→</span>
+                    <el-input v-model="charReplaceTo" size="small" style="width:52px" maxlength="2" placeholder="●" />
+                    <el-button
+                      type="primary"
+                      size="small"
+                      :loading="batchSaving"
+                      @click="handleBatchCharReplace"
+                    >
+                      全量替换并保存
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+            </el-popover>
+
             <el-button
               type="success"
               plain
@@ -188,6 +262,25 @@
           <template #header>
             <span>组委会编辑稿</span>
           </template>
+
+          <!-- 单条替换工具栏（复用批量配置，仅作用于本条 editForm） -->
+          <div class="inline-replace-toolbar">
+            <span class="toolbar-title">替换工具</span>
+            <div class="toolbar-group">
+              <span class="toolbar-label">① 数字序号→</span>
+              <el-input v-model="digitReplaceChar" size="small" style="width:52px" maxlength="2" />
+              <el-button size="small" @click="applyDigitReplaceToForm">替换本条</el-button>
+            </div>
+            <el-divider direction="vertical" />
+            <div class="toolbar-group">
+              <span class="toolbar-label">② 行首</span>
+              <el-input v-model="charReplaceFrom" size="small" style="width:44px" maxlength="2" placeholder="▶" />
+              <span>→</span>
+              <el-input v-model="charReplaceTo" size="small" style="width:44px" maxlength="2" placeholder="●" />
+              <el-button size="small" @click="applyCharReplaceToForm">替换本条</el-button>
+            </div>
+          </div>
+
           <el-form label-width="80px">
             <el-form-item label="亮点">
               <el-input
@@ -219,6 +312,50 @@
         <el-button type="primary" :loading="saving" @click="saveEdit">保存</el-button>
       </template>
     </el-dialog>
+  <!-- 批量替换结果 / 重试对话框 -->
+    <el-dialog
+    v-model="batchResultVisible"
+    title="批量替换保存结果"
+    width="480px"
+    :close-on-click-modal="false"
+  >
+    <div class="batch-result-summary">
+      <el-result
+        :icon="batchResultFailedItems.length === 0 ? 'success' : 'warning'"
+        :title="batchResultFailedItems.length === 0
+          ? `全部保存成功，共 ${batchResultTotal} 条`
+          : `成功 ${batchResultSuccessCount} 条，失败 ${batchResultFailedItems.length} 条`"
+        :sub-title="batchResultFailedItems.length === 0
+          ? '所有记录的替换内容已写入数据库'
+          : `共 ${batchResultTotal} 条，以下记录保存失败，可点击重试`"
+      />
+      <el-table
+        v-if="batchResultFailedItems.length > 0"
+        :data="batchResultFailedItems"
+        border
+        size="small"
+        max-height="240"
+        style="margin-top: 8px"
+      >
+        <el-table-column prop="registrationId" label="项目编号" width="90" align="center" />
+        <el-table-column prop="projectName" label="项目名称" min-width="160" show-overflow-tooltip />
+      </el-table>
+    </div>
+    <template #footer>
+      <el-button @click="batchResultVisible = false">
+        {{ batchResultFailedItems.length === 0 ? '关闭' : '放弃' }}
+      </el-button>
+      <el-button
+        v-if="batchResultFailedItems.length > 0"
+        type="primary"
+        :loading="batchSaving"
+        @click="retryFailedItems"
+      >
+        重试失败项（{{ batchResultFailedItems.length }} 条）
+      </el-button>
+    </template>
+  </el-dialog>
+
   </div>
 </template>
 
@@ -233,7 +370,9 @@ import {
   getProjectFeedbackFilterOptions,
   updateProjectFeedback,
   publishProjectFeedback,
-  batchPublishProjectFeedback
+  batchPublishProjectFeedback,
+  batchSaveFeedbackDrafts,
+  exportFeedbackExcel
 } from '@/api/admin'
 import dayjs from 'dayjs'
 
@@ -449,6 +588,170 @@ const handleBatchPublish = async (nextPublished) => {
   }
 }
 
+// ─── 符号替换工具 ────────────────────────────────────────────────────────────
+
+// 共享配置（单条弹窗和批量操作复用同一套参数）
+const digitReplaceChar = ref('●')
+const charReplaceFrom = ref('')
+const charReplaceTo = ref('●')
+
+// 批量操作状态
+const batchSaving = ref(false)
+const batchPopoverVisible = ref(false)
+const batchResultVisible = ref(false)
+const batchResultTotal = ref(0)
+const batchResultSuccessCount = ref(0)
+const batchResultFailedItems = ref([])
+
+// 行首数字序号替换：匹配 1. / 1、/ 1。/ 1, / 1） 等常见写法
+const replaceDigitSymbol = (text, char) => {
+  if (!text) return text
+  return text.replace(/^(\d+\s*[.。、,，:：）)]\s*)/gm, char + ' ')
+}
+
+// 行首指定字符替换
+const replaceLineStartChar = (text, from, to) => {
+  if (!text || !from) return text
+  const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return text.replace(new RegExp(`^${escaped}`, 'gm'), to)
+}
+
+// 单条：作用于当前编辑弹窗的 editForm
+const applyDigitReplaceToForm = () => {
+  if (!digitReplaceChar.value) { ElMessage.warning('请输入替换字符'); return }
+  editForm.highlight = replaceDigitSymbol(editForm.highlight, digitReplaceChar.value)
+  editForm.weakness = replaceDigitSymbol(editForm.weakness, digitReplaceChar.value)
+}
+
+const applyCharReplaceToForm = () => {
+  if (!charReplaceFrom.value) { ElMessage.warning('请输入要替换的字符'); return }
+  editForm.highlight = replaceLineStartChar(editForm.highlight, charReplaceFrom.value, charReplaceTo.value)
+  editForm.weakness = replaceLineStartChar(editForm.weakness, charReplaceFrom.value, charReplaceTo.value)
+}
+
+// 工具：将数组切割为指定大小的块
+const chunkArray = (arr, size) => {
+  const chunks = []
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size))
+  return chunks
+}
+
+// 批量执行保存，返回失败项列表
+const executeBatchSave = async (items) => {
+  const failedItems = []
+  const chunks = chunkArray(items, 200)
+  for (const chunk of chunks) {
+    try {
+      const res = await batchSaveFeedbackDrafts(
+        chunk.map(i => ({ registrationId: i.registrationId, highlight: i.highlight || null, weakness: i.weakness || null }))
+      )
+      if (!res.success) failedItems.push(...chunk)
+    } catch {
+      failedItems.push(...chunk)
+    }
+  }
+  return failedItems
+}
+
+// 批量替换入口：传入替换函数，对 rows 全量处理后保存
+const runBatchReplace = async (replaceFunc) => {
+  if (!rows.value.length) { ElMessage.warning('当前无数据'); return }
+  batchPopoverVisible.value = false
+  batchSaving.value = true
+  const items = rows.value.map(row => ({
+    registrationId: row.registrationId,
+    projectName: row.projectName,
+    highlight: replaceFunc(row.editedHighlight ?? row.sourceHighlight ?? ''),
+    weakness: replaceFunc(row.editedWeakness ?? row.sourceWeakness ?? '')
+  }))
+  batchResultTotal.value = items.length
+  batchResultSuccessCount.value = 0
+  batchResultFailedItems.value = []
+  try {
+    const failed = await executeBatchSave(items)
+    batchResultSuccessCount.value = items.length - failed.length
+    batchResultFailedItems.value = failed
+    if (failed.length === 0) {
+      await loadData()
+    }
+    batchResultVisible.value = true
+  } finally {
+    batchSaving.value = false
+  }
+}
+
+const handleBatchDigitReplace = async () => {
+  if (!digitReplaceChar.value) { ElMessage.warning('请输入替换字符'); return }
+  try {
+    await ElMessageBox.confirm(
+      `将对当前筛选结果 ${rows.value.length} 条记录，把行首数字序号替换为「${digitReplaceChar.value}」并保存，是否继续？`,
+      '批量替换确认',
+      { type: 'warning' }
+    )
+    await runBatchReplace(text => replaceDigitSymbol(text, digitReplaceChar.value))
+  } catch (e) { if (e !== 'cancel') throw e }
+}
+
+const handleBatchCharReplace = async () => {
+  if (!charReplaceFrom.value) { ElMessage.warning('请输入要替换的字符'); return }
+  try {
+    await ElMessageBox.confirm(
+      `将对当前筛选结果 ${rows.value.length} 条记录，把行首「${charReplaceFrom.value}」替换为「${charReplaceTo.value}」并保存，是否继续？`,
+      '批量替换确认',
+      { type: 'warning' }
+    )
+    await runBatchReplace(text => replaceLineStartChar(text, charReplaceFrom.value, charReplaceTo.value))
+  } catch (e) { if (e !== 'cancel') throw e }
+}
+
+// 重试失败项
+const retryFailedItems = async () => {
+  const items = [...batchResultFailedItems.value]
+  batchResultVisible.value = false
+  batchSaving.value = true
+  try {
+    const failed = await executeBatchSave(items)
+    batchResultSuccessCount.value += items.length - failed.length
+    batchResultFailedItems.value = failed
+    if (failed.length === 0) {
+      await loadData()
+    }
+    batchResultVisible.value = true
+  } finally {
+    batchSaving.value = false
+  }
+}
+
+// 导出 Excel
+const exporting = ref(false)
+const handleExport = async () => {
+  const competitionId = await ensureCompetitionId()
+  if (!competitionId) return
+  exporting.value = true
+  try {
+    const blob = await exportFeedbackExcel(competitionId, {
+      groupType: filters.groupType || undefined,
+      groupCode: filters.groupCode || undefined,
+      projectName: filters.projectName || undefined,
+      institutionName: filters.institutionName || undefined,
+      published: typeof filters.published === 'boolean' ? filters.published : undefined
+    })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '项目意见反馈-书审.xlsx'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(() => {
   loadFilterOptions()
   loadData()
@@ -520,5 +823,66 @@ onMounted(() => {
   min-height: 220px !important;
   font-size: 13px;
   line-height: 1.6;
+}
+
+// 批量替换 Popover 内部
+.batch-replace-panel {
+  .batch-replace-title {
+    font-size: 12px;
+    color: #909399;
+    margin-bottom: 10px;
+  }
+  .batch-replace-section {
+    .batch-replace-label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .batch-replace-desc {
+      font-size: 12px;
+      color: #909399;
+      margin-bottom: 8px;
+      code {
+        background: #f4f4f5;
+        padding: 0 3px;
+        border-radius: 2px;
+      }
+    }
+    .batch-replace-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+  }
+}
+
+// 编辑弹窗内单条替换工具栏
+.inline-replace-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #f9fafb;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 13px;
+
+  .toolbar-title {
+    font-weight: 600;
+    color: #606266;
+    margin-right: 4px;
+  }
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .toolbar-label {
+    color: #606266;
+    white-space: nowrap;
+  }
 }
 </style>
