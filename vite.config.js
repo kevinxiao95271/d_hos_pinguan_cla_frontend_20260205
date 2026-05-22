@@ -1,13 +1,26 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
+import { writeFileSync } from 'fs'
+
+// 每次 build / dev 启动时自动生成 version.txt（年月日时分秒）
+const genVersionPlugin = () => ({
+  name: 'gen-version',
+  buildStart() {
+    const now = new Date()
+    const pad = n => String(n).padStart(2, '0')
+    const ts = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`
+    writeFileSync(resolve(__dirname, 'public/version.txt'), ts)
+    console.log(`[gen-version] version.txt => ${ts}`)
+  }
+})
 
 export default defineConfig(({ mode }) => {
   const base = process.env.VITE_BASE_PATH || (mode === 'production' ? '/pgds/' : '/')
 
   return {
     base,
-    plugins: [vue()],
+    plugins: [vue(), genVersionPlugin()],
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src')
