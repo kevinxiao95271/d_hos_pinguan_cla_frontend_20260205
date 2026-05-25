@@ -29,9 +29,9 @@
       </el-col>
     </el-row>
 
-    <!-- 草稿待提交横幅（面谈阶段改为单项提交，不显示此横幅） -->
+    <!-- 草稿待提交横幅 -->
     <transition name="banner-fade">
-      <div v-if="draftTasks.length > 0 && activeStageTab !== 'INTERVIEW'" class="draft-banner">
+      <div v-if="draftTasks.length > 0" class="draft-banner">
         <div class="draft-banner-left">
           <span class="draft-banner-icon">⚠️</span>
           <div>
@@ -52,17 +52,7 @@
     <!-- 阶段 Tab + 刷新 -->
     <div class="stage-tab-bar">
       <el-tabs v-model="activeStageTab" class="stage-tabs">
-        <el-tab-pane v-if="!isMobile" name="BOOK">
-          <template #label>
-            <span>书面评审 <el-badge :value="stageTabCount('BOOK')" :hidden="stageTabCount('BOOK') === 0" type="warning" /></span>
-          </template>
-        </el-tab-pane>
-        <el-tab-pane name="INTERVIEW">
-          <template #label>
-            <span>面谈评审 <el-badge :value="stageTabCount('INTERVIEW')" :hidden="stageTabCount('INTERVIEW') === 0" type="danger" /></span>
-          </template>
-        </el-tab-pane>
-        <el-tab-pane v-if="hasFinalTasks && !isMobile" name="FINAL">
+        <el-tab-pane name="FINAL">
           <template #label>
             <span>决赛评审 <el-badge :value="stageTabCount('FINAL')" :hidden="stageTabCount('FINAL') === 0" type="primary" /></span>
           </template>
@@ -237,7 +227,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore } from '@/api/review'
+import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore, getFinalMyTasks } from '@/api/review'
 import { getRecuseReasons } from '@/api/dictionary'
 
 const router = useRouter()
@@ -283,7 +273,7 @@ const recuseRules = {
 }
 
 // ── 阶段 Tab ─────────────────────────────────────────────────────
-const activeStageTab = ref('BOOK')
+const activeStageTab = ref('FINAL')
 
 // 是否存在决赛任务（动态显示 FINAL tab）
 const hasFinalTasks = computed(() => tasks.value.some(t => t.stage === 'FINAL'))
@@ -482,23 +472,41 @@ const submitAllDrafts = async () => {
 const loadData = async () => {
   loading.value = true
   try {
-    const [tasksRes, statsRes] = await Promise.allSettled([
+    const [tasksRes, statsRes, finalRes] = await Promise.allSettled([
       getMyReviewTasks({ page: 1, pageSize: 200 }),
-      getMyTaskStats()
+      getMyTaskStats(),
+      getFinalMyTasks()
     ])
     if (tasksRes.status === 'fulfilled' && tasksRes.value.success) {
       const raw = tasksRes.value.data
       const list = Array.isArray(raw) ? raw : (raw?.list || raw?.records || raw?.content || [])
-      console.log('📋 任务列表原始数据 stage 分布:', list.map(t => ({ id: t.reviewTaskId || t.id, stage: t.stage, status: t.status })))
       const mapped = list.map(task => ({
         ...task,
         id: task.reviewTaskId || task.id,
-        // 兼容后端 stage 字段为 null/undefined 的书审任务（书审是默认阶段）
         stage: task.stage || task.reviewStage || task.stageType || 'BOOK'
       }))
-      // 面谈阶段任务按分组安排表顺序排列；弃赛项目前端隐藏
       const INTERVIEW_HIDDEN = new Set([20260237])
-      tasks.value = sortByInterviewOrder(mapped.filter(t => !(t.stage === 'INTERVIEW' && INTERVIEW_HIDDEN.has(t.registrationId))))
+      const nonFinal = sortByInterviewOrder(mapped.filter(t => !(t.stage === 'INTERVIEW' && INTERVIEW_HIDDEN.has(t.registrationId))))
+
+      // 合并决赛任务
+      let finalTasks = []
+      if (finalRes.status === 'fulfilled' && finalRes.value.success) {
+        finalTasks = (finalRes.value.data || []).map(t => ({
+          id: t.taskId,
+          registrationId: t.registrationId,
+          projectName: t.projectName,
+          institutionName: t.institutionName,
+          scoreForm: t.scoreForm,
+          sessionCode: t.sessionCode,
+          sessionOrder: t.sessionOrder,
+          groupCode: t.groupCode,
+          stage: 'FINAL',
+          status: t.status,
+          total: t.draftScore?.total ?? null,
+          draftScore: t.draftScore || null
+        }))
+      }
+      tasks.value = [...nonFinal, ...finalTasks]
     } else if (tasksRes.status === 'fulfilled') {
       ElMessage.error(tasksRes.value.message || '加载失败')
     }
@@ -578,6 +586,21 @@ const getStageText = (stage) => {
 }
 
 const goToReview = (row) => {
+  if (row.stage === 'FINAL') {
+    router.push({
+      path: `/reviewer/final-review/${row.id}`,
+      query: {
+        projectName: row.projectName,
+        institutionName: row.institutionName,
+        sessionCode: row.sessionCode,
+        sessionOrder: row.sessionOrder,
+        scoreForm: row.scoreForm,
+        status: row.status,
+        draftScore: row.draftScore ? JSON.stringify(row.draftScore) : undefined
+      }
+    })
+    return
+  }
   router.push({
     path: `/reviewer/review/${row.id}`,
     query: {
@@ -592,6 +615,22 @@ const goToReview = (row) => {
 }
 
 const viewScore = (row) => {
+  if (row.stage === 'FINAL') {
+    router.push({
+      path: `/reviewer/final-review/${row.id}`,
+      query: {
+        view: 'score',
+        projectName: row.projectName,
+        institutionName: row.institutionName,
+        sessionCode: row.sessionCode,
+        sessionOrder: row.sessionOrder,
+        scoreForm: row.scoreForm,
+        status: 'SCORED',
+        draftScore: row.draftScore ? JSON.stringify(row.draftScore) : undefined
+      }
+    })
+    return
+  }
   router.push({
     path: `/reviewer/review/${row.id}`,
     query: {
@@ -656,9 +695,9 @@ const handleSubmitScore = async (task) => {
 const isMobile = ref(window.innerWidth <= 768)
 const onResize = () => { isMobile.value = window.innerWidth <= 768 }
 
-// 移动端自动锁定到面谈 Tab
-watch(isMobile, (mobile) => {
-  if (mobile) activeStageTab.value = 'INTERVIEW'
+// 始终固定在决赛 Tab
+watch(isMobile, () => {
+  activeStageTab.value = 'FINAL'
 }, { immediate: true })
 
 onMounted(() => {

@@ -91,6 +91,12 @@ const routes = [
         meta: { title: '评分' }
       },
       {
+        path: 'final-review/:taskId',
+        name: 'FinalReview',
+        component: () => import('@/views/reviewer/FinalReview.vue'),
+        meta: { title: '决赛评分' }
+      },
+      {
         path: 'profile',
         name: 'ReviewerProfile',
         component: () => import('@/views/reviewer/Profile.vue'),

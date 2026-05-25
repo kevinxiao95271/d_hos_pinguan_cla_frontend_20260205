@@ -405,3 +405,66 @@ export function deleteRegistration(registrationId) {
     method: 'delete'
   })
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 决赛阶段管理接口
+// ─────────────────────────────────────────────────────────────────
+
+/** 获取决赛专场列表 */
+export function getFinalSessions(competitionId) {
+  return request({ url: '/admin/final/sessions', method: 'get', params: { competitionId } })
+}
+
+/** 一次获取全部场次对应表（含三天分组 + 各场项目列表） */
+export function getFinalSessionSchedule(competitionId) {
+  return request({ url: '/admin/final/session-schedule', method: 'get', params: { competitionId } })
+}
+
+/** 获取专场内项目列表 */
+export function getFinalSessionProjects(sessionCode, competitionId) {
+  return request({
+    url: `/admin/final/sessions/${encodeURIComponent(sessionCode)}/projects`,
+    method: 'get',
+    params: { competitionId }
+  })
+}
+
+/** 分配评委到专场（幂等） */
+export function assignFinalReviewer(sessionCode, competitionId, reviewerId) {
+  return request({
+    url: `/admin/final/sessions/${encodeURIComponent(sessionCode)}/assign-reviewer`,
+    method: 'post',
+    params: { competitionId, reviewerId }
+  })
+}
+
+/** 管理侧决赛评分汇总 */
+export function getFinalScores(competitionId, sessionCode) {
+  const params = { competitionId }
+  if (sessionCode) params.sessionCode = sessionCode
+  return request({ url: '/admin/final/scores', method: 'get', params })
+}
+
+/** 触发决赛排名计算（幂等，先清旧快照再重算） */
+export function computeFinalRanking(competitionId) {
+  return request({ url: '/admin/final/compute-ranking', method: 'post', params: { competitionId } })
+}
+
+/** 获取决赛排名结果 */
+export function getFinalRanking(competitionId, sessionCode) {
+  const params = { competitionId }
+  if (sessionCode) params.sessionCode = sessionCode
+  return request({ url: '/admin/final/ranking', method: 'get', params })
+}
+
+/** 导出决赛排名 Excel（blob） */
+export function exportFinalRanking(competitionId, sessionCode) {
+  const params = { competitionId }
+  if (sessionCode) params.sessionCode = sessionCode
+  return request({ url: '/admin/final/ranking/export', method: 'get', params, responseType: 'blob' })
+}
+
+/** 获取跨专场统一排名（全部专场混排，按 trimmedAvg 降序） */
+export function getFinalRankingMixed(competitionId) {
+  return request({ url: '/admin/final/ranking/mixed', method: 'get', params: { competitionId } })
+}

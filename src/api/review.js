@@ -267,3 +267,22 @@ export function cancelRecuse(taskId) {
     method: 'delete'
   })
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 决赛阶段评分接口
+// ─────────────────────────────────────────────────────────────────
+
+/** 评委获取我的决赛任务列表 */
+export function getFinalMyTasks() {
+  return request({ url: '/reviews/final/my-tasks', method: 'get' })
+}
+
+/** 保存决赛评分草稿 */
+export function saveFinalScoreDraft(taskId, data) {
+  return request({ url: `/reviews/final/scores/${taskId}/draft`, method: 'put', data })
+}
+
+/** 提交决赛最终评分 */
+export function submitFinalScore(taskId, data) {
+  return request({ url: `/reviews/final/scores/${taskId}/submit`, method: 'put', data })
+}
