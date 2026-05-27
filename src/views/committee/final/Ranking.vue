@@ -5,7 +5,7 @@
     <el-card v-loading="loading">
       <template #header>
         <div class="card-header">
-          <span>现场竞赛最终排名</span>
+          <span class="title">现场竞赛排名</span>
           <div class="header-actions">
             <el-button type="warning" :loading="computing" @click="handleCompute">
               重新计算排名
@@ -19,98 +19,145 @@
       </template>
 
       <el-empty
-        v-if="ranking.length === 0 && !loading"
+        v-if="allRanking.length === 0 && !loading"
         description="暂无排名数据，请先确保各专场评委已全部提交评分，然后点击「重新计算排名」"
         :image-size="100"
       />
 
-      <el-table v-else :data="ranking" border stripe>
-
-        <!-- 排名 -->
-        <el-table-column label="排名" width="70" align="center" fixed>
-          <template #default="{ row }">
-            <span :class="['rank-badge', `rank-${row.rank}`]">{{ row.rank }}</span>
-          </template>
-        </el-table-column>
-
-        <!-- 项目名称 -->
-        <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
-
-        <!-- 机构 -->
-        <el-table-column prop="institutionName" label="参赛机构" width="160" show-overflow-tooltip />
-
-        <!-- 专场 -->
-        <el-table-column prop="sessionCode" label="所属专场" width="200" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span class="session-tag">{{ row.sessionCode }}</span>
-          </template>
-        </el-table-column>
-
-        <!-- 上台顺序 -->
-        <el-table-column prop="sessionOrder" label="上台顺序" width="80" align="center" />
-
-        <!-- 评分表类型 + 去极值均分（核心信息并排） -->
-        <el-table-column label="类型 / 均分" width="160" align="center">
-          <template #default="{ row }">
-            <div class="score-cell">
-              <el-tag :type="scoreFormTagType(row.scoreForm)" size="small" class="form-tag">
-                {{ scoreFormText(row.scoreForm) }}
-              </el-tag>
-              <span class="avg-score">{{ formatScore(row.trimmedAvg) }}</span>
-            </div>
-          </template>
-        </el-table-column>
-
-        <!-- 参与评委数 -->
-        <el-table-column label="评委数" width="70" align="center">
-          <template #default="{ row }">
-            <el-tag type="info" size="small">{{ row.judgeCount }}</el-tag>
-          </template>
-        </el-table-column>
-
-        <!-- 备注 -->
-        <el-table-column prop="note" label="备注" min-width="190" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span class="note-text">{{ row.note }}</span>
-          </template>
-        </el-table-column>
-
-      </el-table>
+      <el-tabs v-else v-model="activeDate" type="border-card">
+        <el-tab-pane
+          v-for="date in dateOptions"
+          :key="date"
+          :label="`${date} (${byDate[date]?.length || 0}项)`"
+          :name="date"
+        >
+          <div
+            v-for="session in sessionsByDate[date]"
+            :key="session"
+            class="session-block"
+          >
+            <div class="session-title">{{ session }}</div>
+            <el-table :data="byDateSession[date]?.[session] || []" border stripe size="small">
+              <el-table-column label="排名" width="64" align="center">
+                <template #default="{ row }">
+                  <span :class="['rank-badge', `rank-${row.rank}`]">{{ row.rank }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
+              <el-table-column prop="institutionName" label="参赛机构" width="160" show-overflow-tooltip />
+              <el-table-column label="类型 / 均分" width="140" align="center">
+                <template #default="{ row }">
+                  <div class="score-cell">
+                    <el-tag :type="scoreFormTagType(row.scoreForm)" size="small">
+                      {{ scoreFormText(row.scoreForm) }}
+                    </el-tag>
+                    <span class="avg-score">{{ formatScore(row.trimmedAvg) }}</span>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column label="评委数" width="64" align="center">
+                <template #default="{ row }">
+                  <el-tag type="info" size="small">{{ row.judgeCount }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="note" label="备注" min-width="160" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span class="note-text">{{ row.note }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
-import { computeFinalRanking, exportFinalRanking, getFinalRankingMixed } from '@/api/admin'
+import { computeFinalRanking, exportFinalRanking, getFinalRanking } from '@/api/admin'
 
+// ── 工具 ──────────────────────────────────────────────────
+const formatScore = (val) => val == null ? '-' : Number(val).toFixed(2)
+const scoreFormTagType = (form) => form === 'QCC' ? 'primary' : form === 'QFD' ? 'warning' : 'success'
+const scoreFormText = (form) => form === 'NON_QCC' ? '非QCC' : (form || '-')
+
+// ── 状态 ─────────────────────────────────────────────────
 const { stagesList } = useCompetitionStages()
 const competitionId = ref(getCurrentCompetitionIdSync())
-
-const ranking = ref([])
+const allRanking = ref([])
 const loading = ref(false)
 const computing = ref(false)
 const exporting = ref(false)
+const activeDate = ref('')
 
+// ── 按日期分层 computed ───────────────────────────────────
+// 保持日期顺序稳定（按首次出现顺序）
+const dateOptions = computed(() => {
+  const seen = new Set()
+  for (const r of allRanking.value) {
+    if (r.sessionDate && !seen.has(r.sessionDate)) seen.add(r.sessionDate)
+  }
+  return [...seen]
+})
+
+// byDate[date] = 该日期所有条目
+const byDate = computed(() => {
+  const map = {}
+  for (const r of allRanking.value) {
+    const d = r.sessionDate || '未知'
+    if (!map[d]) map[d] = []
+    map[d].push(r)
+  }
+  return map
+})
+
+// sessionsByDate[date] = 该日期内的有序场次列表
+const sessionsByDate = computed(() => {
+  const map = {}
+  for (const r of allRanking.value) {
+    const d = r.sessionDate || '未知'
+    if (!map[d]) map[d] = []
+    if (!map[d].includes(r.sessionCode)) map[d].push(r.sessionCode)
+  }
+  return map
+})
+
+// byDateSession[date][sessionCode] = 该场次排名列表
+const byDateSession = computed(() => {
+  const map = {}
+  for (const r of allRanking.value) {
+    const d = r.sessionDate || '未知'
+    if (!map[d]) map[d] = {}
+    if (!map[d][r.sessionCode]) map[d][r.sessionCode] = []
+    map[d][r.sessionCode].push(r)
+  }
+  return map
+})
+
+// ── 数据加载 ──────────────────────────────────────────────
 const loadRanking = async () => {
   if (!competitionId.value) return
   loading.value = true
   try {
-    const res = await getFinalRankingMixed(competitionId.value)
-    ranking.value = res.success ? (res.data || []) : []
+    const res = await getFinalRanking(competitionId.value)
+    allRanking.value = res.success ? (res.data || []) : []
     if (!res.success) ElMessage.error(res.message || '加载排名失败')
+    // 默认激活第一个日期 tab
+    if (dateOptions.value.length) activeDate.value = dateOptions.value[0]
   } catch {
     ElMessage.error('加载排名失败')
-    ranking.value = []
+    allRanking.value = []
   } finally {
     loading.value = false
   }
 }
 
+// ── 重新计算 ──────────────────────────────────────────────
 const handleCompute = async () => {
   try {
     await ElMessageBox.confirm(
@@ -133,6 +180,7 @@ const handleCompute = async () => {
   }
 }
 
+// ── 导出 ──────────────────────────────────────────────────
 const handleExport = async () => {
   exporting.value = true
   try {
@@ -140,7 +188,7 @@ const handleExport = async () => {
     const url = URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]))
     const a = document.createElement('a')
     a.href = url
-    a.download = '现场竞赛排名.xlsx'
+    a.download = '现场竞赛排名_全场.xlsx'
     a.click()
     URL.revokeObjectURL(url)
     ElMessage.success('导出成功')
@@ -151,23 +199,10 @@ const handleExport = async () => {
   }
 }
 
-const formatScore = (val) => val == null ? '-' : Number(val).toFixed(2)
-
-const scoreFormTagType = (form) => {
-  if (form === 'QCC') return 'primary'
-  if (form === 'QFD') return 'warning'
-  return 'success'
-}
-
-const scoreFormText = (form) => {
-  if (form === 'NON_QCC') return '非QCC'
-  return form || '-'
-}
-
 onMounted(async () => {
   const id = await getCurrentCompetitionId()
   if (id) competitionId.value = id
-  loadRanking()
+  await loadRanking()
 })
 </script>
 
@@ -182,6 +217,11 @@ onMounted(async () => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px;
+
+  .title {
+    font-size: 15px;
+    font-weight: 600;
+  }
 }
 
 .header-actions {
@@ -190,40 +230,44 @@ onMounted(async () => {
   gap: 10px;
 }
 
+.session-block {
+  margin-bottom: 28px;
+
+  .session-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #303133;
+    padding: 6px 0 8px;
+    border-bottom: 2px solid #409eff;
+    margin-bottom: 10px;
+  }
+}
+
 .rank-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   font-size: 13px;
   font-weight: 700;
   background: #f5f7fa;
   color: #606266;
 
-  &.rank-1 { background: #fff3cd; color: #856404; font-size: 16px; box-shadow: 0 0 0 2px #ffc10760; }
+  &.rank-1 { background: #fff3cd; color: #856404; font-size: 15px; box-shadow: 0 0 0 2px #ffc10760; }
   &.rank-2 { background: #e8f4ff; color: #1677ff; box-shadow: 0 0 0 2px #409eff40; }
   &.rank-3 { background: #f0f9eb; color: #389e0d; box-shadow: 0 0 0 2px #67c23a40; }
-}
-
-.session-tag {
-  font-size: 12px;
-  color: #909399;
 }
 
 .score-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-
-  .form-tag {
-    font-size: 11px;
-  }
+  gap: 3px;
 
   .avg-score {
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     color: #409eff;
     line-height: 1;

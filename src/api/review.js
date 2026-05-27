@@ -286,3 +286,13 @@ export function saveFinalScoreDraft(taskId, data) {
 export function submitFinalScore(taskId, data) {
   return request({ url: `/reviews/final/scores/${taskId}/submit`, method: 'put', data })
 }
+
+/** 申请规避决赛评审任务 */
+export function recuseFinalScore(taskId, data) {
+  return request({ url: `/reviews/final/scores/${taskId}/recuse`, method: 'put', data })
+}
+
+/** 撤销规避决赛评审任务 */
+export function unrecuseFinalScore(taskId) {
+  return request({ url: `/reviews/final/scores/${taskId}/recuse`, method: 'delete' })
+}
