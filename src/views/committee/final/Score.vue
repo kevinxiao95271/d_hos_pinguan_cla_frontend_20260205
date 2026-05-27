@@ -61,6 +61,7 @@
         <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />
         <el-table-column prop="institutionName" label="参赛机构" width="150" show-overflow-tooltip />
         <el-table-column prop="groupCode" label="组别" width="70" align="center" />
+        <el-table-column prop="reviewerName" label="评审专家" width="100" show-overflow-tooltip />
         <el-table-column prop="scoreForm" label="评分表" width="90" align="center">
           <template #default="{ row }">
             <el-tag :type="scoreFormTagType(row.scoreForm)" size="small">{{ row.scoreForm }}</el-tag>
@@ -79,16 +80,7 @@
             <span v-else class="score-empty">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="亮点" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span class="opinion-text">{{ row.draftScore?.highlight || '-' }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="不足" min-width="150" show-overflow-tooltip>
-          <template #default="{ row }">
-            <span class="opinion-text">{{ row.draftScore?.weakness || '-' }}</span>
-          </template>
-        </el-table-column>
+
         <el-table-column label="详细评分" width="80" align="center">
           <template #default="{ row }">
             <el-button

@@ -15,6 +15,12 @@ const routes = [
     meta: { title: '面谈评审专家扫码入口', public: true }
   },
   {
+    path: '/final-qr',
+    name: 'FinalMobileQr',
+    component: () => import('@/views/FinalMobileQr.vue'),
+    meta: { title: '决赛评审专家扫码入口', public: true }
+  },
+  {
     path: '/register',
     name: 'Register',
     component: () => import('@/views/Register.vue'),
