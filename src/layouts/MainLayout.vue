@@ -147,7 +147,8 @@ const roleText = computed(() => {
     'CONTESTANT': '参赛者',
     'REVIEWER': '评审专家',
     'COMMITTEE_ADMIN': '赛事组委会',
-    'OPS': '系统运维'
+    'OPS': '系统运维',
+    'OPERATOR': '会场监督员'
   }
   return roleMap[userStore.role] || ''
 })
@@ -171,6 +172,12 @@ const menuItems = computed(() => {
     ]
   }
   
+  if (role === 'OPERATOR') {
+    return [
+      { path: '/operator/scores', title: '会场评分', icon: 'DataLine' }
+    ]
+  }
+
   if (role === 'COMMITTEE_ADMIN' || role === 'OPS') {
     const menu = [
       // 一级：报名情况（含二级子项）

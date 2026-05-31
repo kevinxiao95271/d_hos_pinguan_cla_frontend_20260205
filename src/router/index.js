@@ -110,6 +110,21 @@ const routes = [
       }
     ]
   },
+  // 会场监督员端（OPERATOR）
+  {
+    path: '/operator',
+    component: () => import('@/layouts/MainLayout.vue'),
+    meta: { requiresAuth: true, roles: ['OPERATOR'] },
+    redirect: '/operator/scores',
+    children: [
+      {
+        path: 'scores',
+        name: 'OperatorScores',
+        component: () => import('@/views/operator/Scores.vue'),
+        meta: { title: '会场评分管理' }
+      }
+    ]
+  },
   // 赛事管理者端
   {
     path: '/committee',

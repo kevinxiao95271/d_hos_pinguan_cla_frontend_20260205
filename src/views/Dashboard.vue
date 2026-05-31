@@ -35,7 +35,8 @@ const roleText = computed(() => {
     'CONTESTANT': '参赛者',
     'REVIEWER': '评审专家',
     'COMMITTEE_ADMIN': '赛事组委会',
-    'OPS': '系统运维'
+    'OPS': '系统运维',
+    'OPERATOR': '会场监督员'
   }
   return roleMap[userStore.role] || ''
 })
@@ -50,6 +51,8 @@ const goToHome = () => {
     router.push('/committee/statistics')
   } else if (role === 'OPS') {
     router.push('/committee/statistics')
+  } else if (role === 'OPERATOR') {
+    router.push('/operator/scores')
   }
 }
 </script>

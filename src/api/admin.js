@@ -468,3 +468,8 @@ export function exportFinalRanking(competitionId, sessionCode) {
 export function getFinalRankingMixed(competitionId) {
   return request({ url: '/admin/final/ranking/mixed', method: 'get', params: { competitionId } })
 }
+
+/** OPERATOR：驳回已提交/草稿评分，任务重置为待评分 */
+export function rejectFinalScore(taskId) {
+  return request({ url: `/admin/final/scores/${taskId}/reject`, method: 'post' })
+}
