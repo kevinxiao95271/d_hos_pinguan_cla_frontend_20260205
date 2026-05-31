@@ -54,9 +54,9 @@
           <div class="criteria-title">1. 计划 <span class="criteria-max">满分 10 分</span></div>
           <ol class="criteria-list">
             <li>主题选取有内涵、具有创新性与应用性，且有推广价值</li>
-            <li>目标设定科学合理性</li>
+            <li>目标设定科学性、合理性</li>
             <li>QC STORY判定准确</li>
-            <li>团队持续维持改善或创新行动所达成的目标</li>
+            <li>成果维持具备持续性，改善创新目标落实到位</li>
           </ol>
         </div>
         <div class="criteria-card">
@@ -65,8 +65,8 @@
             <li>项目分析全面，探讨并求证问题形成影响因素的过程结构完善，符合逻辑</li>
             <li>以数据或实例来呈现事实现状</li>
             <li>科学引用相关文献，实行创新技术</li>
-            <li>问题或攻坚点分析与对策方案间的关联性、逻辑性等，并考虑长、短期的效果发展对策</li>
-            <li>对策行动计划拟订具有时间、人力及费用等资源合理安排的考量</li>
+            <li>问题攻坚分析与对策方案逻辑连贯、关联度高，统筹长短期发展成效</li>
+            <li>对策行动计划拟订，科学安排时间、人力及费用等资源</li>
             <li>合理应用品管工具</li>
           </ol>
         </div>
@@ -191,43 +191,44 @@
       <!-- QFD 评分表 -->
       <template v-else-if="scoreForm === 'QFD'">
         <div class="criteria-card">
-          <div class="criteria-title">1. 圈活动特征 <span class="criteria-max">满分 15 分</span></div>
+          <div class="criteria-title">1. 圈活动特征 <span class="criteria-max">满分 10 分</span></div>
           <ol class="criteria-list">
             <li>选题具有创新性、科学性与应用性</li>
             <li>选题具有推广价值</li>
             <li>QC STORY 判定准确</li>
             <li>中外文献全面、深刻</li>
+            <li>QFD模式构建合理</li>
+            <li>活动计划进度设计合理</li>
           </ol>
         </div>
         <div class="criteria-card">
-          <div class="criteria-title">2. 课题明确化与项目计划性 <span class="criteria-max">满分 25 分</span></div>
+          <div class="criteria-title">2. 质量规划与课题明确化及课题目标设定 <span class="criteria-max">满分 30 分</span></div>
           <ol class="criteria-list">
-            <li>提出的课题明确化结构完整、层次分明、符合逻辑</li>
-            <li>课题具有高度与深度，创新性较强</li>
-            <li>活动计划进度设计合理</li>
-            <li>项目掌握分析全面、完整，望差值设定合理</li>
+            <li>需求挖掘充分、结构完整、层次分明</li>
+            <li>需求重要度评判与排序合理</li>
+            <li>质量水平提升分析合理</li>
             <li>魅力质量创新点识别准确</li>
-            <li>攻坚点发掘评价项目科学合理</li>
+            <li>攻坚点发掘评价科学合理</li>
             <li>目标值设定合理</li>
           </ol>
         </div>
         <div class="criteria-card">
-          <div class="criteria-title">3. 方策拟定与最适方策探究 <span class="criteria-max">满分 25 分</span></div>
+          <div class="criteria-title">3. 质量设计与方策拟定，质量优化与最佳选择 <span class="criteria-max">满分 35 分</span></div>
           <ol class="criteria-list">
-            <li>方策拟定方法准确</li>
-            <li>拟定方策具体可行</li>
-            <li>方策评价方法科学合理</li>
-            <li>最适方策探究方法准确</li>
-            <li>多维质量工具应用（可选）</li>
-            <li>图表应用规范</li>
+            <li>质量特性展开准确</li>
+            <li>需求与质量特性关系评估准确</li>
+            <li>质量设计合理</li>
+            <li>瓶颈分析充分</li>
+            <li>导出创新方策科学合理</li>
+            <li>质量传递合理</li>
+            <li>多维工具应用（TRIZ、FMEA、PDPC等）</li>
           </ol>
         </div>
         <div class="criteria-card">
-          <div class="criteria-title">4. 执行力及活动成果 <span class="criteria-max">满分 25 分</span></div>
+          <div class="criteria-title">4. 执行力及活动成果 <span class="criteria-max">满分 20 分</span></div>
           <ol class="criteria-list">
             <li>方策实施明确、规范有效</li>
             <li>效果确认真实规范</li>
-            <li>质量安全风险控制有效</li>
             <li>目标达成率科学合理</li>
             <li>有形成果真实有效，无形成果规范客观</li>
             <li>标准化规范有效</li>
@@ -235,9 +236,9 @@
           </ol>
         </div>
         <div class="criteria-card">
-          <div class="criteria-title">5. 现场发表 <span class="criteria-max">满分 10 分</span></div>
+          <div class="criteria-title">5. 现场发表 <span class="criteria-max">满分 5 分</span></div>
           <ol class="criteria-list">
-            <li>热忱洋溢、明快有力、语言流畅、清晰</li>
+            <li>热诚洋溢、明快有力、语言流畅、清晰</li>
             <li>前后连贯、条理清晰、逻辑性较强</li>
             <li>PPT 制作水平较高，具有人文、艺术内涵及创意性</li>
           </ol>
