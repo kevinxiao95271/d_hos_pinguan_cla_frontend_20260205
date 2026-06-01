@@ -296,3 +296,17 @@ export function recuseFinalScore(taskId, data) {
 export function unrecuseFinalScore(taskId) {
   return request({ url: `/reviews/final/scores/${taskId}/recuse`, method: 'delete' })
 }
+
+// ─────────────────────────────────────────────────────────────────
+// 须知确认接口
+// ─────────────────────────────────────────────────────────────────
+
+/** 获取我已确认的须知列表 */
+export function getMyNotices() {
+  return request({ url: '/auth/notice/my', method: 'get' })
+}
+
+/** 确认须知（幂等） */
+export function confirmNotice(noticeKey) {
+  return request({ url: '/auth/notice/confirm', method: 'post', data: { noticeKey } })
+}

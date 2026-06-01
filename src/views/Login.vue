@@ -59,9 +59,6 @@
           <el-link type="info" underline="never" style="color: #67b3e8;" @click="showGuidePdf = true">
             📄 报名系统操作说明
           </el-link>
-          <el-link type="info" underline="never" style="color: #67b3e8;" @click="showQrDialog = true">
-            📱 面谈评审专家请扫码
-          </el-link>
         </div>
       </el-form>
     </div>
@@ -102,37 +99,28 @@
     </div>
   </el-dialog>
 
-  <!-- 诚信须知强制阅读弹窗（支持多份按队列阅读） -->
+  <!-- 决赛须知强制阅读弹窗 -->
   <el-dialog
     v-model="showNoticeDialog"
-    :title="currentNoticeTitle"
-    width="92%"
-    top="2vh"
+    title="2026年专家评审纪律及评审要求"
+    width="760px"
+    :show-close="false"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
-    :show-close="false"
+    align-center
   >
-    <div style="margin-bottom: 10px; color: #e6a23c; font-weight: 600;">
-      请认真阅读以下专家须知，阅读完毕后方可继续使用系统。
-    </div>
-    <div v-if="currentNoticePdfUrl" class="pdf-scroll-wrap">
-      <div v-if="noticePdfLoading" class="pdf-loading">加载中...</div>
-      <VuePdfEmbed
-        :key="currentNoticeKey"
-        :source="currentNoticePdfUrl"
-        @loaded="noticePdfLoading = false"
-        @loading-failed="noticePdfLoading = false"
+    <div class="notice-pdf-wrap">
+      <iframe
+        :src="noticePdfUrl"
+        class="notice-pdf-frame"
+        title="专家评审纪律及评审要求"
       />
     </div>
     <template #footer>
-      <div style="display:flex; align-items:center; justify-content:flex-end;">
-        <el-button
-          type="primary"
-          :disabled="noticeCountdown > 0"
-          :loading="confirmingNotice"
-          @click="confirmNotice"
-        >
-          {{ noticeCountdown > 0 ? `请阅读完毕（${noticeCountdown}s）` : '确认已阅读，进入系统' }}
+      <div class="notice-footer">
+        <span class="notice-hint">请仔细阅读以上内容，阅读完毕后点击确认</span>
+        <el-button type="primary" :loading="confirmingNotice" @click="handleConfirmNotice">
+          我已阅读并同意遵守
         </el-button>
       </div>
     </template>
@@ -147,13 +135,8 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import QrcodeVue from 'qrcode.vue'
-import VuePdfEmbed from 'vue-pdf-embed'
 import { loginWithPassword, confirmIntegrityNotice } from '@/api/auth'
 import { ensureCurrentCompetition } from '@/utils/competition'
-import {
-  getIntegrityNoticeMeta,
-  resolvePendingIntegrityNoticeKeys
-} from '@/config/integrityNotices'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -185,35 +168,24 @@ const rules = {
   ]
 }
 
-// 诚信须知（pendingIntegrityQueue 顺序即阅读顺序）
+// ── 决赛须知 ──────────────────────────────────────────────────────
 const showNoticeDialog = ref(false)
-const noticePdfLoading = ref(true)
-const pendingIntegrityQueue = ref([])
-const noticeCountdown = ref(0)
 const confirmingNotice = ref(false)
-const baseUrl = import.meta.env.BASE_URL
-let noticeTimer = null
+const noticePdfUrl = `${import.meta.env.BASE_URL}reviewer_discipline.pdf`
 
-const currentNoticeKey = computed(() => pendingIntegrityQueue.value[0] || '')
-const currentNoticeMeta = computed(() =>
-  currentNoticeKey.value ? getIntegrityNoticeMeta(currentNoticeKey.value) : null
-)
-const currentNoticeTitle = computed(
-  () => currentNoticeMeta.value?.title || '浙江省医院品管大赛专家须知'
-)
-const currentNoticePdfUrl = computed(() => {
-  const file = currentNoticeMeta.value?.pdfFile
-  return file ? `${baseUrl}${file}` : ''
-})
-
-const startNoticeCountdown = () => {
-  noticeCountdown.value = 5
-  if (noticeTimer) clearInterval(noticeTimer)
-  noticeTimer = setInterval(() => {
-    noticeCountdown.value--
-    if (noticeCountdown.value <= 0) clearInterval(noticeTimer)
-  }, 1000)
+const handleConfirmNotice = async () => {
+  confirmingNotice.value = true
+  try {
+    await confirmIntegrityNotice({ noticeKey: 'FINAL' })
+  } catch {
+    // 幂等，忽略错误
+  } finally {
+    confirmingNotice.value = false
+  }
+  showNoticeDialog.value = false
+  await navigateAfterLogin(userStore.role)
 }
+
 const navigateAfterLogin = async (role) => {
   if (role === 'CONTESTANT') {
     router.push('/contestant/dashboard')
@@ -229,27 +201,6 @@ const navigateAfterLogin = async (role) => {
   }
 }
 
-const confirmNotice = async () => {
-  const key = currentNoticeKey.value
-  if (!key) return
-  confirmingNotice.value = true
-  try {
-    await confirmIntegrityNotice({ noticeKey: key })
-  } catch {
-    // 后端未实现时忽略错误，不阻塞流程
-  } finally {
-    confirmingNotice.value = false
-  }
-  pendingIntegrityQueue.value.shift()
-  if (pendingIntegrityQueue.value.length > 0) {
-    noticePdfLoading.value = true
-    startNoticeCountdown()
-    return
-  }
-  showNoticeDialog.value = false
-  await navigateAfterLogin(userStore.role)
-}
-
 const handleLogin = async () => {
   try {
     await formRef.value.validate()
@@ -261,12 +212,9 @@ const handleLogin = async () => {
       userStore.setUserInfo(res.data)
       ElMessage.success('登录成功')
 
-      // 评审专家：新字段 pendingIntegrityNoticeKeys 优先；否则回退旧 noticeConfirmed
-      const pendingKeys = resolvePendingIntegrityNoticeKeys(res.data)
-      if (userStore.role === 'REVIEWER' && pendingKeys.length > 0) {
-        pendingIntegrityQueue.value = [...pendingKeys]
+      const pendingKeys = res.data?.pendingIntegrityNoticeKeys || []
+      if (userStore.role === 'REVIEWER' && pendingKeys.includes('FINAL')) {
         showNoticeDialog.value = true
-        startNoticeCountdown()
       } else {
         await navigateAfterLogin(userStore.role)
       }
@@ -393,6 +341,31 @@ const downloadGuidePdf = () => {
         }
       }
     }
+  }
+}
+
+.notice-pdf-wrap {
+  height: 500px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.notice-pdf-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.notice-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  .notice-hint {
+    font-size: 13px;
+    color: #909399;
   }
 }
 </style>
