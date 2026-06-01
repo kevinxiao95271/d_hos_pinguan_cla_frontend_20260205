@@ -486,7 +486,10 @@ const loadData = async () => {
         stage: task.stage || task.reviewStage || task.stageType || 'BOOK'
       }))
       const INTERVIEW_HIDDEN = new Set([20260237])
-      const nonFinal = sortByInterviewOrder(mapped.filter(t => !(t.stage === 'INTERVIEW' && INTERVIEW_HIDDEN.has(t.registrationId))))
+      const nonFinal = sortByInterviewOrder(mapped.filter(t =>
+        t.stage !== 'FINAL' &&
+        !(t.stage === 'INTERVIEW' && INTERVIEW_HIDDEN.has(t.registrationId))
+      ))
 
       // 合并决赛任务
       let finalTasks = []
