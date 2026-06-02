@@ -110,10 +110,11 @@
     align-center
   >
     <div class="notice-pdf-wrap">
-      <iframe
-        :src="noticePdfUrl"
-        class="notice-pdf-frame"
-        title="专家评审纪律及评审要求"
+      <div v-if="noticePdfLoading" class="pdf-loading">加载中...</div>
+      <VuePdfEmbed
+        :source="noticePdfUrl"
+        @loaded="noticePdfLoading = false"
+        @loading-failed="noticePdfLoading = false"
       />
     </div>
     <template #footer>
@@ -135,6 +136,7 @@ import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
 import { Download } from '@element-plus/icons-vue'
 import QrcodeVue from 'qrcode.vue'
+import VuePdfEmbed from 'vue-pdf-embed'
 import { loginWithPassword, confirmIntegrityNotice } from '@/api/auth'
 import { ensureCurrentCompetition } from '@/utils/competition'
 
@@ -171,6 +173,7 @@ const rules = {
 // ── 决赛须知 ──────────────────────────────────────────────────────
 const showNoticeDialog = ref(false)
 const confirmingNotice = ref(false)
+const noticePdfLoading = ref(true)
 const noticePdfUrl = `${import.meta.env.BASE_URL}reviewer_discipline.pdf`
 
 const handleConfirmNotice = async () => {
@@ -214,6 +217,7 @@ const handleLogin = async () => {
 
       const pendingKeys = res.data?.pendingIntegrityNoticeKeys || []
       if (userStore.role === 'REVIEWER' && pendingKeys.includes('FINAL')) {
+        noticePdfLoading.value = true
         showNoticeDialog.value = true
       } else {
         await navigateAfterLogin(userStore.role)
@@ -345,16 +349,19 @@ const downloadGuidePdf = () => {
 }
 
 .notice-pdf-wrap {
-  height: 500px;
+  max-height: 480px;
+  overflow-y: auto;
   border: 1px solid #e4e7ed;
   border-radius: 4px;
-  overflow: hidden;
-}
+  background: #f5f5f5;
+  padding: 8px;
 
-.notice-pdf-frame {
-  width: 100%;
-  height: 100%;
-  border: none;
+  .pdf-loading {
+    text-align: center;
+    padding: 40px 0;
+    color: #909399;
+    font-size: 14px;
+  }
 }
 
 .notice-footer {

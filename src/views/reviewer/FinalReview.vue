@@ -9,6 +9,7 @@
         <div class="meta-tags">
           <el-tag type="info" size="small">{{ institutionName }}</el-tag>
           <el-tag type="info" size="small" v-if="sessionCode">{{ sessionCode }}</el-tag>
+          <el-tag type="info" size="small" v-if="sessionOrder">第 {{ sessionOrder }} 个</el-tag>
           <el-tag :type="scoreFormTagType" size="small">{{ scoreFormText }}</el-tag>
           <el-tag v-if="isViewMode" type="success" size="small">查看模式</el-tag>
           <el-tag v-if="isScored" type="success" size="small">已提交</el-tag>
@@ -316,6 +317,7 @@ const taskId    = computed(() => route.params.taskId)
 const projectName    = computed(() => route.query.projectName || '未知项目')
 const institutionName = computed(() => route.query.institutionName || '')
 const sessionCode    = computed(() => route.query.sessionCode || '')
+const sessionOrder   = computed(() => route.query.sessionOrder || '')
 const scoreForm      = computed(() => (route.query.scoreForm || 'QCC').toUpperCase())
 const isViewMode     = computed(() => route.query.view === 'score' || route.query.status === 'SCORED')
 const isScored       = computed(() => route.query.status === 'SCORED')
