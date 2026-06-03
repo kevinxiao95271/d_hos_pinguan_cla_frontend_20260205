@@ -360,6 +360,7 @@ const submitSingleDraft = async (task) => {
     )
     submittingId.value = task.id
     const isInterview = task.stage === 'INTERVIEW'
+    const isFinal = task.stage === 'FINAL'
     const scoreRes = isInterview
       ? await getInterviewScore(task.id)
       : await getReviewScore(task.id)
@@ -367,8 +368,8 @@ const submitSingleDraft = async (task) => {
       ElMessage.error('加载评分数据失败，请进入评分页确认后再提交')
       return
     }
-    // 书审必填校验
-    if (!isInterview) {
+    // 书审必填校验（面谈和决赛不校验）
+    if (!isInterview && !isFinal) {
       const err = validateBookScore(scoreRes.data, task.projectName)
       if (err) { ElMessage.warning(err); return }
     }
@@ -428,8 +429,8 @@ const submitAllDrafts = async () => {
           errors.push(`《${task.projectName}》加载评分失败`)
           continue
         }
-        // 书审必填校验
-        if (!isInterview) {
+        // 书审必填校验（面谈和决赛不校验）
+        if (!isInterview && task.stage !== 'FINAL') {
           const err = validateBookScore(scoreRes.data, task.projectName)
           if (err) { errors.push(err); continue }
         }
