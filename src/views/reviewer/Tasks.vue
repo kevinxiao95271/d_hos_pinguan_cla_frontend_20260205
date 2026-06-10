@@ -227,7 +227,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore, getFinalMyTasks } from '@/api/review'
+import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore, getFinalMyTasks, submitFinalScore } from '@/api/review'
 import { getRecuseReasons } from '@/api/dictionary'
 
 const router = useRouter()
@@ -361,6 +361,16 @@ const submitSingleDraft = async (task) => {
     submittingId.value = task.id
     const isInterview = task.stage === 'INTERVIEW'
     const isFinal = task.stage === 'FINAL'
+
+    if (isFinal) {
+      const total = task.draftScore?.total
+      if (total == null) { ElMessage.error('无草稿分值，请先进入评分页保存'); return }
+      const res = await submitFinalScore(task.id, { scoreForm: task.scoreForm, total })
+      if (res.success) { ElMessage.success(`《${task.projectName}》评分已提交`); loadData() }
+      else ElMessage.error(res.message || '提交失败')
+      return
+    }
+
     const scoreRes = isInterview
       ? await getInterviewScore(task.id)
       : await getReviewScore(task.id)
@@ -368,8 +378,8 @@ const submitSingleDraft = async (task) => {
       ElMessage.error('加载评分数据失败，请进入评分页确认后再提交')
       return
     }
-    // 书审必填校验（面谈和决赛不校验）
-    if (!isInterview && !isFinal) {
+    // 书审必填校验
+    if (!isInterview) {
       const err = validateBookScore(scoreRes.data, task.projectName)
       if (err) { ElMessage.warning(err); return }
     }
@@ -399,15 +409,19 @@ const submitAllDrafts = async () => {
   const drafts = draftTasks.value
   if (!drafts.length) return
 
-  // 检查当前 Tab 下是否还有未评分任务（PENDING / CONFIRMED / RETURNED 没有草稿的）
-  const unscoredTasks = pendingTasksFiltered.value.filter(t => !['DRAFT'].includes(t.status))
-  if (unscoredTasks.length > 0) {
-    await ElMessageBox.alert(
-      `还有 ${unscoredTasks.length} 个项目未评审，请全部完成后再提交。`,
-      '无法提交',
-      { confirmButtonText: '知道了', type: 'warning' }
-    )
-    return
+  const isFinalTab = activeStageTab.value === 'FINAL'
+
+  // 非决赛阶段：检查是否还有未评分任务，有则拦截
+  if (!isFinalTab) {
+    const unscoredTasks = pendingTasksFiltered.value.filter(t => !['DRAFT'].includes(t.status))
+    if (unscoredTasks.length > 0) {
+      await ElMessageBox.alert(
+        `还有 ${unscoredTasks.length} 个项目未评审，请全部完成后再提交。`,
+        '无法提交',
+        { confirmButtonText: '知道了', type: 'warning' }
+      )
+      return
+    }
   }
 
   try {
@@ -422,6 +436,18 @@ const submitAllDrafts = async () => {
     for (const task of drafts) {
       try {
         const isInterview = task.stage === 'INTERVIEW'
+        const isFinal = task.stage === 'FINAL'
+
+        if (isFinal) {
+          // 决赛任务：用草稿里已有的 total 直接提交
+          const total = task.draftScore?.total
+          if (total == null) { errors.push(`《${task.projectName}》无草稿分值`); continue }
+          const res = await submitFinalScore(task.id, { scoreForm: task.scoreForm, total })
+          if (res.success) { successCount++ }
+          else { errors.push(`《${task.projectName}》${res.message || '提交失败'}`) }
+          continue
+        }
+
         const scoreRes = isInterview
           ? await getInterviewScore(task.id)
           : await getReviewScore(task.id)
@@ -429,8 +455,8 @@ const submitAllDrafts = async () => {
           errors.push(`《${task.projectName}》加载评分失败`)
           continue
         }
-        // 书审必填校验（面谈和决赛不校验）
-        if (!isInterview && task.stage !== 'FINAL') {
+        // 书审必填校验
+        if (!isInterview) {
           const err = validateBookScore(scoreRes.data, task.projectName)
           if (err) { errors.push(err); continue }
         }
@@ -650,8 +676,25 @@ const viewScore = (row) => {
 const handleSubmitScore = async (task) => {
   try {
     submitting.value = true
-    // 加载草稿评分数据
     const isInterview = task.stage === 'INTERVIEW'
+    const isFinal = task.stage === 'FINAL'
+    const totalStr = task.total != null ? `${task.total} 分` : '暂无分值'
+
+    await ElMessageBox.confirm(
+      `当前总分：${totalStr}，确认正式提交评分？提交后不可修改。`,
+      `提交评分 — ${task.projectName}`,
+      { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
+    )
+
+    if (isFinal) {
+      const total = task.draftScore?.total
+      if (total == null) { ElMessage.error('无草稿分值，请先进入评分页保存'); return }
+      const res = await submitFinalScore(task.id, { scoreForm: task.scoreForm, total })
+      if (res.success) { showThankYouDialog.value = true; loadData() }
+      else ElMessage.error(res.message || '提交失败')
+      return
+    }
+
     const scoreRes = isInterview
       ? await getInterviewScore(task.id)
       : await getReviewScore(task.id)
@@ -662,15 +705,6 @@ const handleSubmitScore = async (task) => {
     }
 
     const scoreData = scoreRes.data || {}
-    const total = task.total != null ? `${task.total} 分` : '暂无分值'
-
-    await ElMessageBox.confirm(
-      `当前总分：${total}，确认正式提交评分？提交后不可修改。`,
-      `提交评分 — ${task.projectName}`,
-      { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
-    )
-
-    // 构建提交数据
     const submitData = { reviewTaskId: task.id, ...scoreData }
     delete submitData.id
     delete submitData.status
