@@ -1,5 +1,5 @@
 <template>
-  <div class="stage-progress-wrapper">
+  <div class="stage-progress-wrapper" style="display:none">
     <div class="stage-progress">
       <div 
         v-for="(stage, index) in stages" 

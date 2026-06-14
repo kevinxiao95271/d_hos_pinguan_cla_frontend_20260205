@@ -199,6 +199,7 @@
                     :max="100"
                     :step="0.5"
                     :precision="1"
+                    :controls="false"
                     :disabled="isViewMode"
                     size="large"
                     style="width:150px"
@@ -462,7 +463,7 @@ const form = reactive({
   processScore: 40,
   interviewOperationScore: 20,
   // 面谈总分直接输入（专家输入，按权重拆解后再存四个维度）
-  interviewTotalInput: 80,
+  interviewTotalInput: null,
   // 公共字段
   highlights: '',
   shortcomings: ''
@@ -630,9 +631,9 @@ const loadData = async () => {
           }
         }
       } catch (error) {
-        // 无已有评分，面谈默认80分，书审默认满分
+        // 无已有评分，面谈默认空，书审默认满分
         if (taskInfo.stage === 'INTERVIEW') {
-          form.interviewTotalInput = 80
+          form.interviewTotalInput = null
         } else {
           Object.assign(form, BOOK_MAX)
         }

@@ -198,7 +198,7 @@ const menuItems = computed(() => {
         children: [
           { path: '/committee/book-stage/registration', title: '项目分组' },
           { path: '/committee/book-stage/reviewer', title: '评委分配' },
-          { path: '/committee/book-stage/score', title: '书审得分' },
+          { path: '/committee/book-stage/score', title: '书审标化得分' },
           { path: '/committee/book-stage/feedback', title: '专家意见反馈' }
         ]
       },
@@ -210,11 +210,11 @@ const menuItems = computed(() => {
         children: [
           { path: '/committee/interview-stage/group', title: '面谈分组' },
           { path: '/committee/interview-stage/reviewer', title: '评委分配' },
-          { path: '/committee/interview-stage/score', title: '面谈得分' }
+          { path: '/committee/interview-stage/score', title: '面谈标化得分' },
+          { path: '/committee/interview-stage/interview-only-ranking', title: '纯面谈排名' }
         ]
       },
       // 一级：入围管理（无子项）
-      { path: '/committee/interview-stage/interview-only-ranking', title: '纯面谈排名', icon: 'DataLine' },
       { path: '/committee/interview-stage/shortlist', title: '入围管理', icon: 'Select' },
       // 一级：决赛阶段
       {

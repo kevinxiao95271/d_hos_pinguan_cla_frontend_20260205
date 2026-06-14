@@ -54,6 +54,15 @@
           />
         </el-form-item>
 
+        <el-form-item label="项目编号">
+          <el-input
+            v-model="filters.registrationCode"
+            placeholder="请输入项目编号"
+            clearable
+            style="width: 160px"
+          />
+        </el-form-item>
+
         <el-form-item label="缴费回执">
           <el-select v-model="filters.hasPaymentProof" placeholder="全部" clearable style="width: 130px">
             <el-option label="已提交" :value="true" />
@@ -116,6 +125,15 @@
           style="margin-right: 8px"
         >
           项目名称：{{ filters.projectName }}
+        </el-tag>
+        <el-tag
+          v-if="filters.registrationCode"
+          closable
+          @close="filters.registrationCode = ''; loadRegistrations()"
+          type="info"
+          style="margin-right: 8px"
+        >
+          项目编号：{{ filters.registrationCode }}
         </el-tag>
         <el-tag
           v-if="filters.hasPaymentProof !== null && filters.hasPaymentProof !== undefined && filters.hasPaymentProof !== ''"
@@ -443,12 +461,13 @@ const filters = reactive({
   institutionName: '',
   groupType: '',
   projectName: '',
+  registrationCode: '',
   hasPaymentProof: null
 })
 
 const hasActiveFilters = computed(() => {
   return filters.competitionId || filters.status || filters.institutionName ||
-         filters.groupType || filters.projectName ||
+         filters.groupType || filters.projectName || filters.registrationCode ||
          (filters.hasPaymentProof !== null && filters.hasPaymentProof !== undefined && filters.hasPaymentProof !== '')
 })
 
@@ -494,6 +513,7 @@ const loadRegistrations = async () => {
     if (filters.institutionName) params.institutionName = filters.institutionName
     if (filters.groupType) params.groupType = filters.groupType
     if (filters.projectName) params.projectName = filters.projectName
+    if (filters.registrationCode) params.registrationCode = filters.registrationCode
     if (filters.hasPaymentProof !== null && filters.hasPaymentProof !== undefined && filters.hasPaymentProof !== '') {
       params.hasPaymentProof = filters.hasPaymentProof
     }
@@ -521,6 +541,7 @@ const resetFilters = () => {
   filters.institutionName = ''
   filters.groupType = ''
   filters.projectName = ''
+  filters.registrationCode = ''
   filters.hasPaymentProof = null
   currentPage.value = 1
   loadRegistrations()

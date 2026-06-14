@@ -59,6 +59,9 @@
                 maxlength="100"
                 show-word-limit
               />
+              <div style="color: #e6a23c; font-size: 12px; margin-top: 4px; line-height: 1.5;">
+                ⚠️ 重要提醒：项目名称用于大赛申报、证书制作、资料归档等，名称提交后不可随意修改，请仔细核对！
+              </div>
             </el-form-item>
             
             <el-form-item label="竞赛组别" prop="groupType">

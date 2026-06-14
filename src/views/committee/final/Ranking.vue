@@ -43,6 +43,7 @@
                   <span :class="['rank-badge', `rank-${row.rank}`]">{{ row.rank }}</span>
                 </template>
               </el-table-column>
+              <el-table-column prop="projectCode" label="项目编号" width="100" align="center" show-overflow-tooltip />
               <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
               <el-table-column prop="institutionName" label="参赛机构" width="160" show-overflow-tooltip />
               <el-table-column label="类型 / 均分" width="140" align="center">
