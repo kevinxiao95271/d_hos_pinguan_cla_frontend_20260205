@@ -177,6 +177,13 @@
         >
           📄 2026年浙江省医院品管大赛现场汇报注意事项和排程
         </el-link>
+        <el-link
+          underline="never"
+          style="color: #67b3e8;"
+          @click="openNoticeFile({ name: '关于公布2026年浙江省医院品管大赛获奖名单的通知', url: `${base}award_notice.pdf` })"
+        >
+          📄 关于公布2026年浙江省医院品管大赛获奖名单的通知
+        </el-link>
       </div>
     </el-card>
 
