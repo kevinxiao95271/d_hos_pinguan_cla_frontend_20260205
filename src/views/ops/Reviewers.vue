@@ -808,7 +808,7 @@ const exportExcel = async () => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `评审专家_${dayjs().format('YYYYMMDD')}.xlsx`
+    a.download = `评审专家_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`
     a.click()
     URL.revokeObjectURL(url)
     ElMessage.success('导出成功')
