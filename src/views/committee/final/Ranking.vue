@@ -41,48 +41,59 @@
           >
             <div class="session-title">{{ session }}</div>
             <el-table :data="byDateSession[date]?.[session] || []" border stripe size="small">
-              <el-table-column label="排名" width="64" align="center">
+              <el-table-column label="排名" width="56" align="center">
                 <template #default="{ row }">
                   <span :class="['rank-badge', `rank-${row.rank}`]">{{ row.rank }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="registrationCode" label="项目编号" width="90" align="center" />
-              <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />
-              <el-table-column prop="institutionName" label="参赛机构" width="150" show-overflow-tooltip />
-              <el-table-column label="类型" width="80" align="center">
+              <el-table-column prop="registrationCode" label="编号" width="72" align="center" />
+              <el-table-column prop="projectName" label="项目名称" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="institutionName" label="参赛机构" width="140" show-overflow-tooltip />
+              <el-table-column label="类型" width="72" align="center">
                 <template #default="{ row }">
                   <el-tag :type="scoreFormTagType(row.scoreForm)" size="small">
                     {{ scoreFormText(row.scoreForm) }}
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column label="现场均分" width="90" align="center">
+              <el-table-column label="书审D" width="78" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.bookScoreD != null ? formatScore(row.bookScoreD) : '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="面谈D" width="78" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.interviewScoreD != null ? formatScore(row.interviewScoreD) : '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="现场均分" width="82" align="center">
                 <template #default="{ row }">
                   <span class="avg-score">{{ formatScore(row.trimmedAvg) }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="书审/面谈D" width="100" align="center">
+              <el-table-column label="得分算式" min-width="220" show-overflow-tooltip>
                 <template #default="{ row }">
-                  <span>{{ row.bookReviewScore != null ? formatScore(row.bookReviewScore) : '-' }}</span>
+                  <span v-if="row.scoreFormula" class="formula-text">{{ row.scoreFormula }}</span>
+                  <span v-else class="text-muted">-</span>
                 </template>
               </el-table-column>
-              <el-table-column label="综合总分" width="90" align="center">
+              <el-table-column label="综合总分" width="86" align="center">
                 <template #default="{ row }">
                   <span class="total-score">{{ row.totalScore != null ? formatScore(row.totalScore) : '-' }}</span>
                 </template>
               </el-table-column>
-              <el-table-column label="总分排名" width="80" align="center">
+              <el-table-column label="总分排名" width="76" align="center">
                 <template #default="{ row }">
                   <span v-if="row.totalRank" :class="['rank-badge', `rank-${row.totalRank}`]">{{ row.totalRank }}</span>
                   <span v-else>-</span>
                 </template>
               </el-table-column>
-              <el-table-column label="评委数" width="64" align="center">
+              <el-table-column label="评委数" width="60" align="center">
                 <template #default="{ row }">
                   <el-tag type="info" size="small">{{ row.judgeCount }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="note" label="备注" min-width="120" show-overflow-tooltip>
+              <el-table-column prop="note" label="备注" min-width="100" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span class="note-text">{{ row.note }}</span>
                 </template>
@@ -316,6 +327,16 @@ onMounted(async () => {
     font-size: 17px;
     font-weight: 700;
     color: #e6a23c;
+  }
+
+  .formula-text {
+    font-size: 12px;
+    color: #606266;
+    font-family: monospace;
+  }
+
+  .text-muted {
+    color: #c0c4cc;
   }
 
   .avg-score {
