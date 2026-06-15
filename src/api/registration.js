@@ -137,6 +137,18 @@ export function getRegistrationCountByInstitution(competitionId) {
 }
 
 /**
+ * 检测同机构相似项目（相似度 ≥ 50% 返回列表）
+ * @param {{ competitionId, institutionId, projectName, selfId? }} params
+ */
+export function checkDuplicateProject(params) {
+  return request({
+    url: '/registrations/check-duplicate',
+    method: 'get',
+    params
+  })
+}
+
+/**
  * 获取报名详情
  */
 export function getRegistration(id) {

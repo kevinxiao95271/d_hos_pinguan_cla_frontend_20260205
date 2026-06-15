@@ -77,6 +77,29 @@
                 <el-radio value="ADVANCED">进阶组</el-radio>
               </el-radio-group>
             </el-form-item>
+
+            <el-divider content-position="left">项目负责人</el-divider>
+            <el-form-item label="负责人姓名" prop="projectLeaderName">
+              <el-input
+                v-model="form.basic.projectLeaderName"
+                placeholder="请输入项目负责人姓名"
+                style="width: 240px"
+              />
+            </el-form-item>
+            <el-form-item label="负责人电话" prop="projectLeaderPhone">
+              <el-input
+                v-model="form.basic.projectLeaderPhone"
+                placeholder="请输入联系电话"
+                style="width: 240px"
+              />
+            </el-form-item>
+            <el-form-item label="负责人职称" prop="projectLeaderTitle">
+              <el-input
+                v-model="form.basic.projectLeaderTitle"
+                placeholder="请输入职称（如：护士长、主任医师）"
+                style="width: 240px"
+              />
+            </el-form-item>
           </el-form>
         </div>
         
@@ -472,7 +495,8 @@ import {
   uploadRegistrationMaterial,
   submitRegistration,
   getRegistrationDetail,
-  getRegistrationCountByInstitution
+  getRegistrationCountByInstitution,
+  checkDuplicateProject
 } from '@/api/registration'
 import { getCompetitions } from '@/api/competition'
 import { getDictionaries } from '@/api/dictionary'
@@ -509,7 +533,10 @@ const form = reactive({
   basic: {
     competitionId: null,
     projectName: '',
-    groupType: 'BASIC'
+    groupType: 'BASIC',
+    projectLeaderName: '',
+    projectLeaderPhone: '',
+    projectLeaderTitle: ''
   },
   members: {
     participants: [],
@@ -788,6 +815,9 @@ const loadRegistrationDetail = async () => {
       form.basic.competitionId = data.competitionId || registration.competitionId
       form.basic.projectName = registration.projectName
       form.basic.groupType = registration.groupType
+      form.basic.projectLeaderName = registration.projectLeaderName || ''
+      form.basic.projectLeaderPhone = registration.projectLeaderPhone || ''
+      form.basic.projectLeaderTitle = registration.projectLeaderTitle || ''
       
       console.log('📝 加载报名详情:', {
         competitionId: form.basic.competitionId,
@@ -1284,6 +1314,39 @@ const submitForm = async () => {
     if (countRes.success && countRes.data >= 8) {
       ElMessage.error('您所在机构在本次赛事中已提交 8 个项目，已达上限，无法继续提交')
       return
+    }
+
+    // 相似度检测：同机构项目名称相似度 ≥ 80% 时提示
+    try {
+      const dupParams = {
+        competitionId: form.basic.competitionId,
+        institutionId: userStore.institutionId,
+        projectName: form.basic.projectName
+      }
+      if (registrationId.value) dupParams.selfId = registrationId.value
+      const dupRes = await checkDuplicateProject(dupParams)
+      if (dupRes.success && dupRes.data && dupRes.data.length > 0) {
+        const highSim = dupRes.data.filter(d => d.similarity >= 80)
+        if (highSim.length > 0) {
+          ElMessage.error('同一申报单位下，系统检索到相似度极高的已提交项目，系统自动拦截本次提交。如需提交，请联系管理员。')
+          return
+        }
+        // 相似度 50~80% 给警告，但允许继续
+        const midSim = dupRes.data.filter(d => d.similarity >= 50)
+        if (midSim.length > 0) {
+          try {
+            await ElMessageBox.confirm(
+              `系统检测到您的项目名称与本单位已有项目"${midSim[0].projectName}"相似度为 ${midSim[0].similarity.toFixed(1)}%，请确认是否继续提交？`,
+              '项目名称相似提醒',
+              { confirmButtonText: '确认提交', cancelButtonText: '取消', type: 'warning' }
+            )
+          } catch {
+            return
+          }
+        }
+      }
+    } catch {
+      // 检测接口异常不阻断提交流程
     }
 
     // 确认提交
