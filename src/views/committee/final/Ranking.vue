@@ -8,7 +8,10 @@
           <span class="title">现场竞赛排名</span>
           <div class="header-actions">
             <el-button type="warning" :loading="computing" @click="handleCompute">
-              重新计算排名
+              计算现场排名
+            </el-button>
+            <el-button type="danger" :loading="computingTotal" @click="handleComputeTotal">
+              计算综合总分
             </el-button>
             <el-button type="success" :loading="exporting" @click="handleExport">
               导出 Excel
@@ -43,17 +46,35 @@
                   <span :class="['rank-badge', `rank-${row.rank}`]">{{ row.rank }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="projectCode" label="项目编号" width="100" align="center" show-overflow-tooltip />
-              <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
-              <el-table-column prop="institutionName" label="参赛机构" width="160" show-overflow-tooltip />
-              <el-table-column label="类型 / 均分" width="140" align="center">
+              <el-table-column prop="registrationCode" label="项目编号" width="90" align="center" />
+              <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />
+              <el-table-column prop="institutionName" label="参赛机构" width="150" show-overflow-tooltip />
+              <el-table-column label="类型" width="80" align="center">
                 <template #default="{ row }">
-                  <div class="score-cell">
-                    <el-tag :type="scoreFormTagType(row.scoreForm)" size="small">
-                      {{ scoreFormText(row.scoreForm) }}
-                    </el-tag>
-                    <span class="avg-score">{{ formatScore(row.trimmedAvg) }}</span>
-                  </div>
+                  <el-tag :type="scoreFormTagType(row.scoreForm)" size="small">
+                    {{ scoreFormText(row.scoreForm) }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="现场均分" width="90" align="center">
+                <template #default="{ row }">
+                  <span class="avg-score">{{ formatScore(row.trimmedAvg) }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="书审/面谈D" width="100" align="center">
+                <template #default="{ row }">
+                  <span>{{ row.bookReviewScore != null ? formatScore(row.bookReviewScore) : '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="综合总分" width="90" align="center">
+                <template #default="{ row }">
+                  <span class="total-score">{{ row.totalScore != null ? formatScore(row.totalScore) : '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="总分排名" width="80" align="center">
+                <template #default="{ row }">
+                  <span v-if="row.totalRank" :class="['rank-badge', `rank-${row.totalRank}`]">{{ row.totalRank }}</span>
+                  <span v-else>-</span>
                 </template>
               </el-table-column>
               <el-table-column label="评委数" width="64" align="center">
@@ -61,7 +82,7 @@
                   <el-tag type="info" size="small">{{ row.judgeCount }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="note" label="备注" min-width="160" show-overflow-tooltip>
+              <el-table-column prop="note" label="备注" min-width="120" show-overflow-tooltip>
                 <template #default="{ row }">
                   <span class="note-text">{{ row.note }}</span>
                 </template>
@@ -80,7 +101,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
-import { computeFinalRanking, exportFinalRanking, getFinalRanking } from '@/api/admin'
+import { computeFinalRanking, computeTotalFinalRanking, exportFinalRanking, getFinalRanking } from '@/api/admin'
 
 // ── 工具 ──────────────────────────────────────────────────
 const formatScore = (val) => val == null ? '-' : Number(val).toFixed(2)
@@ -93,6 +114,7 @@ const competitionId = ref(getCurrentCompetitionIdSync())
 const allRanking = ref([])
 const loading = ref(false)
 const computing = ref(false)
+const computingTotal = ref(false)
 const exporting = ref(false)
 const activeDate = ref('')
 
@@ -181,6 +203,29 @@ const handleCompute = async () => {
   }
 }
 
+// ── 综合总分计算 ───────────────────────────────────────────
+const handleComputeTotal = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '将基于现场均分 + 书审/面谈D值计算综合总分，请确保现场排名已先行计算，确认继续？',
+      '计算综合总分',
+      { confirmButtonText: '确认计算', cancelButtonText: '取消', type: 'warning' }
+    )
+    computingTotal.value = true
+    const res = await computeTotalFinalRanking(competitionId.value)
+    if (res.success) {
+      ElMessage.success(res.data || '综合总分计算完成')
+      await loadRanking()
+    } else {
+      ElMessage.error(res.message || '计算失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error('计算失败，请检查网络')
+  } finally {
+    computingTotal.value = false
+  }
+}
+
 // ── 导出 ──────────────────────────────────────────────────
 const handleExport = async () => {
   exporting.value = true
@@ -266,6 +311,12 @@ onMounted(async () => {
   flex-direction: column;
   align-items: center;
   gap: 3px;
+
+  .total-score {
+    font-size: 17px;
+    font-weight: 700;
+    color: #e6a23c;
+  }
 
   .avg-score {
     font-size: 17px;

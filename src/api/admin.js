@@ -450,6 +450,11 @@ export function computeFinalRanking(competitionId) {
   return request({ url: '/admin/final/compute-ranking', method: 'post', params: { competitionId } })
 }
 
+/** 触发综合总分计算（书审/面谈D值 × 权重 + 现场均分 × 权重） */
+export function computeTotalFinalRanking(competitionId) {
+  return request({ url: '/admin/final/compute-total-ranking', method: 'post', params: { competitionId } })
+}
+
 /** 获取决赛排名结果 */
 export function getFinalRanking(competitionId, sessionCode) {
   const params = { competitionId }
