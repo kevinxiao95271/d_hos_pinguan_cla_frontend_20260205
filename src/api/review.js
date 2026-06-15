@@ -141,10 +141,12 @@ export function getReviewers(params) {
   })
 }
 
-export function exportReviewers() {
+export function exportReviewers(competitionId) {
+  const params = competitionId ? { competitionId } : {}
   return request({
     url: '/admin/reviewers/export',
     method: 'get',
+    params,
     responseType: 'blob'
   })
 }

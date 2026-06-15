@@ -60,6 +60,9 @@
         <el-form-item>
           <el-button type="primary" @click="applyFilter">查询</el-button>
           <el-button @click="resetFilter">重置</el-button>
+          <el-button type="success" plain :loading="exporting" :disabled="filteredRows.length === 0" @click="exportScores">
+            导出标化得分
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -214,11 +217,33 @@ import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getRankings } from '@/api/shortlist'
 import { useComputeRanking } from '@/composables/useComputeRanking'
 import { getCurrentCompetitionIdSync } from '@/utils/competition'
+import { exportReviewScores } from '@/api/admin'
+import dayjs from 'dayjs'
 
 const competitionId = ref(getCurrentCompetitionIdSync())
 const { stagesList, currentStageKey } = useCompetitionStages()
 
 const loading = ref(false)
+const exporting = ref(false)
+
+const exportScores = async () => {
+  if (!competitionId.value) { ElMessage.warning('请先选择赛事'); return }
+  exporting.value = true
+  try {
+    const blob = await exportReviewScores(competitionId.value, 'INTERVIEW_ONLY')
+    const url = URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `纯面谈标化得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+    ElMessage.success('导出成功')
+  } catch {
+    ElMessage.error('导出失败，请检查网络')
+  } finally {
+    exporting.value = false
+  }
+}
 
 const { computing, statusText: computeStatusText, progress: computeProgress, progressMsg: computeProgressMsg, triggerCompute } = useComputeRanking(
   async () => { await loadData() },

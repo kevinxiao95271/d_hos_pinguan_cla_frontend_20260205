@@ -262,6 +262,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { getReviewers, createReviewer, updateReviewer, deleteReviewer, exportReviewers, downloadReviewerIdCards } from '@/api/review'
 import { autocomplete, searchInstitutions } from '@/api/institution'
 import { getReviewerProfile, updateReviewerProfile, adminChangeReviewerInstitution, adminGetReviewerInstitutionHistory } from '@/api/reviewerProfile'
+import { getCurrentCompetitionIdSync } from '@/utils/competition'
 import dayjs from 'dayjs'
 
 // ── 枚举（与 Profile.vue 保持一致） ─────────────────────────────────
@@ -802,7 +803,8 @@ const downloadIdCards = async () => {
 const exportExcel = async () => {
   exporting.value = true
   try {
-    const blob = await exportReviewers()
+    const competitionId = getCurrentCompetitionIdSync()
+    const blob = await exportReviewers(competitionId)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url

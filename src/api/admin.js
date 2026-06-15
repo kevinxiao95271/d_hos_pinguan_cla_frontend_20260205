@@ -478,3 +478,13 @@ export function getFinalRankingMixed(competitionId) {
 export function rejectFinalScore(taskId) {
   return request({ url: `/admin/final/scores/${taskId}/reject`, method: 'post' })
 }
+
+/** 导出打分快照 Excel（stage: BOOK / INTERVIEW / INTERVIEW_ONLY） */
+export function exportReviewScores(competitionId, stage) {
+  return request({
+    url: '/admin/reviews/score-export',
+    method: 'get',
+    params: { competitionId, stage },
+    responseType: 'blob'
+  })
+}
