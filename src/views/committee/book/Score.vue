@@ -314,8 +314,8 @@ const exportExcel = () => {
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '书审得分')
-  XLSX.writeFile(wb, `书审得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
+  XLSX.utils.book_append_sheet(wb, ws, '书审标化得分')
+  XLSX.writeFile(wb, `书审标化得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
 }
 
 onMounted(() => {

@@ -108,6 +108,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
@@ -245,7 +246,7 @@ const handleExport = async () => {
     const url = URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]))
     const a = document.createElement('a')
     a.href = url
-    a.download = '现场竞赛排名_全场.xlsx'
+    a.download = `现场竞赛排名_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`
     a.click()
     URL.revokeObjectURL(url)
     ElMessage.success('导出成功')
