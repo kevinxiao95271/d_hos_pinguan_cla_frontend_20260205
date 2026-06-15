@@ -14,6 +14,12 @@
             <el-option label="全部会场" value="" />
             <el-option v-for="s in sessionOptions" :key="s" :label="s" :value="s" />
           </el-select>
+          <el-input
+            v-model="reviewerKeyword"
+            placeholder="专家姓名搜索"
+            clearable
+            style="width: 160px"
+          />
         </div>
         <div class="toolbar-right">
           <el-button :loading="loading" @click="loadScores">刷新</el-button>
@@ -110,6 +116,7 @@ const competitionId = ref(getCurrentCompetitionIdSync())
 const allScores = ref([])
 const loading = ref(false)
 const selectedSession = ref('')
+const reviewerKeyword = ref('')
 
 // ── 会场选项（保持顺序）──────────────────────────────────────
 const sessionOptions = computed(() => {
@@ -121,11 +128,15 @@ const sessionOptions = computed(() => {
 })
 
 // ── 过滤后的数据 ─────────────────────────────────────────────
-const filteredScores = computed(() =>
-  selectedSession.value
-    ? allScores.value.filter(r => r.sessionCode === selectedSession.value)
-    : allScores.value
-)
+const filteredScores = computed(() => {
+  let list = allScores.value
+  if (selectedSession.value) list = list.filter(r => r.sessionCode === selectedSession.value)
+  if (reviewerKeyword.value.trim()) {
+    const kw = reviewerKeyword.value.trim()
+    list = list.filter(r => r.reviewerName && r.reviewerName.includes(kw))
+  }
+  return list
+})
 
 // ── 展示的会场列表 ────────────────────────────────────────────
 const displayedSessions = computed(() => {
