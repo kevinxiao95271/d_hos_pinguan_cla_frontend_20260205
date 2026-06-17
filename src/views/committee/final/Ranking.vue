@@ -88,6 +88,14 @@
                   <span v-else>-</span>
                 </template>
               </el-table-column>
+              <el-table-column label="奖项" width="72" align="center">
+                <template #default="{ row }">
+                  <el-tag v-if="row.awardLevel === 'GOLD'"   type="warning" effect="dark" size="small">🥇 金奖</el-tag>
+                  <el-tag v-else-if="row.awardLevel === 'SILVER'" type="info"    effect="dark" size="small" style="background:#8c9eb0;border-color:#8c9eb0">🥈 银奖</el-tag>
+                  <el-tag v-else-if="row.awardLevel === 'BRONZE'" effect="dark"  size="small" style="background:#b87333;border-color:#b87333;color:#fff">🥉 铜奖</el-tag>
+                  <span v-else class="text-muted">-</span>
+                </template>
+              </el-table-column>
               <el-table-column label="评委数" width="60" align="center">
                 <template #default="{ row }">
                   <el-tag type="info" size="small">{{ row.judgeCount }}</el-tag>
