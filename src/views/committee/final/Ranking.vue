@@ -147,7 +147,7 @@ const computingTotal = ref(false)
 const exporting = ref(false)
 const activeDate = ref('')
 // 排序模式：natural=自然顺序 | rank=按现场均分 | total=按综合总分
-const sortMode = ref('natural')
+const sortMode = ref('total')
 
 // ── 按日期分层 computed ───────────────────────────────────
 // 保持日期顺序稳定（按首次出现顺序）
