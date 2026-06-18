@@ -27,7 +27,16 @@
         :image-size="100"
       />
 
-      <el-tabs v-else v-model="activeDate" type="border-card">
+      <div v-if="allRanking.length > 0" class="sort-bar">
+        <span class="sort-label">排序方式：</span>
+        <el-radio-group v-model="sortMode" size="small">
+          <el-radio-button value="natural">自然顺序</el-radio-button>
+          <el-radio-button value="rank">按现场均分 ↓</el-radio-button>
+          <el-radio-button value="total">按综合总分 ↓</el-radio-button>
+        </el-radio-group>
+      </div>
+
+      <el-tabs v-if="allRanking.length > 0" v-model="activeDate" type="border-card">
         <el-tab-pane
           v-for="date in dateOptions"
           :key="date"
@@ -137,6 +146,8 @@ const computing = ref(false)
 const computingTotal = ref(false)
 const exporting = ref(false)
 const activeDate = ref('')
+// 排序模式：natural=自然顺序 | rank=按现场均分 | total=按综合总分
+const sortMode = ref('natural')
 
 // ── 按日期分层 computed ───────────────────────────────────
 // 保持日期顺序稳定（按首次出现顺序）
@@ -170,7 +181,7 @@ const sessionsByDate = computed(() => {
   return map
 })
 
-// byDateSession[date][sessionCode] = 该场次排名列表
+// byDateSession[date][sessionCode] = 该场次排名列表（按 sortMode 排序）
 const byDateSession = computed(() => {
   const map = {}
   for (const r of allRanking.value) {
@@ -178,6 +189,17 @@ const byDateSession = computed(() => {
     if (!map[d]) map[d] = {}
     if (!map[d][r.sessionCode]) map[d][r.sessionCode] = []
     map[d][r.sessionCode].push(r)
+  }
+  // 对每个专场内的数据按排序模式重排
+  const sortFn = sortMode.value === 'rank'
+    ? (a, b) => (a.rank ?? 999) - (b.rank ?? 999)
+    : sortMode.value === 'total'
+      ? (a, b) => (a.totalRank ?? 999) - (b.totalRank ?? 999)
+      : (a, b) => (a.sessionOrder ?? 999) - (b.sessionOrder ?? 999)
+  for (const d of Object.keys(map)) {
+    for (const s of Object.keys(map[d])) {
+      map[d][s] = [...map[d][s]].sort(sortFn)
+    }
   }
   return map
 })
@@ -336,6 +358,19 @@ onMounted(async () => {
     font-size: 17px;
     font-weight: 700;
     color: #e6a23c;
+  }
+
+  .sort-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px 14px;
+
+    .sort-label {
+      font-size: 13px;
+      color: #606266;
+      white-space: nowrap;
+    }
   }
 
   .formula-text {
