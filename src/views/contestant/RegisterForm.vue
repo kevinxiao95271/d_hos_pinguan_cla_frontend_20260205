@@ -947,14 +947,19 @@ const nextStep = async () => {
     valid = await basicFormRef.value.validate().catch(() => false)
     if (valid) {
       await saveBasicInfo()
-      // 负责人信息带入参与人员第一行（仅当第一行为空时自动填充，避免覆盖已填内容）
-      const leader = form.basic
-      if (leader.projectLeaderName) {
-        if (form.members.participants.length === 0) {
-          form.members.participants.push({ name: leader.projectLeaderName, title: leader.projectLeaderTitle || '', department: '' })
-        } else if (!form.members.participants[0].name) {
-          form.members.participants[0].name = leader.projectLeaderName
-          form.members.participants[0].title = leader.projectLeaderTitle || ''
+      // 负责人信息带入参与人员：名单中已有同名则跳过，否则填入第一个空行或追加
+      const leaderName = form.basic.projectLeaderName?.trim()
+      if (leaderName) {
+        const alreadyExists = form.members.participants.some(p => p.name?.trim() === leaderName)
+        if (!alreadyExists) {
+          const emptyIdx = form.members.participants.findIndex(p => !p.name?.trim())
+          if (emptyIdx >= 0) {
+            form.members.participants[emptyIdx].name = leaderName
+            form.members.participants[emptyIdx].title = form.basic.projectLeaderTitle || ''
+          } else if (form.members.participants.length === 0) {
+            form.members.participants.push({ name: leaderName, title: form.basic.projectLeaderTitle || '', department: '' })
+          }
+          // 已有成员且全部非空、且无同名 → 不强行插入，避免打乱已填内容
         }
       }
     }
