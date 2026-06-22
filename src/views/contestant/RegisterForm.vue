@@ -58,9 +58,30 @@
                 placeholder="请输入项目名称，不超过100字"
                 maxlength="100"
                 show-word-limit
+                @blur="onProjectNameBlur"
               />
               <div style="color: #e6a23c; font-size: 12px; margin-top: 4px; line-height: 1.5;">
                 ⚠️ 重要提醒：项目名称用于大赛申报、证书制作、资料归档等，名称提交后不可随意修改，请仔细核对！
+              </div>
+              <!-- 实时相似度提示 -->
+              <div v-if="duplicateHints.length > 0" style="margin-top: 6px;">
+                <div
+                  v-for="hint in duplicateHints"
+                  :key="hint.registrationId"
+                  :style="{
+                    fontSize: '12px',
+                    lineHeight: '1.6',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    marginBottom: '4px',
+                    background: hint.similarity >= 80 ? '#fff3e0' : '#fffbe6',
+                    color: hint.similarity >= 80 ? '#e6780a' : '#a07800',
+                    border: hint.similarity >= 80 ? '1px solid #ffcc80' : '1px solid #ffe066'
+                  }"
+                >
+                  <span v-if="hint.similarity >= 80">⚠️ 存在高度相似项目（相似度 {{ hint.similarity.toFixed(1) }}%）：「{{ hint.projectName }}」，提交时将被拦截，请修改名称</span>
+                  <span v-else>💡 存在相似项目（相似度 {{ hint.similarity.toFixed(1) }}%）：「{{ hint.projectName }}」，提交前请确认</span>
+                </div>
               </div>
             </el-form-item>
             
@@ -518,6 +539,31 @@ const currentStep = ref(0)
 const loading = ref(false)
 const saving = ref(false)
 const submitting = ref(false)
+const duplicateHints = ref([])   // 实时相似度提示
+let dupCheckTimer = null
+
+const onProjectNameBlur = () => {
+  clearTimeout(dupCheckTimer)
+  dupCheckTimer = setTimeout(async () => {
+    const name = form.basic.projectName?.trim()
+    if (!name || !form.basic.competitionId || !userStore.institutionId) {
+      duplicateHints.value = []
+      return
+    }
+    try {
+      const params = {
+        competitionId: form.basic.competitionId,
+        institutionId: userStore.institutionId,
+        projectName: name
+      }
+      if (registrationId.value) params.selfId = registrationId.value
+      const res = await checkDuplicateProject(params)
+      duplicateHints.value = res.success && res.data?.length ? res.data : []
+    } catch {
+      duplicateHints.value = []
+    }
+  }, 300)
+}
 
 const competitions = ref([])
 const subjectTypes = ref([])
@@ -1406,9 +1452,19 @@ const submitForm = async () => {
       ElMessage.error(res.message || '提交失败')
     }
   } catch (error) {
-    if (error !== 'cancel') {
+    if (error === 'cancel') return
+    // 服务端相似度兜底拦截（HTTP 409）
+    const body = error?.response?.data
+    if (body?.errorCode === 'DUPLICATE_PROJECT_NAME') {
+      duplicateHints.value = body.data || []
+      currentStep.value = 0
+      // 拦截器已弹过 ElMessage，此处不重复
+    } else {
       console.error('提交失败:', error)
-      ElMessage.error('提交失败')
+      // 拦截器未覆盖的情况才补弹
+      if (!error?.response) {
+        ElMessage.error('提交失败，请检查网络')
+      }
     }
   } finally {
     submitting.value = false
