@@ -262,16 +262,22 @@ async function onOpen() {
     }
   } catch (e) {
     console.error('文件预览失败:', e)
-    error.value = '文件加载失败，请稍后重试'
+    const msg = e?.message || String(e)
+    error.value = `文件加载失败：${msg}`
     loading.value = false
   }
 }
 
 async function renderDocx(blob) {
-  // 动态 import，避免影响首屏加载
   const { renderAsync } = await import('docx-preview')
-  await nextTick()
-  if (!docxContainer.value) return
+  // 动态 import 是异步的，import 完成后需要再等 Vue 把 docxContainer 挂上
+  for (let i = 0; i < 5; i++) {
+    await nextTick()
+    if (docxContainer.value) break
+  }
+  if (!docxContainer.value) {
+    throw new Error('预览容器未就绪，请关闭后重试')
+  }
   docxContainer.value.innerHTML = ''
   await renderAsync(blob, docxContainer.value, null, {
     className: 'docx-render',

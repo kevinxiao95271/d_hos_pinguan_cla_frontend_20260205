@@ -175,11 +175,27 @@
             <div v-if="registration.materials && registration.materials.length > 0" style="margin-top: 20px">
               <el-divider content-position="left">材料文件</el-divider>
               <el-table :data="registration.materials" border>
-                <el-table-column prop="fileName" label="文件名" />
-                <el-table-column prop="fileType" label="类型" width="100" />
-                <el-table-column label="操作" width="120">
+                <el-table-column prop="fileName" label="文件名" min-width="200" />
+                <el-table-column prop="type" label="类型" width="180">
                   <template #default="{ row }">
-                    <el-button type="primary" size="small" @click="downloadFile(row)">
+                    {{ getMaterialTypeLabel(row.type) }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="uploadedAt" label="上传时间" width="160">
+                  <template #default="{ row }">
+                    {{ formatDate(row.uploadedAt) }}
+                  </template>
+                </el-table-column>
+                <el-table-column label="操作" width="160" align="center">
+                  <template #default="{ row }">
+                    <el-button
+                      v-if="canPreview(row.fileName)"
+                      type="success"
+                      size="small"
+                      link
+                      @click="previewFile(row)"
+                    >预览</el-button>
+                    <el-button type="primary" size="small" link :loading="downloadingId === row.id" @click="downloadFile(row)">
                       下载
                     </el-button>
                   </template>
@@ -239,6 +255,14 @@
         </el-main>
       </el-container>
     </el-card>
+
+    <FilePreviewDialog
+      v-model="filePreviewVisible"
+      :material-id="previewMaterialId"
+      :file-url="previewFileUrl"
+      :file-name="previewFileName"
+      :show-download="false"
+    />
   </div>
 </template>
 
@@ -250,7 +274,9 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { getRegistration, getRegistrationReviewDetails, getPublishedFeedback } from '@/api/registration'
 import { getCompetition } from '@/api/competition'
 import { getCurrentCompetitionId } from '@/utils/competition'
+import { downloadMaterial } from '@/api/material'
 import StageProgress from '@/components/StageProgress.vue'
+import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import dayjs from 'dayjs'
 
 const route = useRoute()
@@ -328,11 +354,13 @@ const loadData = async () => {
       const data = regRes.data
       
       // 处理嵌套数据结构
+      const rawMaterials = data.materials ?? data.registration?.materials ?? []
       Object.assign(registration, {
         ...data.registration,
         members: data.members || [],
         activityInfo: data.activityInfo,
-        summary: data.projectSummary
+        summary: data.projectSummary,
+        materials: Array.isArray(rawMaterials) ? rawMaterials : []
       })
       
       // 加载赛事信息（优先使用API返回的competitionId，否则使用后端全局当前赛事）
@@ -437,12 +465,56 @@ const getMemberRoleLabel = (role) => {
   return labels[role] || role
 }
 
-// 下载文件
-const downloadFile = (file) => {
-  if (file.fileUrl) {
-    window.open(file.fileUrl, '_blank')
-  } else {
-    ElMessage.warning('文件链接不存在')
+const downloadingId = ref(null)
+const filePreviewVisible = ref(false)
+const previewMaterialId = ref(null)
+const previewFileName = ref('')
+const previewFileUrl = ref(null)
+
+const canPreview = (fileName) => {
+  if (!fileName) return false
+  const ext = fileName.split('.').pop().toLowerCase()
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'docx', 'xlsx', 'xls'].includes(ext)
+}
+
+const previewFile = (file) => {
+  previewMaterialId.value = file.id || null
+  previewFileUrl.value = null
+  previewFileName.value = file.fileName || '文件预览'
+  filePreviewVisible.value = true
+}
+
+const getMaterialTypeLabel = (type) => {
+  const map = {
+    REGISTRATION_FORM_DOC: '报名表 Word',
+    REGISTRATION_FORM_PDF: '报名表 PDF',
+    REPORT: '成果报告书',
+    EVIDENCE: '佐证材料',
+    PAYMENT_PROOF: '缴费凭证'
+  }
+  return map[type] || type || '-'
+}
+
+const downloadFile = async (file) => {
+  if (!file.id) {
+    ElMessage.warning('文件暂无法下载')
+    return
+  }
+  downloadingId.value = file.id
+  try {
+    const blob = await downloadMaterial(file.id)
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = file.fileName || '下载文件'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败，请重试')
+  } finally {
+    downloadingId.value = null
   }
 }
 

@@ -368,6 +368,16 @@
         
         <!-- 步骤5: 材料上传 -->
         <div v-show="currentStep === 4">
+          <el-alert
+            type="info"
+            :closable="false"
+            show-icon
+            style="margin-bottom: 16px;"
+          >
+            <template #default>
+              已上传的文件点击文件名可直接下载查看；如需替换，请先删除再重新上传。
+            </template>
+          </el-alert>
           <el-form label-width="150px" :disabled="isDisabled">
             <el-form-item label="报名表 Word" required>
               <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -385,6 +395,7 @@
                   :auto-upload="false"
                   :on-change="handleRegistrationFormDocChange"
                   :on-remove="handleRegistrationFormDocRemove"
+                  :on-preview="handleMaterialPreview"
                   :file-list="form.materials.registrationFormDoc"
                   :limit="1"
                   accept=".doc,.docx"
@@ -416,6 +427,7 @@
                   :auto-upload="false"
                   :on-change="handleRegistrationFormPdfChange"
                   :on-remove="handleRegistrationFormPdfRemove"
+                  :on-preview="handleMaterialPreview"
                   :file-list="form.materials.registrationFormPdf"
                   :limit="1"
                   accept=".pdf"
@@ -436,6 +448,7 @@
                   :auto-upload="false"
                   :on-change="handleReportChange"
                   :on-remove="handleReportRemove"
+                  :on-preview="handleMaterialPreview"
                   :file-list="form.materials.report"
                   :limit="1"
                   accept=".pdf,.docx"
@@ -467,6 +480,7 @@
                 :on-change="handleEvidenceChange"
                 :on-remove="handleEvidenceRemove"
                 :on-exceed="handleEvidenceExceed"
+                :on-preview="handleMaterialPreview"
                 :file-list="form.materials.evidence"
                 :limit="5"
                 multiple
@@ -525,7 +539,7 @@ import {
 import { getCompetitions } from '@/api/competition'
 import { getDictionaries } from '@/api/dictionary'
 import { getActiveTemplates, downloadTemplate } from '@/api/systemTemplate'
-import { uploadMaterial, deleteMaterial } from '@/api/material'
+import { uploadMaterial, deleteMaterial, downloadMaterial } from '@/api/material'
 import { getInstitution } from '@/api/institution'
 
 const route = useRoute()
@@ -1478,6 +1492,26 @@ const submitForm = async () => {
     }
   } finally {
     submitting.value = false
+  }
+}
+
+/**
+ * 点击已上传文件名时触发下载（仅限已落库的文件，即有 id 的）
+ */
+const handleMaterialPreview = async (file) => {
+  if (!file.id) return
+  try {
+    const blob = await downloadMaterial(file.id)
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = file.name || '下载文件'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  } catch {
+    ElMessage.error('下载失败，请重试')
   }
 }
 
