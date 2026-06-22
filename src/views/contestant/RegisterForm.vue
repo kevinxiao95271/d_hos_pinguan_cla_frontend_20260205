@@ -438,12 +438,12 @@
                   :on-remove="handleReportRemove"
                   :file-list="form.materials.report"
                   :limit="1"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.docx"
                 >
                   <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
                   <template #tip>
                     <div class="el-upload__tip">
-                      支持PDF、Word格式，文件大小不超过30MB
+                      支持 PDF、Word（.docx）格式，文件大小不超过30MB（不支持 .doc 旧格式）
                     </div>
                   </template>
                 </el-upload>
