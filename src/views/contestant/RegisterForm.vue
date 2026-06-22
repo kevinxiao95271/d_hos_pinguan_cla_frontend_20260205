@@ -1002,8 +1002,9 @@ const nextStep = async () => {
           if (emptyIdx >= 0) {
             form.members.participants[emptyIdx].name = leaderName
             form.members.participants[emptyIdx].title = form.basic.projectLeaderTitle || ''
+            form.members.participants[emptyIdx].role = 'PARTICIPANT'
           } else if (form.members.participants.length === 0) {
-            form.members.participants.push({ name: leaderName, title: form.basic.projectLeaderTitle || '', department: '' })
+            form.members.participants.push({ name: leaderName, title: form.basic.projectLeaderTitle || '', department: '', role: 'PARTICIPANT' })
           }
           // 已有成员且全部非空、且无同名 → 不强行插入，避免打乱已填内容
         }
@@ -1373,6 +1374,15 @@ const submitForm = async () => {
       return
     }
     
+    // 校验成员信息：名字为空视为无效
+    const invalidParticipant = form.members.participants.some(p => !p.name?.trim())
+    const invalidMentor = form.members.mentors.some(p => !p.name?.trim())
+    if (invalidParticipant || invalidMentor) {
+      ElMessage.warning('成员信息中存在未填写姓名的记录，请补充后再提交')
+      currentStep.value = 1
+      return
+    }
+
     // 提交前检查机构项目数量上限
     const countRes = await getRegistrationCountByInstitution(form.basic.competitionId)
     if (countRes.success && countRes.data >= 8) {
