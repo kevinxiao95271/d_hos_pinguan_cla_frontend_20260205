@@ -84,6 +84,7 @@
                 v-model="form.basic.projectLeaderName"
                 placeholder="请输入项目负责人姓名"
                 style="width: 240px"
+                :disabled="isDisabled"
               />
             </el-form-item>
             <el-form-item label="负责人电话" prop="projectLeaderPhone">
@@ -91,6 +92,7 @@
                 v-model="form.basic.projectLeaderPhone"
                 placeholder="请输入联系电话"
                 style="width: 240px"
+                :disabled="isDisabled"
               />
             </el-form-item>
             <el-form-item label="负责人职称" prop="projectLeaderTitle">
@@ -98,6 +100,7 @@
                 v-model="form.basic.projectLeaderTitle"
                 placeholder="请输入职称（如：护士长、主任医师）"
                 style="width: 240px"
+                :disabled="isDisabled"
               />
             </el-form-item>
           </el-form>
@@ -944,6 +947,16 @@ const nextStep = async () => {
     valid = await basicFormRef.value.validate().catch(() => false)
     if (valid) {
       await saveBasicInfo()
+      // 负责人信息带入参与人员第一行（仅当第一行为空时自动填充，避免覆盖已填内容）
+      const leader = form.basic
+      if (leader.projectLeaderName) {
+        if (form.members.participants.length === 0) {
+          form.members.participants.push({ name: leader.projectLeaderName, title: leader.projectLeaderTitle || '', department: '' })
+        } else if (!form.members.participants[0].name) {
+          form.members.participants[0].name = leader.projectLeaderName
+          form.members.participants[0].title = leader.projectLeaderTitle || ''
+        }
+      }
     }
   } else if (currentStep.value === 1) {
     await saveMembers()
