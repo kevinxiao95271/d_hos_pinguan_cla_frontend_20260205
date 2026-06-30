@@ -107,6 +107,17 @@
         </template>
 
         <!-- 评委操作 -->
+        <div style="margin-bottom: 10px;">
+          <el-input
+            v-model="reviewerSearchName"
+            placeholder="搜索评委姓名"
+            clearable
+            size="small"
+            style="width: 160px; margin-bottom: 8px;"
+            @input="loadReviewers"
+            @clear="loadReviewers"
+          />
+        </div>
         <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
           <el-button type="primary" size="small" @click="handleManualAssign" :disabled="selectedRegistrations.length === 0 || selectedReviewers.length === 0">
             <el-icon><User /></el-icon>
@@ -344,6 +355,7 @@ const registrationFilter = ref({
 const reviewers = ref([])
 const loadingReviewers = ref(false)
 const selectedReviewers = ref([])
+const reviewerSearchName = ref('')
 
 // 自动分配
 const autoAssignDialogVisible = ref(false)
@@ -431,7 +443,8 @@ const loadReviewers = async () => {
   loadingReviewers.value = true
   try {
     const res = await getReviewers({
-      competitionId: competitionId.value
+      competitionId: competitionId.value,
+      name: reviewerSearchName.value || undefined
     })
     console.log('📊 评委API响应:', res)
     if (res.success) {
