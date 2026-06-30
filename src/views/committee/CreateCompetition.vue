@@ -114,32 +114,35 @@
           </template>
         </el-alert>
 
-        <el-form-item label="基层组前缀">
+        <el-form-item label="基层组前缀" :error="prefixError.basic">
           <el-input
             v-model="form.basicGroupPrefix"
             placeholder="默认 A"
-            maxlength="5"
-            style="width: 120px"
+            maxlength="1"
+            style="width: 80px"
+            @input="val => form.basicGroupPrefix = val.toUpperCase().replace(/[^A-Z]/g, '')"
           />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.basicGroupPrefix || 'A') }}1、{{ (form.basicGroupPrefix || 'A') }}2…</span>
         </el-form-item>
 
-        <el-form-item label="综合组前缀">
+        <el-form-item label="综合组前缀" :error="prefixError.comprehensive">
           <el-input
             v-model="form.comprehensiveGroupPrefix"
             placeholder="默认 B"
-            maxlength="5"
-            style="width: 120px"
+            maxlength="1"
+            style="width: 80px"
+            @input="val => form.comprehensiveGroupPrefix = val.toUpperCase().replace(/[^A-Z]/g, '')"
           />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.comprehensiveGroupPrefix || 'B') }}1、{{ (form.comprehensiveGroupPrefix || 'B') }}2…</span>
         </el-form-item>
 
-        <el-form-item label="进阶组前缀">
+        <el-form-item label="进阶组前缀" :error="prefixError.advanced">
           <el-input
             v-model="form.advancedGroupPrefix"
             placeholder="默认 C"
-            maxlength="5"
-            style="width: 120px"
+            maxlength="1"
+            style="width: 80px"
+            @input="val => form.advancedGroupPrefix = val.toUpperCase().replace(/[^A-Z]/g, '')"
           />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.advancedGroupPrefix || 'C') }}1、{{ (form.advancedGroupPrefix || 'C') }}2…</span>
         </el-form-item>
@@ -180,7 +183,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createCompetition, uploadCompetitionTemplate } from '@/api/competition'
@@ -211,6 +214,24 @@ const rules = {
   ]
 }
 
+// 前缀实时错误（computed，响应式，无需 validateField）
+const prefixError = computed(() => {
+  const b = form.basicGroupPrefix
+  const c = form.comprehensiveGroupPrefix
+  const a = form.advancedGroupPrefix
+  const check = (val, others) => {
+    if (!val) return ''
+    if (!/^[A-Z]$/.test(val)) return '须为单个大写字母（A-Z）'
+    if (others.filter(Boolean).includes(val)) return '三组前缀不能重复'
+    return ''
+  }
+  return {
+    basic: check(b, [c, a]),
+    comprehensive: check(c, [b, a]),
+    advanced: check(a, [b, c]),
+  }
+})
+
 const fileList = reactive({ registration: [], report: [] })
 const files = reactive({ registration: null, report: null })
 
@@ -222,6 +243,11 @@ const handleFileChange = (file, type) => {
 const submit = async () => {
   try {
     await formRef.value.validate()
+    const pe = prefixError.value
+    if (pe.basic || pe.comprehensive || pe.advanced) {
+      ElMessage.warning('请修正前缀配置后再提交')
+      return
+    }
     submitting.value = true
 
     const payload = { name: form.name }
@@ -262,6 +288,7 @@ const submit = async () => {
 }
 
 const goBack = () => router.back()
+
 </script>
 
 <style scoped lang="scss">
