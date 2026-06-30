@@ -251,9 +251,10 @@ const menuItems = computed(() => {
             title: '赛事管理',
             icon: 'Management',
             children: [
-              { path: '/ops/settings', title: '规则设置' },
+              { path: '/committee/competitions', title: '赛事列表' },
               { path: '/committee/create-competition', title: '创建赛事' },
-              { path: '/committee/switch-competition', title: '切换赛事' }
+              { path: '/committee/switch-competition', title: '切换赛事' },
+              { path: '/ops/settings', title: '规则设置' }
             ]
           },
           // 二级：历史数据（无三级）

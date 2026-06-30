@@ -220,6 +220,18 @@ const routes = [
         meta: { title: '最终排名', parent: '决赛阶段' }
       },
       {
+        path: 'competitions',
+        name: 'Competitions',
+        component: () => import('@/views/committee/Competitions.vue'),
+        meta: { title: '赛事列表' }
+      },
+      {
+        path: 'competition/:id',
+        name: 'CompetitionDetail',
+        component: () => import('@/views/committee/CompetitionDetail.vue'),
+        meta: { title: '赛事详情' }
+      },
+      {
         path: 'create-competition',
         name: 'CreateCompetition',
         component: () => import('@/views/committee/CreateCompetition.vue'),

@@ -39,6 +39,7 @@
             type="datetime"
             placeholder="报名结束"
             value-format="YYYY-MM-DDTHH:mm:ss"
+            :default-time="new Date(2000, 0, 1, 23, 59, 59)"
             style="width: 200px"
           />
         </el-form-item>
@@ -57,6 +58,7 @@
             type="datetime"
             placeholder="书审结束"
             value-format="YYYY-MM-DDTHH:mm:ss"
+            :default-time="new Date(2000, 0, 1, 23, 59, 59)"
             style="width: 200px"
           />
         </el-form-item>
@@ -75,6 +77,7 @@
             type="datetime"
             placeholder="面谈结束"
             value-format="YYYY-MM-DDTHH:mm:ss"
+            :default-time="new Date(2000, 0, 1, 23, 59, 59)"
             style="width: 200px"
           />
         </el-form-item>
@@ -93,6 +96,7 @@
             type="datetime"
             placeholder="决赛结束"
             value-format="YYYY-MM-DDTHH:mm:ss"
+            :default-time="new Date(2000, 0, 1, 23, 59, 59)"
             style="width: 200px"
           />
         </el-form-item>
@@ -117,7 +121,7 @@
             maxlength="5"
             style="width: 120px"
           />
-          <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 A1、A2…</span>
+          <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.basicGroupPrefix || 'A') }}1、{{ (form.basicGroupPrefix || 'A') }}2…</span>
         </el-form-item>
 
         <el-form-item label="综合组前缀">
@@ -127,7 +131,7 @@
             maxlength="5"
             style="width: 120px"
           />
-          <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 B1、B2…</span>
+          <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.comprehensiveGroupPrefix || 'B') }}1、{{ (form.comprehensiveGroupPrefix || 'B') }}2…</span>
         </el-form-item>
 
         <el-form-item label="进阶组前缀">
@@ -137,7 +141,7 @@
             maxlength="5"
             style="width: 120px"
           />
-          <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 C1、C2…</span>
+          <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.advancedGroupPrefix || 'C') }}1、{{ (form.advancedGroupPrefix || 'C') }}2…</span>
         </el-form-item>
 
         <el-divider content-position="left">资料模板</el-divider>

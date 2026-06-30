@@ -40,10 +40,15 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="320" fixed="right">
           <template #default="{ row }">
             <el-space :size="4" wrap>
               <el-button type="primary" size="small" @click="viewDetail(row.id)">管理</el-button>
+              <el-button
+                v-if="row.status === 'DRAFT'"
+                size="small"
+                @click="handleEdit(row)"
+              >编辑</el-button>
               <el-button
                 v-if="row.status === 'DRAFT'"
                 type="success"
@@ -67,6 +72,37 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- 编辑赛事弹窗 -->
+    <el-dialog v-model="editDialogVisible" title="编辑赛事" width="480px">
+      <el-form :model="editForm" label-width="100px">
+        <el-form-item label="赛事名称">
+          <el-input v-model="editForm.name" placeholder="请输入赛事名称" />
+        </el-form-item>
+        <el-form-item label="基层组前缀">
+          <el-input v-model="editForm.basicGroupPrefix" placeholder="默认 A" maxlength="5" style="width: 120px" />
+          <span style="margin-left: 8px; color: #909399; font-size: 13px">
+            生成 {{ editForm.basicGroupPrefix || 'A' }}1、{{ editForm.basicGroupPrefix || 'A' }}2…
+          </span>
+        </el-form-item>
+        <el-form-item label="综合组前缀">
+          <el-input v-model="editForm.comprehensiveGroupPrefix" placeholder="默认 B" maxlength="5" style="width: 120px" />
+          <span style="margin-left: 8px; color: #909399; font-size: 13px">
+            生成 {{ editForm.comprehensiveGroupPrefix || 'B' }}1、{{ editForm.comprehensiveGroupPrefix || 'B' }}2…
+          </span>
+        </el-form-item>
+        <el-form-item label="进阶组前缀">
+          <el-input v-model="editForm.advancedGroupPrefix" placeholder="默认 C" maxlength="5" style="width: 120px" />
+          <span style="margin-left: 8px; color: #909399; font-size: 13px">
+            生成 {{ editForm.advancedGroupPrefix || 'C' }}1、{{ editForm.advancedGroupPrefix || 'C' }}2…
+          </span>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSaveEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -78,13 +114,60 @@ import {
   getCompetitions,
   activateCompetition,
   deactivateCompetition,
-  deleteCompetition
+  deleteCompetition,
+  updateCompetitionConfig
 } from '@/api/competition'
 import dayjs from 'dayjs'
 
 const router = useRouter()
 const competitions = ref([])
 const loading = ref(false)
+
+// 编辑弹窗
+const editDialogVisible = ref(false)
+const saving = ref(false)
+const editingId = ref(null)
+const editForm = ref({ name: '', basicGroupPrefix: '', comprehensiveGroupPrefix: '', advancedGroupPrefix: '' })
+
+const handleEdit = (row) => {
+  editingId.value = row.id
+  editForm.value = {
+    name: row.name,
+    basicGroupPrefix: row.basicGroupPrefix || '',
+    comprehensiveGroupPrefix: row.comprehensiveGroupPrefix || '',
+    advancedGroupPrefix: row.advancedGroupPrefix || ''
+  }
+  editDialogVisible.value = true
+}
+
+const handleSaveEdit = async () => {
+  if (!editForm.value.name?.trim()) {
+    ElMessage.warning('赛事名称不能为空')
+    return
+  }
+  saving.value = true
+  try {
+    const res = await updateCompetitionConfig(editingId.value, {
+      name: editForm.value.name.trim(),
+      basicGroupPrefix: editForm.value.basicGroupPrefix || undefined,
+      comprehensiveGroupPrefix: editForm.value.comprehensiveGroupPrefix || undefined,
+      advancedGroupPrefix: editForm.value.advancedGroupPrefix || undefined
+    })
+    // res 可能是 { success, data, message } 或空（204）
+    if (res && res.success === false) {
+      // 后端返回 HTTP 200 但 success=false（如 PREFIX_LOCKED_BY_GROUPING）
+      ElMessage.error(res.message || '保存失败')
+      return
+    }
+    ElMessage.success('保存成功')
+    editDialogVisible.value = false
+    loadData()
+  } catch {
+    // HTTP 4xx/5xx 错误由 request 拦截器统一弹窗处理，此处无需重复
+  } finally {
+    saving.value = false
+  }
+}
 
 const loadData = async () => {
   loading.value = true
@@ -107,15 +190,19 @@ const handleActivate = async (row) => {
       '确认激活',
       { type: 'warning', confirmButtonText: '激活', cancelButtonText: '取消' }
     )
+  } catch {
+    return // 用户取消
+  }
+  try {
     const res = await activateCompetition(row.id)
-    if (res.success) {
-      ElMessage.success('激活成功')
-      loadData()
-    } else {
+    if (res && res.success === false) {
       ElMessage.error(res.message || '激活失败')
+      return
     }
-  } catch (e) {
-    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || '激活失败')
+    ElMessage.success('激活成功')
+    loadData()
+  } catch {
+    // 拦截器已处理
   }
 }
 
@@ -126,15 +213,19 @@ const handleDeactivate = async (row) => {
       '确认撤回',
       { type: 'warning', confirmButtonText: '撤回', cancelButtonText: '取消' }
     )
+  } catch {
+    return
+  }
+  try {
     const res = await deactivateCompetition(row.id)
-    if (res.success) {
-      ElMessage.success('撤回成功')
-      loadData()
-    } else {
+    if (res && res.success === false) {
       ElMessage.error(res.message || '撤回失败')
+      return
     }
-  } catch (e) {
-    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || '撤回失败')
+    ElMessage.success('撤回成功')
+    loadData()
+  } catch {
+    // 拦截器已处理
   }
 }
 
@@ -145,15 +236,19 @@ const handleDelete = async (row) => {
       '确认删除',
       { type: 'error', confirmButtonText: '删除', cancelButtonText: '取消' }
     )
+  } catch {
+    return
+  }
+  try {
     const res = await deleteCompetition(row.id)
-    if (res.success !== false) {
-      ElMessage.success('删除成功')
-      loadData()
-    } else {
+    if (res && res.success === false) {
       ElMessage.error(res.message || '删除失败')
+      return
     }
-  } catch (e) {
-    if (e !== 'cancel') ElMessage.error(e?.response?.data?.message || '删除失败')
+    ElMessage.success('删除成功')
+    loadData()
+  } catch {
+    // 拦截器已处理
   }
 }
 

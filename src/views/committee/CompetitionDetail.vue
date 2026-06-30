@@ -1,687 +1,340 @@
 <template>
   <div class="competition-detail-page">
-    <el-card>
-      <template #header>
-        <div class="card-header">
-          <span>{{ competition.name }}</span>
-        </div>
-      </template>
-      
-      <!-- 前缀配置信息 -->
-      <div class="prefix-section">
-        <el-descriptions :column="4" border size="small" style="margin-bottom: 12px">
-          <el-descriptions-item label="基层组前缀">
-            <el-tag type="primary">{{ competition.basicGroupPrefix || 'A' }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="综合组前缀">
-            <el-tag type="warning">{{ competition.comprehensiveGroupPrefix || 'B' }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="进阶组前缀">
-            <el-tag type="success">{{ competition.advancedGroupPrefix || 'C' }}</el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="">
-            <el-button
-              v-if="!prefixLocked"
-              size="small"
-              @click="openPrefixDialog"
-            >修改前缀</el-button>
-            <el-tooltip v-else content="已有分组记录，前缀已锁定" placement="top">
-              <el-tag type="danger" size="small">前缀已锁定</el-tag>
-            </el-tooltip>
-          </el-descriptions-item>
-        </el-descriptions>
-      </div>
+    <div class="page-header">
+      <el-button :icon="ArrowLeft" @click="router.push('/committee/competitions')">返回列表</el-button>
+      <h2>{{ competition.name || '赛事详情' }}</h2>
+    </div>
 
-      <!-- 阶段进度 -->
-      <stage-progress
-        :current-stage="competition.stage || competition.currentStage"
-        :stages="stagesList"
-      />
-      
-      <!-- 左侧导航 + 右侧内容 -->
-      <el-container class="content-container">
-        <el-aside width="200px" class="sidebar">
-          <el-menu :default-active="activeTab" @select="handleTabChange">
-            <el-sub-menu index="book">
-              <template #title>书审阶段</template>
-              <el-menu-item index="book-registration">报名与分组</el-menu-item>
-              <el-menu-item index="book-reviewer">评委分配</el-menu-item>
-              <el-menu-item index="book-score">书审得分</el-menu-item>
-              <el-menu-item index="book-feedback">专家意见反馈</el-menu-item>
-            </el-sub-menu>
-            
-            <el-sub-menu index="interview">
-              <template #title>面谈阶段</template>
-              <el-menu-item index="interview-group">面谈分组</el-menu-item>
-              <el-menu-item index="interview-reviewer">评委分配</el-menu-item>
-              <el-menu-item index="interview-score">面谈得分</el-menu-item>
-              <el-menu-item index="interview-shortlist">入围管理</el-menu-item>
-            </el-sub-menu>
-            
-            <el-sub-menu index="final">
-              <template #title>决赛阶段</template>
-              <el-menu-item index="final-group">决赛分组</el-menu-item>
-              <el-menu-item index="final-reviewer">评委分配</el-menu-item>
-              <el-menu-item index="final-score">现场打分</el-menu-item>
-              <el-menu-item index="final-ranking">最终排名</el-menu-item>
-            </el-sub-menu>
-          </el-menu>
-        </el-aside>
-        
-        <el-main class="main-content">
-          <!-- 报名与分组 -->
-          <div v-if="activeTab === 'book-registration'" class="tab-content">
-            <el-form :inline="true" :model="registrationFilters" class="filter-form">
-              <el-form-item label="医疗机构">
-                <el-input
-                  v-model="registrationFilters.institutionName"
-                  placeholder="请输入机构名称"
-                  clearable
-                />
-              </el-form-item>
-              
-              <el-form-item label="竞赛组别">
-                <el-select v-model="registrationFilters.groupType" placeholder="全部" clearable>
-                  <el-option label="基层组" value="BASIC" />
-                  <el-option label="综合组" value="COMPREHENSIVE" />
-                  <el-option label="进阶组" value="ADVANCED" />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item label="分组">
-                <el-select v-model="registrationFilters.groupCode" placeholder="全部" clearable>
-                  <el-option
-                    v-for="code in groupCodes"
-                    :key="code"
-                    :label="code"
-                    :value="code"
-                  />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item label="项目名称">
-                <el-input
-                  v-model="registrationFilters.projectName"
-                  placeholder="请输入项目名称"
-                  clearable
-                />
-              </el-form-item>
-              
-              <el-form-item label="品管工具">
-                <el-select v-model="registrationFilters.methodCode" placeholder="全部" clearable>
-                  <el-option
-                    v-for="item in dictionaries.methods"
-                    :key="item.code"
-                    :label="item.label"
-                    :value="item.code"
-                  />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item>
-                <el-button type="primary" @click="loadRegistrations">
-                  查询
-                </el-button>
-                <el-button @click="resetRegistrationFilters">
-                  重置
-                </el-button>
-                <el-button type="success" @click="autoGroup">
-                  自动分组
-                </el-button>
-                <el-button type="warning" @click="batchClassify">
-                  批量分类
-                </el-button>
-              </el-form-item>
-            </el-form>
-            
-            <el-table
-              :data="registrations"
-              border
-              @selection-change="handleSelectionChange"
-            >
-              <el-table-column type="selection" width="55" />
-              <el-table-column prop="projectName" label="项目名称" />
-              <el-table-column prop="registrationId" label="项目编号" />
-              <el-table-column prop="institutionName" label="医疗机构名称" />
-              <el-table-column prop="groupType" label="竞赛组别">
-                <template #default="{ row }">
-                  {{ getGroupTypeText(row.groupType) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="groupCode" label="分组" />
-              <el-table-column prop="methodLabel" label="品管工具" />
-              <el-table-column prop="applicantName" label="报名人" />
-              <el-table-column prop="submittedAt" label="报名时间">
-                <template #default="{ row }">
-                  {{ formatDate(row.submittedAt) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="200">
-                <template #default="{ row }">
-                  <el-button type="primary" size="small" @click="viewRegistrationDetail(row)">
-                    详情
-                  </el-button>
-                  <el-button type="warning" size="small" @click="changeGroup(row)">
-                    变更分组
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-          
-          <!-- 评委分配 -->
-          <div v-if="activeTab === 'book-reviewer'" class="tab-content">
-            <el-button type="primary" @click="autoAssignReviewers">
-              自动分配
-            </el-button>
-            
-            <el-table :data="reviewerAssignments" border style="margin-top: 20px">
-              <el-table-column prop="groupCode" label="分组" />
-              <el-table-column prop="projectCount" label="报名项目数量" />
-              <el-table-column prop="reviewers" label="评审人员">
-                <template #default="{ row }">
-                  <el-tag
-                    v-for="(reviewer, index) in row.reviewers"
-                    :key="index"
-                    style="margin-right: 8px"
-                  >
-                    {{ reviewer.name }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="150">
-                <template #default="{ row }">
-                  <el-button type="primary" size="small" @click="assignReviewer(row)">
-                    评委设置
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-          
-          <!-- 书审得分 -->
-          <div v-if="activeTab === 'book-score'" class="tab-content">
-            <el-form :inline="true" :model="scoreFilters" class="filter-form">
-              <el-form-item label="竞赛组别">
-                <el-select v-model="scoreFilters.groupType" placeholder="全部" clearable>
-                  <el-option label="基层组" value="BASIC" />
-                  <el-option label="综合组" value="COMPREHENSIVE" />
-                  <el-option label="进阶组" value="ADVANCED" />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item label="分组">
-                <el-select v-model="scoreFilters.groupCode" placeholder="全部" clearable>
-                  <el-option
-                    v-for="code in groupCodes"
-                    :key="code"
-                    :label="code"
-                    :value="code"
-                  />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item label="评审状态">
-                <el-select v-model="scoreFilters.status" placeholder="全部" clearable>
-                  <el-option label="待评审" value="PENDING" />
-                  <el-option label="已评审" value="COMPLETED" />
-                </el-select>
-              </el-form-item>
-              
-              <el-form-item>
-                <el-button type="primary" @click="loadScores">
-                  查询
-                </el-button>
-              </el-form-item>
-            </el-form>
-            
-            <el-table :data="scores" border>
-              <el-table-column prop="projectName" label="项目名称" />
-              <el-table-column prop="projectCode" label="项目编号" />
-              <el-table-column prop="groupType" label="竞赛组别">
-                <template #default="{ row }">
-                  {{ getGroupTypeText(row.groupType) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="groupCode" label="分组" />
-              <el-table-column prop="reviewerName" label="评审专家" />
-              <el-table-column prop="status" label="状态">
-                <template #default="{ row }">
-                  <el-tag :type="row.status === 'COMPLETED' ? 'success' : 'warning'">
-                    {{ row.status === 'COMPLETED' ? '已评审' : '待评审' }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-              <el-table-column prop="totalScore" label="总得分" />
-              <el-table-column label="操作" width="150">
-                <template #default="{ row }">
-                  <el-button type="primary" size="small" @click="viewScoreDetail(row)">
-                    详情
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
-          
-          <!-- 其他标签页内容 -->
-          <div v-if="!['book-registration', 'book-reviewer', 'book-score'].includes(activeTab)" class="tab-content">
-            <el-empty description="功能开发中" />
-          </div>
-        </el-main>
-      </el-container>
+    <el-card v-loading="loading" shadow="never">
+      <!-- 基本信息 -->
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="赛事名称">{{ competition.name || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="状态">
+          <el-tag :type="competition.status === 'ACTIVE' ? 'success' : 'info'">
+            {{ competition.status === 'ACTIVE' ? '已激活' : '草稿' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="当前阶段">
+          <el-tag :type="stageTagType(competition.stage)">{{ stageLabel(competition.stage) }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="创建时间">{{ fmt(competition.createdAt) }}</el-descriptions-item>
+
+        <el-descriptions-item label="基层组前缀">
+          <el-tag type="primary" size="small">{{ competition.basicGroupPrefix || 'A' }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="综合组前缀">
+          <el-tag type="warning" size="small">{{ competition.comprehensiveGroupPrefix || 'B' }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="进阶组前缀">
+          <el-tag type="success" size="small">{{ competition.advancedGroupPrefix || 'C' }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label=""> </el-descriptions-item>
+
+        <el-descriptions-item label="报名开始">{{ fmt(competition.registerStart) }}</el-descriptions-item>
+        <el-descriptions-item label="报名截止">{{ fmt(competition.registerEnd) }}</el-descriptions-item>
+        <el-descriptions-item label="书审开始">{{ fmt(competition.bookReviewStart) }}</el-descriptions-item>
+        <el-descriptions-item label="书审截止">{{ fmt(competition.bookReviewEnd) }}</el-descriptions-item>
+        <el-descriptions-item label="面谈开始">{{ fmt(competition.interviewStart) }}</el-descriptions-item>
+        <el-descriptions-item label="面谈截止">{{ fmt(competition.interviewEnd) }}</el-descriptions-item>
+        <el-descriptions-item label="决赛开始">{{ fmt(competition.finalStart) }}</el-descriptions-item>
+        <el-descriptions-item label="决赛截止">{{ fmt(competition.finalEnd) }}</el-descriptions-item>
+      </el-descriptions>
+
+      <!-- 操作按钮 -->
+      <div class="actions">
+        <el-button type="primary" @click="openEditDialog">
+          <el-icon><Edit /></el-icon>修改配置
+        </el-button>
+        <el-button
+          v-if="competition.status === 'DRAFT'"
+          type="success"
+          @click="handleActivate"
+        >激活赛事</el-button>
+        <el-button
+          v-if="competition.status === 'ACTIVE'"
+          type="warning"
+          @click="handleDeactivate"
+        >撤回激活</el-button>
+        <el-button
+          v-if="competition.status === 'ACTIVE'"
+          type="primary"
+          plain
+          @click="openStageDialog"
+        >推进阶段</el-button>
+      </div>
     </el-card>
-    
-    <!-- 前缀编辑对话框 -->
-    <el-dialog v-model="prefixDialogVisible" title="修改分组前缀" width="400px">
+
+    <!-- 修改配置弹窗 -->
+    <el-dialog v-model="editVisible" title="修改赛事配置" width="560px">
       <el-alert
+        v-if="competition.status === 'ACTIVE'"
         type="warning"
         :closable="false"
-        show-icon
         style="margin-bottom: 16px"
-      >一旦有任何分组记录，前缀将锁定不可修改。</el-alert>
-      <el-form :model="prefixForm" label-width="100px">
-        <el-form-item label="基层组前缀">
-          <el-input v-model="prefixForm.basicGroupPrefix" placeholder="默认 A" maxlength="5" style="width: 120px" />
+      >赛事已激活，名称和分组前缀不可修改。</el-alert>
+
+      <el-form :model="editForm" label-width="110px">
+        <!-- 名称和前缀仅 DRAFT 可改 -->
+        <template v-if="competition.status === 'DRAFT'">
+          <el-form-item label="赛事名称">
+            <el-input v-model="editForm.name" placeholder="请输入赛事名称" />
+          </el-form-item>
+          <el-form-item label="基层组前缀">
+            <el-input v-model="editForm.basicGroupPrefix" placeholder="默认 A" maxlength="5" style="width:120px" />
+            <span class="prefix-hint">生成 {{ editForm.basicGroupPrefix || 'A' }}1、{{ editForm.basicGroupPrefix || 'A' }}2…</span>
+          </el-form-item>
+          <el-form-item label="综合组前缀">
+            <el-input v-model="editForm.comprehensiveGroupPrefix" placeholder="默认 B" maxlength="5" style="width:120px" />
+            <span class="prefix-hint">生成 {{ editForm.comprehensiveGroupPrefix || 'B' }}1、{{ editForm.comprehensiveGroupPrefix || 'B' }}2…</span>
+          </el-form-item>
+          <el-form-item label="进阶组前缀">
+            <el-input v-model="editForm.advancedGroupPrefix" placeholder="默认 C" maxlength="5" style="width:120px" />
+            <span class="prefix-hint">生成 {{ editForm.advancedGroupPrefix || 'C' }}1、{{ editForm.advancedGroupPrefix || 'C' }}2…</span>
+          </el-form-item>
+          <el-divider />
+        </template>
+
+        <!-- 时间窗口（DRAFT 和 ACTIVE 都可改） -->
+        <el-form-item label="报名开始">
+          <el-date-picker v-model="editForm.registerStart" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" placeholder="报名开始" style="width:220px" />
         </el-form-item>
-        <el-form-item label="综合组前缀">
-          <el-input v-model="prefixForm.comprehensiveGroupPrefix" placeholder="默认 B" maxlength="5" style="width: 120px" />
+        <el-form-item label="报名截止">
+          <el-date-picker v-model="editForm.registerEnd" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" :default-time="new Date(2000,0,1,23,59,59)" placeholder="报名截止" style="width:220px" />
         </el-form-item>
-        <el-form-item label="进阶组前缀">
-          <el-input v-model="prefixForm.advancedGroupPrefix" placeholder="默认 C" maxlength="5" style="width: 120px" />
+        <el-form-item label="书审开始">
+          <el-date-picker v-model="editForm.bookReviewStart" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" placeholder="书审开始" style="width:220px" />
+        </el-form-item>
+        <el-form-item label="书审截止">
+          <el-date-picker v-model="editForm.bookReviewEnd" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" :default-time="new Date(2000,0,1,23,59,59)" placeholder="书审截止" style="width:220px" />
+        </el-form-item>
+        <el-form-item label="面谈开始">
+          <el-date-picker v-model="editForm.interviewStart" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" placeholder="面谈开始" style="width:220px" />
+        </el-form-item>
+        <el-form-item label="面谈截止">
+          <el-date-picker v-model="editForm.interviewEnd" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" :default-time="new Date(2000,0,1,23,59,59)" placeholder="面谈截止" style="width:220px" />
+        </el-form-item>
+        <el-form-item label="决赛开始">
+          <el-date-picker v-model="editForm.finalStart" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" placeholder="决赛开始" style="width:220px" />
+        </el-form-item>
+        <el-form-item label="决赛截止">
+          <el-date-picker v-model="editForm.finalEnd" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss" :default-time="new Date(2000,0,1,23,59,59)" placeholder="决赛截止" style="width:220px" />
         </el-form-item>
       </el-form>
+
       <template #footer>
-        <el-button @click="prefixDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="savingPrefix" @click="savePrefix">保存</el-button>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSaveConfig">保存</el-button>
       </template>
     </el-dialog>
 
-    <!-- 变更分组对话框 -->
-    <el-dialog v-model="changeGroupDialogVisible" title="变更分组" width="400px">
-      <el-form :model="changeGroupForm" label-width="100px">
-        <el-form-item label="竞赛组别">
-          <el-select v-model="changeGroupForm.groupType" @change="handleGroupTypeChange">
-            <el-option label="基层组" value="BASIC" />
-            <el-option label="综合组" value="COMPREHENSIVE" />
-            <el-option label="进阶组" value="ADVANCED" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item label="分组">
-          <el-select v-model="changeGroupForm.groupCode">
-            <el-option
-              v-for="code in availableGroupCodes"
-              :key="code"
-              :label="code"
-              :value="code"
-            />
+    <!-- 推进阶段弹窗 -->
+    <el-dialog v-model="stageVisible" title="推进当前阶段" width="360px">
+      <el-form label-width="90px">
+        <el-form-item label="目标阶段">
+          <el-select v-model="targetStage" placeholder="选择阶段">
+            <el-option label="报名阶段 (REGISTER)" value="REGISTER" />
+            <el-option label="书审阶段 (BOOK_REVIEW)" value="BOOK_REVIEW" />
+            <el-option label="面谈阶段 (INTERVIEW)" value="INTERVIEW" />
+            <el-option label="决赛阶段 (FINAL)" value="FINAL" />
           </el-select>
         </el-form-item>
       </el-form>
-      
       <template #footer>
-        <el-button @click="changeGroupDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmChangeGroup">确定</el-button>
+        <el-button @click="stageVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingStage" @click="handleAdvanceStage">确认</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCompetition, updateCompetitionConfig } from '@/api/competition'
-import {
-  filterRegistrations,
-  batchClassifyRegistrations,
-  autoGroupRegistrations,
-  autoAssignReview,
-  getAdminReviewSummary
-} from '@/api/admin'
-import { getDictionaryByType } from '@/api/dictionary'
-import StageProgress from '@/components/StageProgress.vue'
+import { ArrowLeft, Edit } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import {
+  getCompetition,
+  updateCompetitionConfig,
+  activateCompetition,
+  deactivateCompetition
+} from '@/api/competition'
 
 const route = useRoute()
-const competitionId = ref(route.params.competitionId)
-const activeTab = ref('book-registration')
+const router = useRouter()
+const competitionId = route.params.id
 
 const competition = ref({})
-const registrations = ref([])
-const selectedRegistrations = ref([])
-const reviewerAssignments = ref([])
-const scores = ref([])
+const loading = ref(false)
 
-// 前缀相关
-const prefixLocked = ref(false)
-const prefixDialogVisible = ref(false)
-const savingPrefix = ref(false)
-const prefixForm = reactive({
-  basicGroupPrefix: '',
-  comprehensiveGroupPrefix: '',
-  advancedGroupPrefix: ''
-})
+// 编辑配置
+const editVisible = ref(false)
+const saving = ref(false)
+const editForm = ref({})
 
-const openPrefixDialog = () => {
-  prefixForm.basicGroupPrefix = competition.value.basicGroupPrefix || 'A'
-  prefixForm.comprehensiveGroupPrefix = competition.value.comprehensiveGroupPrefix || 'B'
-  prefixForm.advancedGroupPrefix = competition.value.advancedGroupPrefix || 'C'
-  prefixDialogVisible.value = true
-}
+// 推进阶段
+const stageVisible = ref(false)
+const savingStage = ref(false)
+const targetStage = ref('')
 
-const savePrefix = async () => {
-  savingPrefix.value = true
-  try {
-    const res = await updateCompetitionConfig(competitionId.value, {
-      basicGroupPrefix: prefixForm.basicGroupPrefix || undefined,
-      comprehensiveGroupPrefix: prefixForm.comprehensiveGroupPrefix || undefined,
-      advancedGroupPrefix: prefixForm.advancedGroupPrefix || undefined
-    })
-    if (res.success) {
-      ElMessage.success('前缀已更新')
-      prefixDialogVisible.value = false
-      loadCompetition()
-    } else {
-      if (res.errorCode === 'PREFIX_LOCKED_BY_GROUPING') {
-        prefixLocked.value = true
-        ElMessage.error('已有分组记录，前缀已锁定，无法修改')
-      } else {
-        ElMessage.error(res.message || '保存失败')
-      }
-    }
-  } catch (e) {
-    const body = e?.response?.data
-    if (body?.errorCode === 'PREFIX_LOCKED_BY_GROUPING') {
-      prefixLocked.value = true
-      ElMessage.error('已有分组记录，前缀已锁定，无法修改')
-    } else {
-      ElMessage.error(body?.message || '保存失败')
-    }
-  } finally {
-    savingPrefix.value = false
-  }
-}
-
-const dictionaries = reactive({
-  methods: []
-})
-
-const registrationFilters = reactive({
-  institutionName: '',
-  groupType: '',
-  groupCode: '',
-  projectName: '',
-  methodCode: ''
-})
-
-const scoreFilters = reactive({
-  groupType: '',
-  groupCode: '',
-  status: ''
-})
-
-const changeGroupDialogVisible = ref(false)
-const changeGroupForm = reactive({
-  registrationIds: [],
-  groupType: '',
-  groupCode: ''
-})
-
-const stagesList = computed(() => {
-  return [
-    { key: 'REGISTRATION', title: '报名', description: '' },
-    { key: 'BOOK', title: '书审', description: '' },
-    { key: 'INTERVIEW', title: '面谈', description: '' },
-    { key: 'FINAL', title: '决赛', description: '' }
-  ]
-})
-
-const groupCodes = computed(() => {
-  const codes = []
-  if (registrationFilters.groupType === 'BASIC') {
-    for (let i = 1; i <= 10; i++) {
-      codes.push(`A${i}`)
-    }
-  } else if (registrationFilters.groupType === 'COMPREHENSIVE') {
-    for (let i = 1; i <= 10; i++) {
-      codes.push(`B${i}`)
-    }
-  } else if (registrationFilters.groupType === 'ADVANCED') {
-    for (let i = 1; i <= 10; i++) {
-      codes.push(`C${i}`)
-    }
-  }
-  return codes
-})
-
-const availableGroupCodes = computed(() => {
-  const codes = []
-  if (changeGroupForm.groupType === 'BASIC') {
-    for (let i = 1; i <= 10; i++) {
-      codes.push(`A${i}`)
-    }
-  } else if (changeGroupForm.groupType === 'COMPREHENSIVE') {
-    for (let i = 1; i <= 10; i++) {
-      codes.push(`B${i}`)
-    }
-  } else if (changeGroupForm.groupType === 'ADVANCED') {
-    for (let i = 1; i <= 10; i++) {
-      codes.push(`C${i}`)
-    }
-  }
-  return codes
-})
+const STAGE_LABELS = { REGISTER: '报名阶段', BOOK_REVIEW: '书审阶段', INTERVIEW: '面谈阶段', FINAL: '决赛阶段' }
+const STAGE_TYPES  = { REGISTER: 'success', BOOK_REVIEW: 'warning', INTERVIEW: 'warning', FINAL: 'danger' }
+const stageLabel = (s) => STAGE_LABELS[s] || (s || '未开始')
+const stageTagType = (s) => STAGE_TYPES[s] || 'info'
+const fmt = (d) => d ? dayjs(d).format('YYYY-MM-DD HH:mm') : '-'
 
 const loadCompetition = async () => {
+  loading.value = true
   try {
-    const res = await getCompetition(competitionId.value)
-    if (res.success && res.data) {
+    const res = await getCompetition(competitionId)
+    if (res?.success && res.data) {
       competition.value = res.data
     }
-  } catch (error) {
-    console.error('加载赛事信息失败:', error)
+  } catch {
+    // 拦截器已处理
+  } finally {
+    loading.value = false
   }
 }
 
-const loadDictionaries = async () => {
+const openEditDialog = () => {
+  const c = competition.value
+  editForm.value = {
+    name: c.name,
+    basicGroupPrefix: c.basicGroupPrefix || '',
+    comprehensiveGroupPrefix: c.comprehensiveGroupPrefix || '',
+    advancedGroupPrefix: c.advancedGroupPrefix || '',
+    registerStart: c.registerStart || null,
+    registerEnd: c.registerEnd || null,
+    bookReviewStart: c.bookReviewStart || null,
+    bookReviewEnd: c.bookReviewEnd || null,
+    interviewStart: c.interviewStart || null,
+    interviewEnd: c.interviewEnd || null,
+    finalStart: c.finalStart || null,
+    finalEnd: c.finalEnd || null,
+  }
+  editVisible.value = true
+}
+
+const handleSaveConfig = async () => {
+  saving.value = true
   try {
-    const res = await getDictionaryByType('method')
-    if (res.success) {
-      dictionaries.methods = res.data || []
+    // ACTIVE 时不传 name / prefix（锁定字段）
+    const payload = { ...editForm.value }
+    if (competition.value.status === 'ACTIVE') {
+      delete payload.name
+      delete payload.basicGroupPrefix
+      delete payload.comprehensiveGroupPrefix
+      delete payload.advancedGroupPrefix
     }
-  } catch (error) {
-    console.error('加载字典失败:', error)
-  }
-}
-
-const loadRegistrations = async () => {
-  try {
-    const res = await filterRegistrations({
-      competitionId: competitionId.value,
-      ...registrationFilters
+    // 空字符串前缀转 undefined
+    ;['basicGroupPrefix','comprehensiveGroupPrefix','advancedGroupPrefix'].forEach(k => {
+      if (payload[k] === '') delete payload[k]
     })
-    if (res.success) {
-      registrations.value = res.data || []
-    }
-  } catch (error) {
-    console.error('加载报名列表失败:', error)
-  }
-}
-
-const loadScores = async () => {
-  try {
-    const res = await getAdminReviewSummary({
-      competitionId: competitionId.value,
-      stage: 'BOOK',
-      ...scoreFilters
-    })
-    if (res.success) {
-      scores.value = res.data || []
-    }
-  } catch (error) {
-    console.error('加载评分列表失败:', error)
-  }
-}
-
-const resetRegistrationFilters = () => {
-  Object.keys(registrationFilters).forEach(key => {
-    registrationFilters[key] = ''
-  })
-}
-
-const handleSelectionChange = (selection) => {
-  selectedRegistrations.value = selection
-}
-
-const autoGroup = async () => {
-  try {
-    // 检查是否选择了竞赛组别
-    if (!registrationFilters.groupType) {
-      ElMessage.warning('请先选择竞赛组别再进行自动分组')
+    const res = await updateCompetitionConfig(competitionId, payload)
+    if (res && res.success === false) {
+      ElMessage.error(res.message || '保存失败')
       return
     }
-    
-    const groupTypeText = getGroupTypeText(registrationFilters.groupType)
-
-    await ElMessageBox.confirm(
-      `确定要对【${groupTypeText}】进行自动分组吗？将按每组25人自动分配，分组前缀由赛事配置决定。`,
-      '提示',
-      {
-        type: 'warning',
-        confirmButtonText: '确定',
-        cancelButtonText: '取消'
-      }
-    )
-
-    await autoGroupRegistrations({
-      competitionId: competitionId.value,
-      groupType: registrationFilters.groupType,
-      groupSize: 25
-    })
-    
-    ElMessage.success('自动分组成功')
-    loadRegistrations()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('自动分组失败:', error)
-      ElMessage.error('自动分组失败')
-    }
+    if (res?.data) competition.value = res.data
+    ElMessage.success('保存成功')
+    editVisible.value = false
+    if (!res?.data) loadCompetition()
+  } catch {
+    // 拦截器已处理
+  } finally {
+    saving.value = false
   }
 }
 
-const batchClassify = () => {
-  if (selectedRegistrations.value.length === 0) {
-    ElMessage.warning('请先选择要分类的项目')
+const openStageDialog = () => {
+  targetStage.value = competition.value.stage || ''
+  stageVisible.value = true
+}
+
+const handleAdvanceStage = async () => {
+  if (!targetStage.value) {
+    ElMessage.warning('请选择目标阶段')
     return
   }
-  
-  changeGroupForm.registrationIds = selectedRegistrations.value.map(r => r.registrationId)
-  changeGroupDialogVisible.value = true
-}
-
-const changeGroup = (row) => {
-  changeGroupForm.registrationIds = [row.registrationId]
-  changeGroupForm.groupType = row.groupType
-  changeGroupForm.groupCode = row.groupCode
-  changeGroupDialogVisible.value = true
-}
-
-const handleGroupTypeChange = () => {
-  changeGroupForm.groupCode = ''
-}
-
-const confirmChangeGroup = async () => {
+  savingStage.value = true
   try {
-    await batchClassifyRegistrations({
-      registrationIds: changeGroupForm.registrationIds,
-      groupCode: changeGroupForm.groupCode
-    })
-    ElMessage.success('变更分组成功')
-    changeGroupDialogVisible.value = false
-    loadRegistrations()
-  } catch (error) {
-    console.error('变更分组失败:', error)
+    const res = await updateCompetitionConfig(competitionId, { stage: targetStage.value })
+    if (res && res.success === false) {
+      ElMessage.error(res.message || '操作失败')
+      return
+    }
+    if (res?.data) competition.value = res.data
+    ElMessage.success('阶段已更新')
+    stageVisible.value = false
+    if (!res?.data) loadCompetition()
+  } catch {
+    // 拦截器已处理
+  } finally {
+    savingStage.value = false
   }
 }
 
-const autoAssignReviewers = async () => {
+const handleActivate = async () => {
   try {
-    await autoAssignReview({
-      competitionId: competitionId.value,
-      stage: 'BOOK'
-    })
-    ElMessage.success('自动分配成功')
-  } catch (error) {
-    console.error('自动分配失败:', error)
-  }
+    await ElMessageBox.confirm(
+      `确定激活赛事「${competition.value.name}」？激活后参赛者可报名，同年只允许一个激活赛事。`,
+      '确认激活', { type: 'warning', confirmButtonText: '激活', cancelButtonText: '取消' }
+    )
+  } catch { return }
+  try {
+    const res = await activateCompetition(competitionId)
+    if (res && res.success === false) { ElMessage.error(res.message || '激活失败'); return }
+    ElMessage.success('激活成功')
+    loadCompetition()
+  } catch {}
 }
 
-const assignReviewer = (row) => {
-  ElMessage.info('评委设置功能开发中')
+const handleDeactivate = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `确定撤回赛事「${competition.value.name}」的激活？前提：无任何报名记录。`,
+      '确认撤回', { type: 'warning', confirmButtonText: '撤回', cancelButtonText: '取消' }
+    )
+  } catch { return }
+  try {
+    const res = await deactivateCompetition(competitionId)
+    if (res && res.success === false) { ElMessage.error(res.message || '撤回失败'); return }
+    ElMessage.success('撤回成功')
+    loadCompetition()
+  } catch {}
 }
 
-const viewRegistrationDetail = (row) => {
-  ElMessage.info('查看详情功能开发中')
-}
-
-const viewScoreDetail = (row) => {
-  ElMessage.info('查看评分详情功能开发中')
-}
-
-const getGroupTypeText = (type) => {
-  const map = {
-    'BASIC': '基层组',
-    'COMPREHENSIVE': '综合组',
-    'ADVANCED': '进阶组'
-  }
-  return map[type] || type
-}
-
-const formatDate = (date) => {
-  return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
-}
-
-const handleTabChange = (key) => {
-  activeTab.value = key
-  
-  if (key === 'book-registration') {
-    loadRegistrations()
-  } else if (key === 'book-score') {
-    loadScores()
-  }
-}
-
-onMounted(() => {
-  loadCompetition()
-  loadDictionaries()
-  loadRegistrations()
-})
+onMounted(loadCompetition)
 </script>
 
 <style scoped lang="scss">
 .competition-detail-page {
   padding: 20px;
-  
-  .card-header {
-    font-size: 18px;
-    font-weight: 600;
+
+  .page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+    }
   }
-  
-  .content-container {
+
+  .actions {
     margin-top: 20px;
-    
-    .sidebar {
-      border-right: 1px solid #e8e8e8;
-    }
-    
-    .main-content {
-      .tab-content {
-        .filter-form {
-          margin-bottom: 20px;
-        }
-      }
-    }
+    display: flex;
+    gap: 10px;
+  }
+
+  .prefix-hint {
+    margin-left: 8px;
+    color: #909399;
+    font-size: 13px;
   }
 }
 </style>
