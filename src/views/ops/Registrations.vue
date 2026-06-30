@@ -172,7 +172,7 @@
         border
         style="margin-top: 20px"
       >
-        <el-table-column prop="registrationId" label="项目编号" width="100" />
+        <el-table-column prop="id" label="项目编号" width="100" align="center" />
         <el-table-column prop="projectName" label="项目名称" min-width="200" />
         <el-table-column prop="institutionName" label="医疗机构" min-width="160" />
         <el-table-column prop="institutionLevel" label="机构等级" width="120">
@@ -299,6 +299,47 @@
           </el-descriptions-item>
         </el-descriptions>
         
+        <!-- 活动说明 -->
+        <template v-if="currentDetail?.activityInfo">
+          <el-divider content-position="left">活动说明</el-divider>
+          <el-descriptions :column="2" border size="small">
+            <el-descriptions-item label="主题">{{ currentDetail.activityInfo.theme || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="关键词">{{ currentDetail.activityInfo.keywords || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="平均工龄（年）">{{ currentDetail.activityInfo.avgWorkYears ?? '-' }}</el-descriptions-item>
+            <el-descriptions-item label="平均年龄">{{ currentDetail.activityInfo.avgAge ?? '-' }}</el-descriptions-item>
+            <el-descriptions-item label="跨部门">{{ currentDetail.activityInfo.crossDepartment ? '是' : '否' }}</el-descriptions-item>
+            <el-descriptions-item label="数字化/AI相关">{{ currentDetail.activityInfo.relatedToDigitalAi ? '是' : '否' }}</el-descriptions-item>
+          </el-descriptions>
+        </template>
+
+        <!-- 项目摘要 -->
+        <template v-if="currentDetail?.projectSummary">
+          <el-divider content-position="left">项目摘要</el-divider>
+          <el-descriptions :column="1" border size="small">
+            <el-descriptions-item v-if="currentDetail.projectSummary.plan" label="计划">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.plan }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentDetail.projectSummary.problem" label="问题结构">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.problem }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentDetail.projectSummary.action" label="对策">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.action }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentDetail.projectSummary.success" label="成果">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.success }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentDetail.projectSummary.discussion" label="讨论">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.discussion }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentDetail.projectSummary.operation" label="运营">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.operation }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="currentDetail.projectSummary.presentation" label="展示">
+              <div style="white-space:pre-wrap;line-height:1.7">{{ currentDetail.projectSummary.presentation }}</div>
+            </el-descriptions-item>
+          </el-descriptions>
+        </template>
+
         <!-- 成员信息 -->
         <el-divider content-position="left">团队成员</el-divider>
         <el-table v-if="currentDetail?.members && currentDetail.members.length > 0" :data="currentDetail.members" border>
@@ -506,7 +547,7 @@ const loadRegistrations = async () => {
   try {
     const params = {
       competitionId: filters.competitionId,
-      page: currentPage.value,
+      page: currentPage.value - 1,
       size: pageSize.value
     }
     if (filters.status) params.status = filters.status
@@ -522,7 +563,6 @@ const loadRegistrations = async () => {
     if (res.success) {
       registrations.value = res.data?.content || []
       total.value = res.data?.totalElements || 0
-      currentPage.value = res.data?.pageNo ?? currentPage.value
       console.log('✅ 报名列表 第', currentPage.value, '页，共', total.value, '条')
     } else {
       ElMessage.error('加载失败')

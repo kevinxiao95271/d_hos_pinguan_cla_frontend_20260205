@@ -317,6 +317,30 @@ export function deleteReviewer(id) {
 }
 
 /**
+ * 启用或禁用单个账号
+ * PUT /api/admin/reviewers/{id}/enabled?enabled=true/false
+ */
+export function setReviewerEnabled(id, enabled) {
+  return request({
+    url: `/admin/reviewers/${id}/enabled`,
+    method: 'put',
+    params: { enabled }
+  })
+}
+
+/**
+ * 批量禁用指定角色全部账号
+ * POST /api/admin/reviewers/batch-disable?role=REVIEWER|STAFF
+ */
+export function batchDisableReviewers(role) {
+  return request({
+    url: '/admin/reviewers/batch-disable',
+    method: 'post',
+    params: { role }
+  })
+}
+
+/**
  * 获取数据源信息
  */
 export function getDatasource() {

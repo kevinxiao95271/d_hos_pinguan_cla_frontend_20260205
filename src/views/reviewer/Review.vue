@@ -58,8 +58,9 @@
                 <el-table-column label="操作" width="180">
                   <template #default="{ row }">
                     <el-button v-if="canPreview(row.fileName)" type="success" size="small" @click="previewFile(row)">预览</el-button>
-                    <el-button v-else type="primary" size="small" @click="downloadFile(row)">下载</el-button>
-                    <el-button v-if="row.type === 'REPORT'" type="primary" size="small" @click="downloadFile(row)">下载</el-button>
+                    <el-tooltip v-else content="此格式仅支持预览，评委不可下载" placement="top">
+                      <el-button type="info" size="small" disabled>不可预览</el-button>
+                    </el-tooltip>
                   </template>
                 </el-table-column>
               </el-table>

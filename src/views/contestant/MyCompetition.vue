@@ -48,7 +48,7 @@
             
             <el-descriptions title="项目信息" :column="2" border style="margin-top: 20px">
               <el-descriptions-item label="项目编号">
-                {{ registration.registrationId || registration.id || '-' }}
+                {{ registration.id || '-' }}
               </el-descriptions-item>
               <el-descriptions-item label="竞赛组别">
                 {{ getGroupTypeText(registration.groupType) }}

@@ -7,6 +7,31 @@
         </div>
       </template>
       
+      <!-- 前缀配置信息 -->
+      <div class="prefix-section">
+        <el-descriptions :column="4" border size="small" style="margin-bottom: 12px">
+          <el-descriptions-item label="基层组前缀">
+            <el-tag type="primary">{{ competition.basicGroupPrefix || 'A' }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="综合组前缀">
+            <el-tag type="warning">{{ competition.comprehensiveGroupPrefix || 'B' }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="进阶组前缀">
+            <el-tag type="success">{{ competition.advancedGroupPrefix || 'C' }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="">
+            <el-button
+              v-if="!prefixLocked"
+              size="small"
+              @click="openPrefixDialog"
+            >修改前缀</el-button>
+            <el-tooltip v-else content="已有分组记录，前缀已锁定" placement="top">
+              <el-tag type="danger" size="small">前缀已锁定</el-tag>
+            </el-tooltip>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+
       <!-- 阶段进度 -->
       <stage-progress
         :current-stage="competition.stage || competition.currentStage"
@@ -246,6 +271,31 @@
       </el-container>
     </el-card>
     
+    <!-- 前缀编辑对话框 -->
+    <el-dialog v-model="prefixDialogVisible" title="修改分组前缀" width="400px">
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 16px"
+      >一旦有任何分组记录，前缀将锁定不可修改。</el-alert>
+      <el-form :model="prefixForm" label-width="100px">
+        <el-form-item label="基层组前缀">
+          <el-input v-model="prefixForm.basicGroupPrefix" placeholder="默认 A" maxlength="5" style="width: 120px" />
+        </el-form-item>
+        <el-form-item label="综合组前缀">
+          <el-input v-model="prefixForm.comprehensiveGroupPrefix" placeholder="默认 B" maxlength="5" style="width: 120px" />
+        </el-form-item>
+        <el-form-item label="进阶组前缀">
+          <el-input v-model="prefixForm.advancedGroupPrefix" placeholder="默认 C" maxlength="5" style="width: 120px" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="prefixDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="savingPrefix" @click="savePrefix">保存</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 变更分组对话框 -->
     <el-dialog v-model="changeGroupDialogVisible" title="变更分组" width="400px">
       <el-form :model="changeGroupForm" label-width="100px">
@@ -281,7 +331,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCompetition } from '@/api/competition'
+import { getCompetition, updateCompetitionConfig } from '@/api/competition'
 import {
   filterRegistrations,
   batchClassifyRegistrations,
@@ -302,6 +352,56 @@ const registrations = ref([])
 const selectedRegistrations = ref([])
 const reviewerAssignments = ref([])
 const scores = ref([])
+
+// 前缀相关
+const prefixLocked = ref(false)
+const prefixDialogVisible = ref(false)
+const savingPrefix = ref(false)
+const prefixForm = reactive({
+  basicGroupPrefix: '',
+  comprehensiveGroupPrefix: '',
+  advancedGroupPrefix: ''
+})
+
+const openPrefixDialog = () => {
+  prefixForm.basicGroupPrefix = competition.value.basicGroupPrefix || 'A'
+  prefixForm.comprehensiveGroupPrefix = competition.value.comprehensiveGroupPrefix || 'B'
+  prefixForm.advancedGroupPrefix = competition.value.advancedGroupPrefix || 'C'
+  prefixDialogVisible.value = true
+}
+
+const savePrefix = async () => {
+  savingPrefix.value = true
+  try {
+    const res = await updateCompetitionConfig(competitionId.value, {
+      basicGroupPrefix: prefixForm.basicGroupPrefix || undefined,
+      comprehensiveGroupPrefix: prefixForm.comprehensiveGroupPrefix || undefined,
+      advancedGroupPrefix: prefixForm.advancedGroupPrefix || undefined
+    })
+    if (res.success) {
+      ElMessage.success('前缀已更新')
+      prefixDialogVisible.value = false
+      loadCompetition()
+    } else {
+      if (res.errorCode === 'PREFIX_LOCKED_BY_GROUPING') {
+        prefixLocked.value = true
+        ElMessage.error('已有分组记录，前缀已锁定，无法修改')
+      } else {
+        ElMessage.error(res.message || '保存失败')
+      }
+    }
+  } catch (e) {
+    const body = e?.response?.data
+    if (body?.errorCode === 'PREFIX_LOCKED_BY_GROUPING') {
+      prefixLocked.value = true
+      ElMessage.error('已有分组记录，前缀已锁定，无法修改')
+    } else {
+      ElMessage.error(body?.message || '保存失败')
+    }
+  } finally {
+    savingPrefix.value = false
+  }
+}
 
 const dictionaries = reactive({
   methods: []
@@ -442,17 +542,10 @@ const autoGroup = async () => {
       return
     }
     
-    // 根据组别确定分组前缀
-    const prefixMap = {
-      'BASIC': 'A',           // 基层组
-      'COMPREHENSIVE': 'B',   // 综合组
-      'ADVANCED': 'C'         // 进阶组
-    }
-    const groupPrefix = prefixMap[registrationFilters.groupType]
     const groupTypeText = getGroupTypeText(registrationFilters.groupType)
-    
+
     await ElMessageBox.confirm(
-      `确定要对【${groupTypeText}】进行自动分组吗？将按每组25人自动分配到${groupPrefix}组系列（${groupPrefix}1、${groupPrefix}2、${groupPrefix}3...）`,
+      `确定要对【${groupTypeText}】进行自动分组吗？将按每组25人自动分配，分组前缀由赛事配置决定。`,
       '提示',
       {
         type: 'warning',
@@ -460,12 +553,11 @@ const autoGroup = async () => {
         cancelButtonText: '取消'
       }
     )
-    
+
     await autoGroupRegistrations({
       competitionId: competitionId.value,
-      groupType: registrationFilters.groupType,  // 指定组别
-      groupPrefix: groupPrefix,                  // 根据组别自动选择前缀
-      groupSize: 25                              // 每组人数
+      groupType: registrationFilters.groupType,
+      groupSize: 25
     })
     
     ElMessage.success('自动分组成功')

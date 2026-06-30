@@ -72,9 +72,11 @@
       </template>
       <div v-show="!sec.pending">
         <el-empty v-if="pendingTasksFiltered.length === 0 && !loading" description="暂无待评分项目" :image-size="80" />
-        <div v-for="task in pendingTasksFiltered" :key="task.id" class="task-row">
+        <div v-for="(task, idx) in pendingTasksFiltered" :key="task.id" class="task-row">
+          <span class="task-seq">{{ idx + 1 }}</span>
           <span class="task-name">{{ task.projectName || '-' }}</span>
           <div class="task-inline-meta">
+            <el-tag v-if="task.registrationId" type="info" size="small">编号 {{ task.registrationId }}</el-tag>
             <el-tag v-if="task.status === 'RETURNED'" type="danger" size="small">已退回，请重评</el-tag>
             <el-tag v-else-if="task.status === 'CONFIRMED'" size="small">已确认</el-tag>
             <el-tag v-else type="warning" size="small">待评审</el-tag>
@@ -101,9 +103,11 @@
       </template>
       <div v-show="!sec.draft">
         <el-empty v-if="draftTasksFiltered.length === 0 && !loading" description="暂无已评分项目" :image-size="80" />
-        <div v-for="task in draftTasksFiltered" :key="task.id" class="task-row task-row-draft">
+        <div v-for="(task, idx) in draftTasksFiltered" :key="task.id" class="task-row task-row-draft">
+          <span class="task-seq">{{ idx + 1 }}</span>
           <span class="task-name">{{ task.projectName || '-' }}</span>
           <div class="task-inline-meta">
+            <el-tag v-if="task.registrationId" type="info" size="small">编号 {{ task.registrationId }}</el-tag>
             <span v-if="task.total != null" class="task-score pending-score">{{ task.total }} 分</span>
             <el-tag type="primary" size="small">草稿</el-tag>
             <span class="meta-sep">·</span>
@@ -130,9 +134,11 @@
       </template>
       <div v-show="!sec.scored">
         <el-empty v-if="scoredTasksFiltered.length === 0 && !loading" description="暂无已提交项目" :image-size="80" />
-        <div v-for="task in scoredTasksFiltered" :key="task.id" class="task-row">
+        <div v-for="(task, idx) in scoredTasksFiltered" :key="task.id" class="task-row">
+          <span class="task-seq">{{ idx + 1 }}</span>
           <span class="task-name">{{ task.projectName || '-' }}</span>
           <div class="task-inline-meta">
+            <el-tag v-if="task.registrationId" type="info" size="small">编号 {{ task.registrationId }}</el-tag>
             <span v-if="task.total != null" class="task-score scored-score">{{ task.total }} 分</span>
             <el-tag type="success" size="small">已提交</el-tag>
             <span class="meta-sep">·</span>
@@ -948,6 +954,20 @@ onUnmounted(() => {
     margin-left: -10px;
     border-radius: 0 4px 4px 0;
   }
+}
+
+.task-seq {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f0f2f5;
+  color: #606266;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 .task-name {

@@ -16,6 +16,9 @@
             <el-button type="success" :loading="exporting" @click="handleExport">
               导出 Excel
             </el-button>
+            <el-button type="warning" plain @click="openBatchCert" :disabled="allRanking.length === 0">
+              生成奖状
+            </el-button>
             <el-button type="primary" plain size="small" @click="loadRanking">刷新</el-button>
           </div>
         </div>
@@ -102,7 +105,7 @@
                   <el-tag v-if="row.awardLevel === 'GOLD'"   type="warning" effect="dark" size="small">🥇 金奖</el-tag>
                   <el-tag v-else-if="row.awardLevel === 'SILVER'" type="info"    effect="dark" size="small" style="background:#8c9eb0;border-color:#8c9eb0">🥈 银奖</el-tag>
                   <el-tag v-else-if="row.awardLevel === 'BRONZE'" effect="dark"  size="small" style="background:#b87333;border-color:#b87333;color:#fff">🥉 铜奖</el-tag>
-                  <span v-else class="text-muted">-</span>
+                  <el-tag v-else type="success" size="small">佳作奖</el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="评委数" width="60" align="center">
@@ -115,11 +118,30 @@
                   <span class="note-text">{{ row.note }}</span>
                 </template>
               </el-table-column>
+              <el-table-column label="奖状" width="80" align="center">
+                <template #default="{ row }">
+                  <el-button
+                    v-if="row.awardLevel"
+                    type="warning"
+                    size="small"
+                    plain
+                    @click="openSingleCert(row)"
+                  >奖状</el-button>
+                  <span v-else style="color:#c0c4cc">-</span>
+                </template>
+              </el-table-column>
             </el-table>
           </div>
         </el-tab-pane>
       </el-tabs>
     </el-card>
+
+    <CertificateDialog
+      v-model="certVisible"
+      :row="certRow"
+      :list="certBatch ? allRanking : []"
+      :competition-name="competitionName"
+    />
   </div>
 </template>
 
@@ -128,9 +150,11 @@ import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import StageProgress from '@/components/StageProgress.vue'
+import CertificateDialog from '@/components/CertificateDialog.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import { computeFinalRanking, computeTotalFinalRanking, exportFinalRanking, getFinalRanking } from '@/api/admin'
+import { getCurrentCompetition } from '@/api/competition'
 
 // ── 工具 ──────────────────────────────────────────────────
 const formatScore = (val) => val == null ? '-' : Number(val).toFixed(2)
@@ -146,6 +170,23 @@ const computing = ref(false)
 const computingTotal = ref(false)
 const exporting = ref(false)
 const activeDate = ref('')
+const competitionName = ref('浙江省医院品管大赛')
+
+// 证书弹窗
+const certVisible = ref(false)
+const certRow = ref(null)
+const certBatch = ref(false)
+
+const openSingleCert = (row) => {
+  certRow.value = row
+  certBatch.value = false
+  certVisible.value = true
+}
+const openBatchCert = () => {
+  certRow.value = null
+  certBatch.value = true
+  certVisible.value = true
+}
 // 排序模式：natural=自然顺序 | rank=按现场均分 | total=按综合总分
 const sortMode = ref('total')
 
@@ -291,6 +332,10 @@ onMounted(async () => {
   const id = await getCurrentCompetitionId()
   if (id) competitionId.value = id
   await loadRanking()
+  try {
+    const res = await getCurrentCompetition()
+    if (res.success && res.data?.name) competitionName.value = res.data.name
+  } catch {}
 })
 </script>
 

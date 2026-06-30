@@ -48,6 +48,21 @@ export function getMaterialsByRegistration(registrationId) {
 }
 
 /**
+ * 预览材料文件（inline，评委专用，不触发下载）
+ * GET /api/materials/{id}/preview
+ * @param {number} materialId - 材料ID
+ * @returns {Promise<Blob>}
+ */
+export function previewMaterialBlob(materialId) {
+  return request({
+    url: `/materials/${materialId}/preview`,
+    method: 'get',
+    responseType: 'blob',
+    timeout: MATERIAL_UPLOAD_TIMEOUT_MS
+  })
+}
+
+/**
  * 删除材料文件
  * @param {number} materialId - 材料ID
  */

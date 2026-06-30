@@ -124,7 +124,7 @@ import { ref, computed, watch, nextTick, watchEffect } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Loading, WarningFilled, Document, Download, ZoomIn, ZoomOut } from '@element-plus/icons-vue'
 import * as XLSX from 'xlsx'
-import { downloadMaterial } from '@/api/material'
+import { previewMaterialBlob } from '@/api/material'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -231,7 +231,7 @@ async function onOpen() {
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
       blob = await resp.blob()
     } else {
-      blob = await downloadMaterial(props.materialId)
+      blob = await previewMaterialBlob(props.materialId)
     }
     fileBlob.value = blob
 
@@ -303,7 +303,7 @@ async function renderExcel(blob) {
 // ── 下载 ──────────────────────────────────────────────────────────
 async function triggerDownload() {
   try {
-    const blob = fileBlob.value || await downloadMaterial(props.materialId)
+    const blob = fileBlob.value || await previewMaterialBlob(props.materialId)
     const url = URL.createObjectURL(new Blob([blob]))
     const a = document.createElement('a')
     a.href = url

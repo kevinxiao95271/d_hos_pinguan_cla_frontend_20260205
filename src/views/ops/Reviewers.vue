@@ -44,6 +44,12 @@
           <el-button type="warning" plain :loading="downloadingIdCards" @click="downloadIdCards">
             下载身份证照片
           </el-button>
+          <el-button type="danger" plain :loading="batchDisabling" @click="handleBatchDisable('REVIEWER')">
+            批量禁用评审专家
+          </el-button>
+          <el-button type="danger" plain :loading="batchDisabling" @click="handleBatchDisable('STAFF')">
+            批量禁用工作人员
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -66,10 +72,22 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" align="center" fixed="right">
+        <el-table-column label="状态" width="80" align="center">
+          <template #default="{ row }">
+            <el-tag :type="row.enabled === false ? 'danger' : 'success'" size="small">
+              {{ row.enabled === false ? '已禁用' : '正常' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="280" align="center" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button type="info" size="small" @click="openDetail(row)">详情</el-button>
+            <el-button
+              :type="row.enabled === false ? 'success' : 'warning'"
+              size="small"
+              @click="handleToggleEnabled(row)"
+            >{{ row.enabled === false ? '启用' : '禁用' }}</el-button>
             <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -260,6 +278,7 @@ import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getReviewers, createReviewer, updateReviewer, deleteReviewer, exportReviewers, downloadReviewerIdCards } from '@/api/review'
+import { setReviewerEnabled, batchDisableReviewers } from '@/api/admin'
 import { autocomplete, searchInstitutions } from '@/api/institution'
 import { getReviewerProfile, updateReviewerProfile, adminChangeReviewerInstitution, adminGetReviewerInstitutionHistory } from '@/api/reviewerProfile'
 import { getCurrentCompetitionIdSync } from '@/utils/competition'
@@ -488,6 +507,51 @@ const handleDelete = async (row) => {
       console.error('删除评委失败:', error)
       ElMessage.error('删除失败: ' + (error.message || '未知错误'))
     }
+  }
+}
+
+const handleToggleEnabled = async (row) => {
+  const toEnable = !row.enabled
+  const label = toEnable ? '启用' : '禁用'
+  try {
+    await ElMessageBox.confirm(
+      `确定要${label}评委 "${row.name}" 的账号吗？`,
+      `${label}账号`,
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    const res = await setReviewerEnabled(row.id, toEnable)
+    if (res.success) {
+      ElMessage.success(`${label}成功`)
+      row.enabled = toEnable
+    } else {
+      ElMessage.error(res.message || `${label}失败`)
+    }
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(`操作失败: ${e.message || '未知错误'}`)
+  }
+}
+
+const batchDisabling = ref(false)
+const handleBatchDisable = async (role) => {
+  const roleLabel = role === 'REVIEWER' ? '全部评审专家' : '全部工作人员'
+  try {
+    await ElMessageBox.confirm(
+      `确定要禁用 ${roleLabel} 账号吗？禁用后可通过单个账号操作恢复。`,
+      '批量禁用',
+      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+    )
+    batchDisabling.value = true
+    const res = await batchDisableReviewers(role)
+    if (res.success) {
+      ElMessage.success(`已禁用 ${res.data ?? 0} 个账号`)
+      loadData()
+    } else {
+      ElMessage.error(res.message || '批量禁用失败')
+    }
+  } catch (e) {
+    if (e !== 'cancel') ElMessage.error(`操作失败: ${e.message || '未知错误'}`)
+  } finally {
+    batchDisabling.value = false
   }
 }
 

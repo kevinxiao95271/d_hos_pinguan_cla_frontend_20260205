@@ -11,7 +11,7 @@
       </template>
       
       <el-table :data="registrations" v-loading="loading" border>
-        <el-table-column prop="id" label="项目编号" width="100" />
+        <el-table-column prop="id" label="项目编号" width="100" align="center" />
         <el-table-column prop="projectName" label="项目名称" min-width="200" />
         <el-table-column prop="institutionName" label="医疗机构" width="180" />
         <el-table-column prop="institutionLevel" label="机构等级" width="120">

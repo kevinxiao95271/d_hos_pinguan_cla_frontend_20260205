@@ -228,7 +228,18 @@
               <el-option v-for="name in assignedTaskInstitutions" :key="name" :label="name" :value="name" />
             </el-select>
           </el-form-item>
+          <el-form-item label="专家姓名">
+            <el-input
+              v-model="assignedTaskFilter.reviewerName"
+              placeholder="姓名关键词"
+              clearable
+              style="width: 140px"
+              @clear="loadAllAssignedTasks"
+              @keyup.enter="loadAllAssignedTasks"
+            />
+          </el-form-item>
           <el-form-item>
+            <el-button type="primary" @click="loadAllAssignedTasks">查询</el-button>
             <el-button @click="resetAssignedTaskFilter">重置</el-button>
           </el-form-item>
         </el-form>
@@ -337,7 +348,7 @@ const autoAssignForm = ref({
 const assignedTasksDialogVisible = ref(false)
 const loadingAssignedTasks = ref(false)
 const allAssignedTasks = ref([])
-const assignedTaskFilter = ref({ groupType: '', groupCode: '', institution: '' })
+const assignedTaskFilter = ref({ groupType: '', groupCode: '', institution: '', reviewerName: '' })
 const assignedTaskGroupCodes = computed(() => {
   const base = assignedTaskFilter.value.groupType
     ? allAssignedTasks.value.filter(t => t.groupType === assignedTaskFilter.value.groupType)
@@ -361,7 +372,8 @@ const filteredAssignedTasks = computed(() =>
   })
 )
 const resetAssignedTaskFilter = () => {
-  assignedTaskFilter.value = { groupType: '', groupCode: '', institution: '' }
+  assignedTaskFilter.value = { groupType: '', groupCode: '', institution: '', reviewerName: '' }
+  loadAllAssignedTasks()
 }
 
 // 加载报名列表
@@ -616,9 +628,10 @@ const loadAllAssignedTasks = async () => {
   try {
     const res = await getAdminReviewTasks({
       competitionId: competitionId.value,
-      stage: 'FINAL'
+      stage: 'FINAL',
+      reviewerName: assignedTaskFilter.value.reviewerName?.trim() || undefined
     })
-    
+
     if (res.success) {
       allAssignedTasks.value = res.data || []
       console.log('✅ 加载所有已分配任务:', allAssignedTasks.value.length, '条')

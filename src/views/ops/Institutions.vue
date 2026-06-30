@@ -133,14 +133,11 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 import {
+  getInstitutions,
   createInstitution as createInstitutionApi,
   updateInstitution,
   deleteInstitution as deleteInstitutionApi
 } from '@/api/institution'
-import request from '@/utils/request'
-
-// 管理后台机构列表，仅已激活机构（约百条），区别于注册时的全量36K库
-const getAdminInstitutions = () => request({ url: '/admin/institutions/export', method: 'get' })
 import { usePagination } from '@/composables/usePagination'
 import dayjs from 'dayjs'
 
@@ -183,9 +180,20 @@ const rules = {
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getAdminInstitutions()
+    const res = await getInstitutions({
+      keyword: searchKeyword.value?.trim() || undefined,
+      page: currentPage.value - 1,
+      size: pageSize.value
+    })
     if (res.success) {
-      institutions.value = Array.isArray(res.data) ? res.data : extractDataList(res.data)
+      const data = res.data
+      if (data && typeof data === 'object' && 'content' in data) {
+        institutions.value = data.content || []
+        totalCount.value = data.totalElements ?? institutions.value.length
+      } else {
+        institutions.value = Array.isArray(data) ? data : []
+        totalCount.value = institutions.value.length
+      }
     } else {
       ElMessage.error(res.message || '加载机构列表失败')
     }

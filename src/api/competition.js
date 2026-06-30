@@ -127,3 +127,33 @@ export function setCurrentCompetition(competitionId) {
     params: { competitionId }
   })
 }
+
+/**
+ * 激活赛事 DRAFT → ACTIVE
+ */
+export function activateCompetition(id) {
+  return request({
+    url: `/competitions/${id}/activate`,
+    method: 'post'
+  })
+}
+
+/**
+ * 撤回激活 ACTIVE → DRAFT（前提：无报名记录）
+ */
+export function deactivateCompetition(id) {
+  return request({
+    url: `/competitions/${id}/deactivate`,
+    method: 'post'
+  })
+}
+
+/**
+ * 删除赛事（前提：DRAFT 且无报名记录）
+ */
+export function deleteCompetition(id) {
+  return request({
+    url: `/competitions/${id}`,
+    method: 'delete'
+  })
+}

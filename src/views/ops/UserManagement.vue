@@ -253,14 +253,14 @@
     <!-- 初始密码对话框 -->
     <el-dialog
       v-model="passwordVisible"
-      :title="createdReviewer.institutionName === '-' ? '密码重置成功' : '评委账号创建成功'"
+      :title="createdReviewer.institutionName === '-' ? '密码重置成功' : '用户账号创建成功'"
       width="500px"
       :close-on-click-modal="false"
     >
       <el-alert
         type="success"
         :closable="false"
-        :description="createdReviewer.institutionName === '-' ? '新密码已生成，请立即记录' : '请立即记录以下信息并通知评委'"
+        :description="createdReviewer.institutionName === '-' ? '新密码已生成，请立即记录' : '请立即记录以下信息并通知用户'"
         style="margin-bottom: 20px"
       />
 
@@ -284,7 +284,7 @@
       <el-alert
         type="warning"
         :closable="false"
-        :description="createdReviewer.institutionName === '-' ? '请及时通知用户新密码' : '请提醒评委首次登录后尽快修改密码'"
+        :description="createdReviewer.institutionName === '-' ? '请及时通知用户新密码' : '请提醒用户首次登录后尽快修改密码'"
         style="margin-top: 20px"
       />
 

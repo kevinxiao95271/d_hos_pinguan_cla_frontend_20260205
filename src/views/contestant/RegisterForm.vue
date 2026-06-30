@@ -451,12 +451,12 @@
                   :on-preview="handleMaterialPreview"
                   :file-list="form.materials.report"
                   :limit="1"
-                  accept=".pdf,.docx"
+                  accept=".pdf"
                 >
-                  <el-button type="primary" :disabled="isDisabled">选择文件</el-button>
+                  <el-button type="primary" :disabled="isDisabled">选择 PDF 文件</el-button>
                   <template #tip>
                     <div class="el-upload__tip">
-                      支持 PDF、Word（.docx）格式，文件大小不超过30MB（不支持 .doc 旧格式）
+                      仅支持 PDF 格式，文件大小不超过30MB（如为 Word 文件请先转换为 PDF）
                     </div>
                   </template>
                 </el-upload>

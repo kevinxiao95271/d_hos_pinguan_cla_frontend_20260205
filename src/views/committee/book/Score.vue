@@ -53,6 +53,12 @@
           max-height="calc(100vh - 200px)"
         >
           <el-table-column prop="registrationId" label="项目编号" width="80" align="center" />
+          <el-table-column label="决赛顺序" width="80" align="center">
+            <template #default="{ row }">
+              <span v-if="row.finalSessionOrder != null">{{ row.finalSessionOrder }}</span>
+              <span v-else style="color:#c0c4cc">-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="projectName" label="项目名称" min-width="200" show-overflow-tooltip />
           <el-table-column prop="institutionName" label="医疗机构" min-width="200" show-overflow-tooltip />
           <el-table-column prop="groupCode" label="分组" width="80" align="center" />

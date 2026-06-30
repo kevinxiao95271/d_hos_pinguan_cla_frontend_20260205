@@ -52,6 +52,15 @@
               style="width: 150px"
             />
           </el-form-item>
+
+          <el-form-item label="项目编号">
+            <el-input
+              v-model="filters.registrationId"
+              placeholder="请输入项目编号"
+              clearable
+              style="width: 120px"
+            />
+          </el-form-item>
           
           <el-form-item>
             <el-button type="primary" @click="loadPoolData" size="small">查询</el-button>
@@ -438,7 +447,8 @@ const filters = reactive({
   institutionName: '',
   groupCode: null,
   methodCode: '',
-  projectName: ''
+  projectName: '',
+  registrationId: ''
 })
 
 const groupDialogVisible = ref(false)
@@ -531,6 +541,7 @@ const resetFilters = () => {
   filters.groupCode = null
   filters.methodCode = ''
   filters.projectName = ''
+  filters.registrationId = ''
   resetPagination()
   loadPoolData()
 }
