@@ -79,20 +79,38 @@
         <el-form-item label="赛事名称">
           <el-input v-model="editForm.name" placeholder="请输入赛事名称" />
         </el-form-item>
-        <el-form-item label="基层组前缀">
-          <el-input v-model="editForm.basicGroupPrefix" placeholder="默认 A" maxlength="5" style="width: 120px" />
+        <el-form-item label="基层组前缀" :error="prefixError.basic">
+          <el-input
+            v-model="editForm.basicGroupPrefix"
+            placeholder="默认 A"
+            maxlength="1"
+            style="width: 80px"
+            @input="val => editForm.basicGroupPrefix = sanitizePrefixInput(val)"
+          />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">
             生成 {{ editForm.basicGroupPrefix || 'A' }}1、{{ editForm.basicGroupPrefix || 'A' }}2…
           </span>
         </el-form-item>
-        <el-form-item label="综合组前缀">
-          <el-input v-model="editForm.comprehensiveGroupPrefix" placeholder="默认 B" maxlength="5" style="width: 120px" />
+        <el-form-item label="综合组前缀" :error="prefixError.comprehensive">
+          <el-input
+            v-model="editForm.comprehensiveGroupPrefix"
+            placeholder="默认 B"
+            maxlength="1"
+            style="width: 80px"
+            @input="val => editForm.comprehensiveGroupPrefix = sanitizePrefixInput(val)"
+          />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">
             生成 {{ editForm.comprehensiveGroupPrefix || 'B' }}1、{{ editForm.comprehensiveGroupPrefix || 'B' }}2…
           </span>
         </el-form-item>
-        <el-form-item label="进阶组前缀">
-          <el-input v-model="editForm.advancedGroupPrefix" placeholder="默认 C" maxlength="5" style="width: 120px" />
+        <el-form-item label="进阶组前缀" :error="prefixError.advanced">
+          <el-input
+            v-model="editForm.advancedGroupPrefix"
+            placeholder="默认 C"
+            maxlength="1"
+            style="width: 80px"
+            @input="val => editForm.advancedGroupPrefix = sanitizePrefixInput(val)"
+          />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">
             生成 {{ editForm.advancedGroupPrefix || 'C' }}1、{{ editForm.advancedGroupPrefix || 'C' }}2…
           </span>
@@ -107,9 +125,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { computePrefixErrors, hasPrefixError, sanitizePrefixInput } from '@/utils/groupPrefix'
 import {
   getCompetitions,
   activateCompetition,
@@ -129,6 +148,11 @@ const saving = ref(false)
 const editingId = ref(null)
 const editForm = ref({ name: '', basicGroupPrefix: '', comprehensiveGroupPrefix: '', advancedGroupPrefix: '' })
 
+const prefixError = computed(() => {
+  const f = editForm.value
+  return computePrefixErrors(f.basicGroupPrefix, f.comprehensiveGroupPrefix, f.advancedGroupPrefix)
+})
+
 const handleEdit = (row) => {
   editingId.value = row.id
   editForm.value = {
@@ -143,6 +167,10 @@ const handleEdit = (row) => {
 const handleSaveEdit = async () => {
   if (!editForm.value.name?.trim()) {
     ElMessage.warning('赛事名称不能为空')
+    return
+  }
+  if (hasPrefixError(prefixError.value)) {
+    ElMessage.warning('请修正前缀配置后再保存')
     return
   }
   saving.value = true

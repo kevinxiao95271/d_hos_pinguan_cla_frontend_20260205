@@ -21,7 +21,7 @@ def deploy():
     local_zip = "dist.zip"
     # 服务器目标路径
     remote_tmp = "/tmp/dist.zip"
-    remote_target = "/data/pinguan_frontend"
+    remote_target = "/data/pgds/dist"
     
     print("🚀 开始部署前端到服务器")
     print(f"服务器: {host}")

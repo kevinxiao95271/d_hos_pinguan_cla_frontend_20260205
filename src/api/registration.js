@@ -149,6 +149,18 @@ export function checkDuplicateProject(params) {
 }
 
 /**
+ * 获取报名材料列表
+ * 草稿期：draftId → registration_draft_material_files
+ * 已提交：regId → material_files（提交后须用返回的新 registrationId 重新拉取）
+ */
+export function getRegistrationMaterials(id) {
+  return request({
+    url: `/registrations/${id}/materials`,
+    method: 'get'
+  })
+}
+
+/**
  * 获取报名详情
  */
 export function getRegistration(id) {

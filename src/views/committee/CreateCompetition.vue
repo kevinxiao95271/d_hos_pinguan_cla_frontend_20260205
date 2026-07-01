@@ -120,7 +120,7 @@
             placeholder="默认 A"
             maxlength="1"
             style="width: 80px"
-            @input="val => form.basicGroupPrefix = val.toUpperCase().replace(/[^A-Z]/g, '')"
+            @input="val => form.basicGroupPrefix = sanitizePrefixInput(val)"
           />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.basicGroupPrefix || 'A') }}1、{{ (form.basicGroupPrefix || 'A') }}2…</span>
         </el-form-item>
@@ -131,7 +131,7 @@
             placeholder="默认 B"
             maxlength="1"
             style="width: 80px"
-            @input="val => form.comprehensiveGroupPrefix = val.toUpperCase().replace(/[^A-Z]/g, '')"
+            @input="val => form.comprehensiveGroupPrefix = sanitizePrefixInput(val)"
           />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.comprehensiveGroupPrefix || 'B') }}1、{{ (form.comprehensiveGroupPrefix || 'B') }}2…</span>
         </el-form-item>
@@ -142,7 +142,7 @@
             placeholder="默认 C"
             maxlength="1"
             style="width: 80px"
-            @input="val => form.advancedGroupPrefix = val.toUpperCase().replace(/[^A-Z]/g, '')"
+            @input="val => form.advancedGroupPrefix = sanitizePrefixInput(val)"
           />
           <span style="margin-left: 8px; color: #909399; font-size: 13px">生成 {{ (form.advancedGroupPrefix || 'C') }}1、{{ (form.advancedGroupPrefix || 'C') }}2…</span>
         </el-form-item>
@@ -187,6 +187,7 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createCompetition, uploadCompetitionTemplate } from '@/api/competition'
+import { computePrefixErrors, hasPrefixError, sanitizePrefixInput } from '@/utils/groupPrefix'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -214,23 +215,10 @@ const rules = {
   ]
 }
 
-// 前缀实时错误（computed，响应式，无需 validateField）
-const prefixError = computed(() => {
-  const b = form.basicGroupPrefix
-  const c = form.comprehensiveGroupPrefix
-  const a = form.advancedGroupPrefix
-  const check = (val, others) => {
-    if (!val) return ''
-    if (!/^[A-Z]$/.test(val)) return '须为单个大写字母（A-Z）'
-    if (others.filter(Boolean).includes(val)) return '三组前缀不能重复'
-    return ''
-  }
-  return {
-    basic: check(b, [c, a]),
-    comprehensive: check(c, [b, a]),
-    advanced: check(a, [b, c]),
-  }
-})
+// 前缀实时错误
+const prefixError = computed(() =>
+  computePrefixErrors(form.basicGroupPrefix, form.comprehensiveGroupPrefix, form.advancedGroupPrefix)
+)
 
 const fileList = reactive({ registration: [], report: [] })
 const files = reactive({ registration: null, report: null })
@@ -244,7 +232,7 @@ const submit = async () => {
   try {
     await formRef.value.validate()
     const pe = prefixError.value
-    if (pe.basic || pe.comprehensive || pe.advanced) {
+    if (hasPrefixError(pe)) {
       ElMessage.warning('请修正前缀配置后再提交')
       return
     }

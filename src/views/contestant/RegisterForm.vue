@@ -379,6 +379,15 @@
             </template>
           </el-alert>
           <el-form label-width="150px" :disabled="isDisabled">
+            <el-alert
+              v-if="isDraftRecord && !isDisabled"
+              type="info"
+              :closable="false"
+              show-icon
+              style="margin-bottom: 16px;"
+            >
+              草稿材料已保存至服务器，提交时将直接复用，无需重复上传。在线预览/下载请在提交成功后使用（正式 material id）。
+            </el-alert>
             <el-form-item label="报名表 Word" required>
               <div style="display: flex; flex-direction: column; gap: 12px;">
                 <el-alert
@@ -533,6 +542,7 @@ import {
   uploadRegistrationMaterial,
   submitRegistration,
   getRegistrationDetail,
+  getRegistrationMaterials,
   getRegistrationCountByInstitution,
   checkDuplicateProject
 } from '@/api/registration'
@@ -640,6 +650,8 @@ const form = reactive({
 })
 
 const isDisabled = computed(() => form.status === 'SUBMITTED')
+/** 草稿记录：材料 id 属于 draft 表，不可走 /materials/{id}/download|preview */
+const isDraftRecord = ref(true)
 
 // 三级机构不可选基层组
 const institutionLevel = ref('')
@@ -828,16 +840,13 @@ const applyMaterialsFromServerList = (materials) => {
   console.log('📎 材料列表已回显:', materials.length, '条')
 }
 
-/** 保存/删除后从报名详情拉取 materials（与 loadRegistrationDetail 一致；勿用 /materials/registration/{id}，部分环境未部署会 404） */
+/** 从 GET /registrations/{id}/materials 拉取材料列表（草稿/正式均走此接口） */
 const refreshMaterialsFromServer = async () => {
   if (!registrationId.value) return
   try {
-    const res = await getRegistrationDetail(registrationId.value)
-    if (!res?.success || !res.data) return
-    const data = res.data
-    const registration = data.registration || data
-    const rawMaterials = data.materials ?? registration.materials ?? []
-    const list = Array.isArray(rawMaterials) ? rawMaterials : []
+    const res = await getRegistrationMaterials(registrationId.value)
+    if (!res?.success) return
+    const list = Array.isArray(res.data) ? res.data : []
     applyMaterialsFromServerList(list)
   } catch (e) {
     console.warn('刷新材料列表失败:', e)
@@ -872,7 +881,8 @@ const loadRegistrationDetail = async () => {
       
       // 状态
       form.status = registration.status
-      
+      isDraftRecord.value = data.draft === true || registration.status === 'DRAFT'
+
       // 基本信息
       // competitionId 可能在顶层或在registration中
       form.basic.competitionId = data.competitionId || registration.competitionId
@@ -905,10 +915,7 @@ const loadRegistrationDetail = async () => {
         console.log('📄 项目总结数据加载:', form.summary)
       }
 
-      // 已上传材料：兼容 data.materials 与 registration.materials
-      const rawMaterials = data.materials ?? registration.materials ?? []
-      const materials = Array.isArray(rawMaterials) ? rawMaterials : []
-      applyMaterialsFromServerList(materials)
+      await refreshMaterialsFromServer()
     }
   } catch (error) {
     console.error('加载报名详情失败:', error)
@@ -1467,9 +1474,17 @@ const submitForm = async () => {
       return
     }
     
-    // 提交报名
+    // 提交报名（仅 POST submit，MinIO 文件不重新上传；后端 COPY 到 material_files 并返回新 registrationId）
     const res = await submitRegistration(registrationId.value)
     if (res.success) {
+      const formal = res.data
+      const formalId = formal?.id
+      if (formalId && String(formalId) !== String(registrationId.value)) {
+        registrationId.value = formalId
+        form.status = formal.status || 'SUBMITTED'
+        isDraftRecord.value = false
+        await refreshMaterialsFromServer()
+      }
       ElMessage.success('提交成功')
       router.push('/contestant/registrations')
     } else {
@@ -1496,9 +1511,14 @@ const submitForm = async () => {
 }
 
 /**
- * 点击已上传文件名时触发下载（仅限已落库的文件，即有 id 的）
+ * 点击已上传文件名：草稿期仅展示文件名；已提交后用正式 material_files.id 下载
  */
 const handleMaterialPreview = async (file) => {
+  if (!file?.id && !file?.name) return
+  if (isDraftRecord.value) {
+    ElMessage.info(`草稿材料「${file.name || '已上传文件'}」已保存，提交后可预览/下载`)
+    return
+  }
   if (!file.id) return
   try {
     const blob = await downloadMaterial(file.id)

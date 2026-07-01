@@ -1,5 +1,11 @@
 import request from '@/utils/request'
 
+/**
+ * 材料 download/preview 仅用于「已提交」正式项目（material_files 表）。
+ * 草稿材料在 registration_draft_material_files，id 不互通；
+ * 草稿期请用 GET /registrations/{draftId}/materials 展示 fileName，勿调本模块 download/preview。
+ */
+
 /** 大文件上传（含 MinIO）可能超过默认 30s，单独放宽；不重试以免重复传整包 */
 const MATERIAL_UPLOAD_TIMEOUT_MS = 300000
 
