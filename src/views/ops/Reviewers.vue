@@ -243,7 +243,7 @@
                 </div>
               </div>
 
-              <div v-if="profileForm.backgrounds.length === 0 && profileForm.tools.length === 0 && profileForm.topics.length === 0 && profileForm.experience.length === 0" style="color:#909399; padding:24px 0; text-align:center; font-size:14px">
+              <div v-if="!hasMultiSelectExtension" style="color:#909399; padding:24px 0; text-align:center; font-size:14px">
                 专家尚未填写扩展信息
               </div>
             </template>
@@ -274,13 +274,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { getReviewers, createReviewer, updateReviewer, deleteReviewer, exportReviewers, downloadReviewerIdCards } from '@/api/review'
 import { setReviewerEnabled, batchDisableReviewers } from '@/api/admin'
 import { autocomplete, searchInstitutions } from '@/api/institution'
 import { getReviewerProfile, updateReviewerProfile, adminChangeReviewerInstitution, adminGetReviewerInstitutionHistory } from '@/api/reviewerProfile'
+import {
+  mapReviewerProfileToForm,
+  mapFormToReviewerProfilePayload,
+  maskIdNumber,
+  maskBankCard,
+  GENDER_LABEL,
+  hasReviewerMultiSelectExtension,
+} from '@/utils/reviewerProfile'
 import { getCurrentCompetitionIdSync } from '@/utils/competition'
 import dayjs from 'dayjs'
 
@@ -634,6 +642,7 @@ const profileForm = reactive({
   topicsOther: '',
   experience: []
 })
+const hasMultiSelectExtension = computed(() => hasReviewerMultiSelectExtension(profileForm))
 const profileRules = {
   idNumber: [
     {
@@ -646,25 +655,11 @@ const profileRules = {
   ]
 }
 
-function safeJsonParse(str) {
-  if (!str) return []
-  try { return JSON.parse(str) } catch { return [] }
-}
-
-const GENDER_LABEL = { MALE: '男', FEMALE: '女', UNKNOWN: '保密' }
-
 function codeToLabels(codes, options) {
   if (!codes || codes.length === 0) return '-'
   return codes.map(c => options.find(o => o.value === c)?.label || c).join('、')
 }
-function maskIdNumber(v) {
-  if (!v || v.length < 10) return ''
-  return v.slice(0, 6) + '********' + v.slice(-4)
-}
-function maskBankCard(v) {
-  if (!v || v.length < 8) return ''
-  return v.slice(0, 4) + ' **** **** ' + v.slice(-4)
-}
+
 function profileAutoMaskId() {
   profileForm.idNumberMasked = maskIdNumber(profileForm.idNumber)
 }
@@ -673,24 +668,9 @@ function profileAutoMaskBank() {
 }
 
 function apiToProfileForm(data) {
-  profileForm.title = data.title || ''
-  profileForm.gender = data.gender || 'UNKNOWN'
-  profileForm.position = data.position || ''
-  profileForm.department = data.department || ''
-  profileForm.idNumber = data.idNumber || ''
-  profileForm.idNumberMasked = data.idNumberMasked || maskIdNumber(data.idNumber || '')
-  profileForm.idCardFrontUrl = data.idCardFrontUrl || ''
-  profileForm.idCardBackUrl = data.idCardBackUrl || ''
-  profileForm.bankName = data.bankName || ''
-  profileForm.bankCardNo = data.bankCardNo || ''
-  profileForm.bankCardNoMasked = data.bankCardNoMasked || maskBankCard(data.bankCardNo || '')
-  profileForm.backgrounds = safeJsonParse(data.backgroundsJson)
-  profileForm.backgroundsOther = data.backgroundsOther || ''
-  profileForm.tools = safeJsonParse(data.toolsJson)
-  profileForm.toolsOther = data.toolsOther || ''
-  profileForm.topics = safeJsonParse(data.topicsJson)
-  profileForm.topicsOther = data.topicsOther || ''
-  profileForm.experience = safeJsonParse(data.experienceJson)
+  const mapped = mapReviewerProfileToForm(data)
+  if (!mapped) return
+  Object.assign(profileForm, mapped)
 }
 
 function resetProfileForm() {
@@ -731,27 +711,7 @@ async function saveProfile() {
   try {
     await profileFormRef.value.validate()
     profileSaving.value = true
-    const payload = {
-      title: profileForm.title || null,
-      gender: profileForm.gender,
-      position: profileForm.position || null,
-      department: profileForm.department || null,
-      idNumber: profileForm.idNumber || null,
-      idNumberMasked: maskIdNumber(profileForm.idNumber),
-      idCardFrontUrl: profileForm.idCardFrontUrl || null,
-      idCardBackUrl: profileForm.idCardBackUrl || null,
-      bankName: profileForm.bankName || null,
-      bankCardNo: profileForm.bankCardNo || null,
-      bankCardNoMasked: maskBankCard(profileForm.bankCardNo),
-      backgroundsJson: JSON.stringify(profileForm.backgrounds),
-      backgroundsOther: profileForm.backgroundsOther || null,
-      toolsJson: JSON.stringify(profileForm.tools),
-      toolsOther: profileForm.toolsOther || null,
-      topicsJson: JSON.stringify(profileForm.topics),
-      topicsOther: profileForm.topicsOther || null,
-      experienceJson: JSON.stringify(profileForm.experience)
-    }
-    const res = await updateReviewerProfile(drawerRow.value.id, payload)
+    const res = await updateReviewerProfile(drawerRow.value.id, mapFormToReviewerProfilePayload(profileForm))
     if (res.success) {
       ElMessage.success('扩展档案已保存')
     } else {

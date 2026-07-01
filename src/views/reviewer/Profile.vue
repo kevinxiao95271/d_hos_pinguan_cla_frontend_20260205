@@ -5,6 +5,22 @@
         <span style="font-weight: 600; font-size: 16px">专家信息</span>
       </template>
 
+      <el-alert
+        v-if="!loading && profileLoaded && !profileFilled"
+        title="您尚未填写扩展信息，请完善下方表单并保存。"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 20px"
+      />
+
+      <!-- 只读账号信息（来自 user_accounts） -->
+      <el-descriptions v-if="readonlyInfo.name" :column="2" border size="small" style="margin-bottom: 20px">
+        <el-descriptions-item label="姓名">{{ readonlyInfo.name }}</el-descriptions-item>
+        <el-descriptions-item label="手机号">{{ readonlyInfo.phone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="所属单位" :span="2">{{ readonlyInfo.institutionName || userStore.institutionName || '-' }}</el-descriptions-item>
+      </el-descriptions>
+
       <el-form ref="formRef" :model="form" :rules="rules" label-width="160px">
 
         <!-- 基本信息 -->
@@ -49,10 +65,9 @@
             placeholder="请输入身份证号"
             maxlength="18"
             style="width: 320px"
-            @input="autoMaskId"
           />
-          <span v-if="form.idNumberMasked" style="margin-left: 12px; color: #909399; font-size: 13px">
-            脱敏：{{ form.idNumberMasked }}
+          <span v-if="displayIdNumberMasked" style="margin-left: 12px; color: #909399; font-size: 13px">
+            脱敏：{{ displayIdNumberMasked }}
           </span>
         </el-form-item>
 
@@ -121,10 +136,9 @@
             placeholder="请输入银行卡号"
             maxlength="25"
             style="width: 320px"
-            @input="autoMaskBank"
           />
-          <span v-if="form.bankCardNoMasked" style="margin-left: 12px; color: #909399; font-size: 13px">
-            脱敏：{{ form.bankCardNoMasked }}
+          <span v-if="displayBankCardMasked" style="margin-left: 12px; color: #909399; font-size: 13px">
+            脱敏：{{ displayBankCardMasked }}
           </span>
         </el-form-item>
 
@@ -245,7 +259,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
@@ -253,6 +267,13 @@ import { getMyProfile, updateMyProfile, uploadMyIdCard, getMyIdCardStream, chang
 import { selfChangePassword } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
 import InstitutionSelector from '@/components/InstitutionSelector.vue'
+import {
+  hasReviewerProfileFilled,
+  mapReviewerProfileToForm,
+  mapFormToReviewerProfilePayload,
+  maskIdNumber,
+  maskBankCard,
+} from '@/utils/reviewerProfile'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -319,7 +340,21 @@ const EXPERIENCE_OPTIONS = [
 // ── 状态 ─────────────────────────────────────────────────────────────
 const loading = ref(false)
 const saving = ref(false)
+const profileLoaded = ref(false)
+const profileFilled = ref(false)
 const formRef = ref(null)
+const readonlyInfo = reactive({ userId: null, name: '', phone: '', institutionName: '' })
+const savedIdNumberMasked = ref('')
+const savedBankCardMasked = ref('')
+
+const displayIdNumberMasked = computed(() => {
+  if (form.idNumber) return maskIdNumber(form.idNumber)
+  return savedIdNumberMasked.value
+})
+const displayBankCardMasked = computed(() => {
+  if (form.bankCardNo) return maskBankCard(form.bankCardNo)
+  return savedBankCardMasked.value
+})
 
 // 身份证图片
 const idCardFrontBlobUrl = ref('')
@@ -331,16 +366,14 @@ const backFileInput = ref(null)
 
 const form = reactive({
   title: '',
-  gender: 'UNKNOWN',
+  gender: '',
   position: '',
   department: '',
   idNumber: '',
-  idNumberMasked: '',
   idCardFrontUrl: '',
   idCardBackUrl: '',
   bankName: '',
   bankCardNo: '',
-  bankCardNoMasked: '',
   backgrounds: [],
   backgroundsOther: '',
   tools: [],
@@ -414,74 +447,23 @@ const rules = {
   experience: [multiSelectRequired('品管相关经验')]
 }
 
-// ── 脱敏辅助 ─────────────────────────────────────────────────────────
-function maskIdNumber(v) {
-  if (!v || v.length < 10) return ''
-  return v.slice(0, 6) + '********' + v.slice(-4)
-}
-
-function maskBankCard(v) {
-  if (!v || v.length < 8) return ''
-  return v.slice(0, 4) + ' **** **** ' + v.slice(-4)
-}
-
-function autoMaskId() {
-  form.idNumberMasked = maskIdNumber(form.idNumber)
-}
-
-function autoMaskBank() {
-  form.bankCardNoMasked = maskBankCard(form.bankCardNo)
-}
-
 // ── API 与 Form 转换 ──────────────────────────────────────────────────
-function apiToForm(data) {
+function applyProfileData(data) {
   if (!data) return
-  form.title = data.title || ''
-  form.gender = data.gender || 'UNKNOWN'
-  form.position = data.position || ''
-  form.department = data.department || ''
-  form.idNumber = data.idNumber || ''
-  form.idNumberMasked = data.idNumberMasked || maskIdNumber(data.idNumber || '')
-  form.idCardFrontUrl = data.idCardFrontUrl || ''
-  form.idCardBackUrl = data.idCardBackUrl || ''
-  form.bankName = data.bankName || ''
-  form.bankCardNo = data.bankCardNo || ''
-  form.bankCardNoMasked = data.bankCardNoMasked || maskBankCard(data.bankCardNo || '')
-  form.backgrounds = safeJsonParse(data.backgroundsJson)
-  form.backgroundsOther = data.backgroundsOther || ''
-  form.tools = safeJsonParse(data.toolsJson)
-  form.toolsOther = data.toolsOther || ''
-  form.topics = safeJsonParse(data.topicsJson)
-  form.topicsOther = data.topicsOther || ''
-  form.experience = safeJsonParse(data.experienceJson)
-}
+  readonlyInfo.userId = data.userId ?? null
+  readonlyInfo.name = data.name ?? ''
+  readonlyInfo.phone = data.phone ?? ''
+  readonlyInfo.institutionName = data.institutionName ?? ''
+  profileFilled.value = hasReviewerProfileFilled(data)
 
-function formToApi() {
-  return {
-    title: form.title || null,
-    gender: form.gender,
-    position: form.position || null,
-    department: form.department || null,
-    idNumber: form.idNumber || null,
-    idNumberMasked: maskIdNumber(form.idNumber),
-    idCardFrontUrl: form.idCardFrontUrl || null,
-    idCardBackUrl: form.idCardBackUrl || null,
-    bankName: form.bankName || null,
-    bankCardNo: form.bankCardNo || null,
-    bankCardNoMasked: maskBankCard(form.bankCardNo),
-    backgroundsJson: JSON.stringify(form.backgrounds),
-    backgroundsOther: form.backgroundsOther || null,
-    toolsJson: JSON.stringify(form.tools),
-    toolsOther: form.toolsOther || null,
-    topicsJson: JSON.stringify(form.topics),
-    topicsOther: form.topicsOther || null,
-    experienceJson: JSON.stringify(form.experience)
-  }
-}
-
-function safeJsonParse(str) {
-  if (!str) return []
-  try { return JSON.parse(str) } catch { return [] }
+  const mapped = mapReviewerProfileToForm(data)
+  if (!mapped) return
+  Object.assign(form, mapped)
+  savedIdNumberMasked.value = mapped.idNumberMasked
+  savedBankCardMasked.value = mapped.bankCardNoMasked
+  // 已有明文时不重复展示输入框内容（脱敏区展示 idNumberMasked）
+  if (!data.idNumber && data.idNumberMasked) form.idNumber = ''
+  if (!data.bankCardNo && data.bankCardNoMasked) form.bankCardNo = ''
 }
 
 // ── 身份证图片 ────────────────────────────────────────────────────────
@@ -546,8 +528,8 @@ onMounted(async () => {
   try {
     const res = await getMyProfile()
     if (res.success && res.data) {
-      apiToForm(res.data)
-      // 有 object key 则加载图片流
+      applyProfileData(res.data)
+      profileLoaded.value = true
       if (res.data.idCardFrontUrl) loadIdCardImage('FRONT')
       if (res.data.idCardBackUrl) loadIdCardImage('BACK')
     }
@@ -575,9 +557,14 @@ async function handleSave() {
       return
     }
     saving.value = true
-    const res = await updateMyProfile(formToApi())
+    const res = await updateMyProfile(mapFormToReviewerProfilePayload(form))
     if (res.success) {
       ElMessage.success('档案已保存')
+      if (res.data) applyProfileData(res.data)
+      else {
+        const reload = await getMyProfile()
+        if (reload.success && reload.data) applyProfileData(reload.data)
+      }
     } else {
       ElMessage.error(res.message || '保存失败')
     }
