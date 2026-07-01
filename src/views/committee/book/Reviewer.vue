@@ -324,10 +324,12 @@ import StageProgress from '@/components/StageProgress.vue'
 import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
+import { useCompetitionGroupPrefixes } from '@/composables/useCompetitionGroupPrefixes'
 
 const { stagesList } = useCompetitionStages()
 
 const competitionId = ref(getCurrentCompetitionIdSync())
+const { load: loadGroupPrefixes, allGroupCodes } = useCompetitionGroupPrefixes(competitionId)
 
 // 报名列表分页
 const {
@@ -396,25 +398,7 @@ const resetAssignedTaskFilter = () => {
   loadAllAssignedTasks()
 }
 
-// 所有分组代码
-const allGroupCodes = computed(() => {
-  const codes = []
-  // A1-A10 (基层组)
-  for (let i = 1; i <= 10; i++) {
-    codes.push(`A${i}`)
-  }
-  // B1-B10 (综合组)
-  for (let i = 1; i <= 10; i++) {
-    codes.push(`B${i}`)
-  }
-  // C1-C10 (进阶组)
-  for (let i = 1; i <= 10; i++) {
-    codes.push(`C${i}`)
-  }
-  return codes
-})
-
-// 加载报名列表
+// 分组筛选：按当前赛事配置的前缀生成（基层/综合/进阶各 10 组）
 const loadRegistrations = async () => {
   loadingRegistrations.value = true
   try {
@@ -792,8 +776,10 @@ onMounted(async () => {
   const currentCompetitionId = await getCurrentCompetitionId()
   if (currentCompetitionId) {
     competitionId.value = currentCompetitionId
+    registrationFilter.value.competitionId = currentCompetitionId
   }
-  
+  await loadGroupPrefixes(true)
+
   loadRegistrations()
   loadReviewers()
 })

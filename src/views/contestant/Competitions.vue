@@ -95,6 +95,7 @@ import { getCompetitions } from '@/api/competition'
 import { getMyRegistrations } from '@/api/registration'
 import { Download } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
+import { contestantRegistrationPath } from '@/utils/registrationDisplay'
 
 const router = useRouter()
 
@@ -188,7 +189,7 @@ const handleButtonClick = (item) => {
     // 跳转到报名详情
     const myReg = getMyRegistration(item.id)
     if (myReg) {
-      router.push(`/contestant/registration/${myReg.id}`)
+      router.push(contestantRegistrationPath(myReg))
     }
   } else {
     // 跳转到新建报名页面，通过query参数传递赛事ID

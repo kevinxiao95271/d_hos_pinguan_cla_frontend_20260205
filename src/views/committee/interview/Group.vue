@@ -412,6 +412,7 @@ import { getDictionaryByType } from '@/api/dictionary'
 import { downloadMaterial } from '@/api/material'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
+import { useCompetitionGroupPrefixes } from '@/composables/useCompetitionGroupPrefixes'
 import dayjs from 'dayjs'
 
 const { stagesList } = useCompetitionStages()
@@ -451,6 +452,9 @@ const filters = reactive({
   registrationId: ''
 })
 
+const competitionIdRef = computed(() => filters.competitionId)
+const { load: loadGroupPrefixes, prefixForType, groupCodesForTypeComputed } = useCompetitionGroupPrefixes(competitionIdRef)
+
 const groupDialogVisible = ref(false)
 const groupForm = reactive({
   registrationIds: [],
@@ -462,10 +466,8 @@ const detailDialogVisible = ref(false)
 const detailLoading = ref(false)
 const currentDetail = ref(null)
 
-// 进阶组分组代码（C1-C10）
-const advancedGroupCodes = computed(() => {
-  return Array.from({ length: 10 }, (_, i) => `C${i + 1}`)
-})
+// 进阶组分组编号：按赛事 advancedGroupPrefix 生成（如 C1 或 Z1）
+const advancedGroupCodes = groupCodesForTypeComputed(computed(() => 'ADVANCED'))
 
 const getGroupTypeText = (type) => {
   const map = {
@@ -751,6 +753,7 @@ const autoGroupInterview = async () => {
         return
       }
       
+      const advancedPrefix = prefixForType('ADVANCED')
       const totalGroups = Math.ceil(ungroupedItems.length / groupSize)
       let successCount = 0
       
@@ -758,7 +761,7 @@ const autoGroupInterview = async () => {
         const start = i * groupSize
         const end = Math.min(start + groupSize, ungroupedItems.length)
         const batch = ungroupedItems.slice(start, end)
-        const groupCode = `C${i + 1}`
+        const groupCode = `${advancedPrefix}${i + 1}`
         
         // 兼容不同的字段名：id 或 registrationId
         const batchIds = batch.map(item => item.id || item.registrationId).filter(id => id)
@@ -844,7 +847,8 @@ onMounted(async () => {
   if (competitionId) {
     filters.competitionId = competitionId
   }
-  
+  await loadGroupPrefixes(true)
+
   loadDictionaries()
   loadPoolData()
   

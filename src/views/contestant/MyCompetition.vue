@@ -48,7 +48,7 @@
             
             <el-descriptions title="项目信息" :column="2" border style="margin-top: 20px">
               <el-descriptions-item label="项目编号">
-                {{ registration.id || '-' }}
+                {{ displayProjectCode(registration) }}
               </el-descriptions-item>
               <el-descriptions-item label="竞赛组别">
                 {{ getGroupTypeText(registration.groupType) }}
@@ -277,6 +277,7 @@ import { getCurrentCompetitionId } from '@/utils/competition'
 import { downloadMaterial } from '@/api/material'
 import StageProgress from '@/components/StageProgress.vue'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
+import { displayProjectCode } from '@/utils/registrationDisplay'
 import dayjs from 'dayjs'
 
 const route = useRoute()

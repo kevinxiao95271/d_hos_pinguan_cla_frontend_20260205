@@ -505,6 +505,7 @@ import { getDictionaryByType } from '@/api/dictionary'
 import { downloadMaterial } from '@/api/material'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
+import { useCompetitionGroupPrefixes } from '@/composables/useCompetitionGroupPrefixes'
 import dayjs from 'dayjs'
 
 //分页
@@ -545,6 +546,9 @@ const filters = reactive({
   methodCode: ''
 })
 
+const competitionIdRef = computed(() => filters.competitionId)
+const { load: loadGroupPrefixes, prefixForType, groupCodesForTypeComputed } = useCompetitionGroupPrefixes(competitionIdRef)
+
 const changeGroupDialogVisible = ref(false)
 const changeGroupForm = reactive({
   registrationIds: [],
@@ -566,20 +570,8 @@ const groupCodes = computed(() => {
   return Array.from(codes).sort()
 })
 
-// 根据选中的竞赛组别，动态生成可用的分组选项
-const availableGroupCodes = computed(() => {
-  const groupType = changeGroupForm.groupType
-  if (!groupType) return []
-  
-  if (groupType === 'BASIC') {
-    return ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10']
-  } else if (groupType === 'COMPREHENSIVE') {
-    return ['B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9', 'B10']
-  } else if (groupType === 'ADVANCED') {
-    return ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10']
-  }
-  return []
-})
+// 根据赛事配置的前缀 + 组别，生成分组下拉（如 Z1、Z2…）
+const availableGroupCodes = groupCodesForTypeComputed(computed(() => changeGroupForm.groupType))
 
 // 检查是否有激活的筛选条件
 const hasActiveFilters = computed(() => {
@@ -854,13 +846,7 @@ const autoGroup = async () => {
       return
     }
     
-    // 根据组别确定分组前缀
-    const prefixMap = {
-      'BASIC': 'A',           // 基层组
-      'COMPREHENSIVE': 'B',   // 综合组
-      'ADVANCED': 'C'         // 进阶组
-    }
-    const groupPrefix = prefixMap[filters.groupType]
+    const groupPrefix = prefixForType(filters.groupType)
     
     const groupTypeText = getGroupTypeText(filters.groupType)
     
@@ -943,7 +929,8 @@ onMounted(async () => {
   if (competitionId) {
     filters.competitionId = competitionId
   }
-  
+  await loadGroupPrefixes(true)
+
   loadDictionaries()
   loadRegistrations()
   

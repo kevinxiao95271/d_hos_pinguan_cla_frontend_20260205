@@ -50,8 +50,8 @@
             </div>
             
             <div class="actions">
-              <el-button type="primary" @click="viewDetail(item.id)">
-                查看详情
+              <el-button type="primary" @click="viewDetail(item)">
+                {{ item.status === 'DRAFT' ? '继续编辑' : '查看详情' }}
               </el-button>
             </div>
           </div>
@@ -67,6 +67,7 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { getRegistrationsByApplicant } from '@/api/registration'
 import dayjs from 'dayjs'
+import { contestantRegistrationPath } from '@/utils/registrationDisplay'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -121,8 +122,8 @@ const formatDate = (date) => {
   return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 }
 
-const viewDetail = (id) => {
-  router.push(`/contestant/registration/${id}`)  // ✅ 修复路径，匹配路由配置
+const viewDetail = (row) => {
+  router.push(contestantRegistrationPath(row))
 }
 
 const goToCompetitions = () => {

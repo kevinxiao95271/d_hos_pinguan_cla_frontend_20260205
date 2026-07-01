@@ -43,7 +43,11 @@
       </el-alert>
       
       <el-table :data="registrations" v-loading="loading" border>
-        <el-table-column prop="id" label="项目编号" width="100" align="center" />
+        <el-table-column label="项目编号" width="100" align="center">
+          <template #default="{ row }">
+            {{ displayProjectCode(row) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="projectName" label="项目名称" min-width="200" />
         <el-table-column prop="institutionName" label="医疗机构" width="180" />
         <el-table-column prop="institutionLevel" label="机构等级" width="120">
@@ -90,7 +94,13 @@
               <template v-else-if="row.status === 'SUBMITTED'">
                 <el-button size="small" disabled style="cursor:not-allowed;opacity:.6">已提交</el-button>
               </template>
-              <el-button size="small" @click="viewDetail(row.id)">查看详情</el-button>
+              <el-button
+                v-if="row.status !== 'DRAFT'"
+                size="small"
+                @click="viewDetail(row)"
+              >
+                查看详情
+              </el-button>
               <el-button
                 v-if="row.status === 'SUBMITTED'"
                 type="warning"
@@ -264,6 +274,7 @@ import {
 } from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
+import { displayProjectCode, contestantRegistrationPath } from '@/utils/registrationDisplay'
 import dayjs from 'dayjs'
 
 const PAYMENT_URL = 'https://mm.sciconf.cn/cn/minisite/index/35899'
@@ -568,7 +579,7 @@ const goToCreate = () => {
   router.push({ path: '/contestant/register/new', query })
 }
 const editRegistration = (id) => router.push(`/contestant/register/${id}`)
-const viewDetail = (id) => router.push(`/contestant/registration/${id}`)
+const viewDetail = (row) => router.push(contestantRegistrationPath(row))
 const viewResults = (id) => router.push(`/contestant/registration/${id}/results`)
 
 const submitRegistration = async (id, competitionId) => {
