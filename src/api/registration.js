@@ -2,10 +2,23 @@ import request from '@/utils/request'
 
 /**
  * 获取我的报名列表 (从token获取申请人ID)
+ * @param {{ competitionId?: number|string }} [params] 传 competitionId 时只返回该届正式报名 + 草稿
  */
-export function getMyRegistrations() {
+export function getMyRegistrations(params) {
   return request({
     url: '/registrations/my',
+    method: 'get',
+    params: params || undefined
+  })
+}
+
+/**
+ * 获取我有报名/草稿数据的赛事列表（按届查历史）
+ * GET /registrations/my/competitions
+ */
+export function getMyCompetitions() {
+  return request({
+    url: '/registrations/my/competitions',
     method: 'get'
   })
 }

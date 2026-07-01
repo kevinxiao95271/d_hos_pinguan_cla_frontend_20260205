@@ -15,6 +15,13 @@ export const useUserStore = defineStore('user', {
     institutionId: (state) => state.userInfo?.institutionId || null,
     institutionName: (state) => state.userInfo?.institutionName || '',
     userName: (state) => state.userInfo?.name || '',
+    /** 登录默认届（ID 最大的赛事，与后端 getLatest 一致） */
+    currentCompetitionId: (state) => {
+      const fromUser = state.userInfo?.currentCompetitionId
+      if (fromUser != null && fromUser !== '') return Number(fromUser)
+      const cached = localStorage.getItem('currentCompetitionId')
+      return cached ? parseInt(cached, 10) : null
+    },
     isContestant: (state) => state.userInfo?.role === 'CONTESTANT',
     isReviewer: (state) => state.userInfo?.role === 'REVIEWER',
     isCommittee: (state) => state.userInfo?.role === 'COMMITTEE_ADMIN',
@@ -32,6 +39,9 @@ export const useUserStore = defineStore('user', {
       localStorage.setItem('userInfo', JSON.stringify(userData))
       localStorage.setItem('loginTime', new Date().toLocaleString('zh-CN'))
       localStorage.setItem('loginTimestamp', loginTimestamp.toString())
+      if (userData.currentCompetitionId != null && userData.currentCompetitionId !== '') {
+        localStorage.setItem('currentCompetitionId', String(userData.currentCompetitionId))
+      }
     },
     
     // 旧的登录方法（兼容现有代码）

@@ -4,11 +4,43 @@
       <template #header>
         <div class="card-header">
           <span>我的报名</span>
-          <el-button type="primary" @click="goToCreate">
-            新建报名
-          </el-button>
+          <div class="header-actions">
+            <el-select
+              v-model="selectedCompetitionId"
+              placeholder="选择赛事届别"
+              style="width: 320px; margin-right: 12px;"
+              :loading="competitionsLoading"
+              @change="loadRegistrations"
+            >
+              <el-option
+                v-for="item in competitionOptions"
+                :key="item.competitionId"
+                :label="formatCompetitionOption(item)"
+                :value="item.competitionId"
+              />
+            </el-select>
+            <el-button
+              v-if="!isViewingCurrentCompetition"
+              @click="backToCurrentCompetition"
+            >
+              回到当年
+            </el-button>
+            <el-button type="primary" @click="goToCreate">
+              新建报名
+            </el-button>
+          </div>
         </div>
       </template>
+
+      <el-alert
+        v-if="selectedCompetitionSummary"
+        type="info"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 16px;"
+      >
+        {{ selectedCompetitionSummary }}
+      </el-alert>
       
       <el-table :data="registrations" v-loading="loading" border>
         <el-table-column prop="id" label="项目编号" width="100" align="center" />
@@ -221,7 +253,15 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload } from '@element-plus/icons-vue'
-import { getMyRegistrations, submitRegistration as submitReg, getRegistration, uploadRegistrationMaterial, getRegistrationCountByInstitution } from '@/api/registration'
+import { useUserStore } from '@/stores/user'
+import {
+  getMyRegistrations,
+  getMyCompetitions,
+  submitRegistration as submitReg,
+  getRegistration,
+  uploadRegistrationMaterial,
+  getRegistrationCountByInstitution
+} from '@/api/registration'
 import { downloadMaterial } from '@/api/material'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import dayjs from 'dayjs'
@@ -229,9 +269,117 @@ import dayjs from 'dayjs'
 const PAYMENT_URL = 'https://mm.sciconf.cn/cn/minisite/index/35899'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const registrations = ref([])
 const loading = ref(false)
+const myCompetitions = ref([])
+const competitionsLoading = ref(false)
+const selectedCompetitionId = ref(null)
+
+const defaultCompetitionId = computed(() => userStore.currentCompetitionId)
+
+const isViewingCurrentCompetition = computed(() => {
+  if (!selectedCompetitionId.value || !defaultCompetitionId.value) return true
+  return Number(selectedCompetitionId.value) === Number(defaultCompetitionId.value)
+})
+
+/** 下拉选项：有数据的历届 + 当前届（尚无报名时也要能选） */
+const competitionOptions = computed(() => {
+  const list = [...myCompetitions.value]
+  const curId = defaultCompetitionId.value
+  if (curId && !list.some(c => Number(c.competitionId) === Number(curId))) {
+    list.unshift({
+      competitionId: curId,
+      competitionName: '当前赛事',
+      year: new Date().getFullYear(),
+      registrationCount: 0,
+      draftCount: 0,
+      current: true
+    })
+  }
+  return list
+})
+
+const selectedCompetitionMeta = computed(() =>
+  competitionOptions.value.find(c => Number(c.competitionId) === Number(selectedCompetitionId.value))
+)
+
+const selectedCompetitionSummary = computed(() => {
+  const meta = selectedCompetitionMeta.value
+  if (!meta) return ''
+  const parts = []
+  if (meta.competitionName) parts.push(meta.competitionName)
+  if (meta.registrationCount != null || meta.draftCount != null) {
+    parts.push(`正式 ${meta.registrationCount ?? 0} 条，草稿 ${meta.draftCount ?? 0} 条`)
+  }
+  if (meta.current || isViewingCurrentCompetition.value) parts.push('（当前届）')
+  return parts.join(' · ')
+})
+
+const formatCompetitionOption = (item) => {
+  const year = item.year ? `${item.year}年 ` : ''
+  const counts = `正式${item.registrationCount ?? 0}/草稿${item.draftCount ?? 0}`
+  const cur = item.current ? ' · 当前' : ''
+  return `${year}${item.competitionName || '赛事'}（${counts}）${cur}`
+}
+
+const loadMyCompetitions = async () => {
+  competitionsLoading.value = true
+  try {
+    const res = await getMyCompetitions()
+    if (res.success) {
+      myCompetitions.value = res.data || []
+    }
+  } catch (error) {
+    console.warn('加载历届赛事失败:', error)
+  } finally {
+    competitionsLoading.value = false
+  }
+}
+
+const loadRegistrations = async () => {
+  if (!selectedCompetitionId.value) return
+  loading.value = true
+  try {
+    const res = await getMyRegistrations({ competitionId: selectedCompetitionId.value })
+    if (res.success) {
+      registrations.value = res.data || []
+      loadAllProofs()
+    } else {
+      ElMessage.error(res.message || '加载失败')
+    }
+  } catch (error) {
+    console.error('加载报名列表失败:', error)
+    ElMessage.error('加载报名列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadData = async () => {
+  await loadMyCompetitions()
+  if (!selectedCompetitionId.value) {
+    const currentInList = myCompetitions.value.find(c => c.current)
+    selectedCompetitionId.value =
+      defaultCompetitionId.value ??
+      currentInList?.competitionId ??
+      myCompetitions.value[0]?.competitionId ??
+      null
+  }
+  if (selectedCompetitionId.value) {
+    await loadRegistrations()
+  }
+}
+
+const backToCurrentCompetition = async () => {
+  if (!defaultCompetitionId.value) {
+    ElMessage.warning('未获取到当前届赛事')
+    return
+  }
+  selectedCompetitionId.value = defaultCompetitionId.value
+  await loadRegistrations()
+}
 
 // key: registrationId -> payment_proof materials 数组
 const proofMap = reactive({})
@@ -250,25 +398,6 @@ const proofLoading = ref(false)
 const currentProofList = ref([])
 
 const proofCount = (regId) => (proofMap[regId] || []).length
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const res = await getMyRegistrations()
-    if (res.success) {
-      registrations.value = res.data || []
-      // 并行拉取所有报名的 payment_proof 材料
-      loadAllProofs()
-    } else {
-      ElMessage.error(res.message || '加载失败')
-    }
-  } catch (error) {
-    console.error('加载报名列表失败:', error)
-    ElMessage.error('加载报名列表失败')
-  } finally {
-    loading.value = false
-  }
-}
 
 const loadAllProofs = async () => {
   const submitted = registrations.value.filter(r => r.status === 'SUBMITTED')
@@ -432,7 +561,12 @@ const getStatusText = (status) => {
 
 const formatDate = (date) => date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 
-const goToCreate = () => router.push('/contestant/register/new')
+const goToCreate = () => {
+  const query = {}
+  const cid = selectedCompetitionId.value || defaultCompetitionId.value
+  if (cid) query.competitionId = cid
+  router.push({ path: '/contestant/register/new', query })
+}
 const editRegistration = (id) => router.push(`/contestant/register/${id}`)
 const viewDetail = (id) => router.push(`/contestant/registration/${id}`)
 const viewResults = (id) => router.push(`/contestant/registration/${id}/results`)
@@ -455,7 +589,7 @@ const submitRegistration = async (id, competitionId) => {
     const res = await submitReg(id)
     if (res.success) {
       ElMessage.success('提交成功')
-      loadData()
+      await loadRegistrations()
     } else {
       ElMessage.error(res.message || '提交失败')
     }
@@ -480,8 +614,17 @@ onMounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
     font-size: 18px;
     font-weight: 600;
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 }
 

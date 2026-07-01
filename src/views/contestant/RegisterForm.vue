@@ -716,11 +716,12 @@ const loadData = async () => {
     if (registrationId.value) {
       await loadRegistrationDetail()
     } else {
-      // 新建模式：检查query参数，如果有competitionId则自动预选
+      // 新建模式：query 优先，否则登录默认届 currentCompetitionId
       const competitionIdFromQuery = route.query.competitionId
       if (competitionIdFromQuery) {
-        form.basic.competitionId = parseInt(competitionIdFromQuery)
-        console.log('📋 从赛事列表跳转，自动预选赛事ID:', form.basic.competitionId)
+        form.basic.competitionId = parseInt(competitionIdFromQuery, 10)
+      } else if (userStore.currentCompetitionId) {
+        form.basic.competitionId = userStore.currentCompetitionId
       }
     }
   } catch (error) {
