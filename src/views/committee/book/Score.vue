@@ -1,17 +1,5 @@
 <template>
   <div class="score-page">
-    <div class="stage-progress-collapsible">
-      <div class="stage-progress-toggle" @click="stageProgressVisible = !stageProgressVisible">
-        <span>赛事阶段进度</span>
-        <el-icon :style="{ transform: stageProgressVisible ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.3s' }">
-          <ArrowDown />
-        </el-icon>
-      </div>
-      <transition name="collapse">
-        <stage-progress v-if="stageProgressVisible" :current-stage="currentStageKey" :stages="stagesList" />
-      </transition>
-    </div>
-
     <el-card class="score-card">
       <template #header>
         <div class="card-header">
@@ -135,10 +123,7 @@
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
 import { getBookScores, returnScore } from '@/api/review'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import { flattenScoreListRows } from '@/utils/scoreListFlatten'
 import { useUserStore } from '@/stores/user'
@@ -146,9 +131,6 @@ import * as XLSX from 'xlsx'
 import dayjs from 'dayjs'
 
 const userStore = useUserStore()
-const { stagesList, currentStageKey } = useCompetitionStages()
-
-const stageProgressVisible = ref(false)
 
 const loading = ref(false)
 const scores = ref([])
@@ -331,33 +313,6 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.stage-progress-collapsible {
-  margin-bottom: 16px;
-  .stage-progress-toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    color: #909399;
-    padding: 4px 8px;
-    border-radius: 4px;
-    user-select: none;
-    margin-bottom: 6px;
-    &:hover { color: #409eff; background: #f0f7ff; }
-  }
-}
-
-.collapse-enter-active,
-.collapse-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
-  transform-origin: top;
-}
-.collapse-enter-from,
-.collapse-leave-to {
-  opacity: 0;
-  transform: scaleY(0.85);
-}
 
 .score-page {
   padding: 20px;
