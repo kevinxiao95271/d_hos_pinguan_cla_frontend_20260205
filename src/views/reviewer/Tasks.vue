@@ -50,7 +50,7 @@
     </transition>
 
     <!-- 赛事 Tab（多赛事时显示） -->
-    <div v-if="competitions.length > 1" class="comp-tab-bar">
+    <div v-if="visibleCompetitions.length > 1" class="comp-tab-bar">
       <el-tabs
         :model-value="selectedCompId"
         @tab-change="onCompTabChange"
@@ -58,7 +58,7 @@
         type="card"
       >
         <el-tab-pane
-          v-for="comp in competitions"
+          v-for="comp in visibleCompetitions"
           :key="comp.id"
           :name="comp.id"
           :label="comp.name"
@@ -358,14 +358,18 @@ const onCompTabChange = (compId) => {
 }
 
 // 自动选有待处理任务的最新赛事（优先 pendingSubmit > 0）
+// 只展示有任务的赛事（total > 0）
+const visibleCompetitions = computed(() =>
+  competitions.value.filter(c => (compStatsMap.value[c.id]?.total || 0) > 0)
+)
+
 const autoSelectComp = () => {
-  if (!competitions.value.length) return
-  const withPending = competitions.value.find(c => (compStatsMap.value[c.id]?.pendingSubmit || 0) > 0)
+  if (!visibleCompetitions.value.length) return
+  const withPending = visibleCompetitions.value.find(c => (compStatsMap.value[c.id]?.pendingSubmit || 0) > 0)
   if (withPending) {
     selectedCompId.value = withPending.id
   } else {
-    // 没有待处理任务就选最新赛事（第一条）
-    selectedCompId.value = competitions.value[0]?.id ?? null
+    selectedCompId.value = visibleCompetitions.value[0]?.id ?? null
   }
 }
 
