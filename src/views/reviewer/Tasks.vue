@@ -49,16 +49,33 @@
       </div>
     </transition>
 
-    <!-- 年度筛选（多年度时才显示） -->
-    <div v-if="availableYears.length > 1" class="year-filter-bar">
-      <span class="year-filter-label">年度：</span>
-      <el-radio-group v-model="yearFilter" size="small">
-        <el-radio-button
-          v-for="y in availableYears"
-          :key="y"
-          :value="y"
-        >{{ y === 'all' ? '全部' : y + '年度' }}</el-radio-button>
-      </el-radio-group>
+    <!-- 赛事 Tab（多赛事时显示） -->
+    <div v-if="competitions.length > 1" class="comp-tab-bar">
+      <el-tabs
+        :model-value="selectedCompId"
+        @tab-change="onCompTabChange"
+        class="comp-tabs"
+        type="card"
+      >
+        <el-tab-pane
+          v-for="comp in competitions"
+          :key="comp.id"
+          :name="comp.id"
+          :label="comp.name"
+        >
+          <template #label>
+            <span class="comp-tab-label">
+              {{ comp.name }}
+              <el-badge
+                v-if="compStatsMap[comp.id]?.pendingSubmit > 0"
+                :value="compStatsMap[comp.id].pendingSubmit"
+                type="danger"
+                class="comp-badge"
+              />
+            </span>
+          </template>
+        </el-tab-pane>
+      </el-tabs>
     </div>
 
     <!-- 阶段 Tab + 刷新 -->
@@ -256,6 +273,7 @@ import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMyReviewTasks, getMyTaskStats, recuseReviewTask, cancelRecuse, getReviewScore, getInterviewScore, submitReviewScore, submitInterviewScore, getFinalMyTasks, submitFinalScore } from '@/api/review'
+import { getCompetitions } from '@/api/competition'
 import { getRecuseReasons } from '@/api/dictionary'
 
 const router = useRouter()
@@ -300,79 +318,84 @@ const recuseRules = {
   ]
 }
 
-// ── 年度筛选 ──────────────────────────────────────────────────────
-const yearFilter = ref('')
+// ── 赛事列表 Tab ──────────────────────────────────────────────────
+const competitions = ref([])       // [{id, name, stage}, ...]
+const selectedCompId = ref(null)   // null = 全部，number = 某赛事 id
+const compStatsMap = ref({})       // { [compId]: { total, pendingSubmit, scored, recused } }
 
-// 从 registrationId 推断年度（20260xxx → '2026'，短ID用 createdAt 年份兜底）
-const getTaskYear = (task) => {
-  const rid = task.registrationId
-  const ridNum = typeof rid === 'number' ? rid : Number(rid)
-  if (!isNaN(ridNum) && ridNum >= 20200000) {
-    return String(Math.floor(ridNum / 10000))
+// 加载赛事列表，并根据角标数据自动选默认赛事
+const loadCompetitions = async () => {
+  try {
+    const res = await getCompetitions()
+    if (res.success) {
+      competitions.value = (res.data || []).sort((a, b) => b.id - a.id) // 新赛事在前
+    }
+  } catch (e) {
+    console.error('加载赛事列表失败', e)
   }
-  return task.createdAt?.substring(0, 4) || ''
 }
 
-// 可选年度列表（降序）+ 末尾加"全部"
-const availableYears = computed(() => {
-  const years = new Set()
-  tasks.value.forEach(t => {
-    const y = getTaskYear(t)
-    if (y) years.add(y)
-  })
-  const sorted = Array.from(years).sort().reverse()
-  return sorted.length > 1 ? [...sorted, 'all'] : sorted
-})
-
-// 数据加载后自动选最新有待处理任务的年度，否则选最新年度
-const autoSelectYear = () => {
-  const years = availableYears.value.filter(y => y !== 'all')
-  const withPending = years.find(y =>
-    tasks.value.some(t =>
-      getTaskYear(t) === y &&
-      ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status)
-    )
+// 加载所有赛事的统计数据（并行），用于 Tab 角标
+const loadAllCompStats = async () => {
+  const ids = competitions.value.map(c => c.id)
+  const results = await Promise.allSettled(
+    ids.map(id => getMyTaskStats({ competitionId: id }))
   )
-  yearFilter.value = withPending || years[0] || ''
+  const map = {}
+  ids.forEach((id, i) => {
+    const r = results[i]
+    if (r.status === 'fulfilled' && r.value.success) {
+      map[id] = r.value.data || {}
+    }
+  })
+  compStatsMap.value = map
 }
 
-// 年度过滤后的任务（阶段 Tab 和各列表都基于此）
-const yearFilteredTasks = computed(() => {
-  if (!yearFilter.value || yearFilter.value === 'all') return tasks.value
-  return tasks.value.filter(t => getTaskYear(t) === yearFilter.value)
-})
+// 切换赛事 Tab 时重新拉任务
+const onCompTabChange = (compId) => {
+  selectedCompId.value = compId
+  loadData()
+}
 
-// 年度切换时自动重选最优 Tab
-watch(yearFilter, () => autoSelectTab())
+// 自动选有待处理任务的最新赛事（优先 pendingSubmit > 0）
+const autoSelectComp = () => {
+  if (!competitions.value.length) return
+  const withPending = competitions.value.find(c => (compStatsMap.value[c.id]?.pendingSubmit || 0) > 0)
+  if (withPending) {
+    selectedCompId.value = withPending.id
+  } else {
+    // 没有待处理任务就选最新赛事（第一条）
+    selectedCompId.value = competitions.value[0]?.id ?? null
+  }
+}
 
 // ── 阶段 Tab ─────────────────────────────────────────────────────
 const activeStageTab = ref('FINAL')
 
-const hasBookTasks      = computed(() => yearFilteredTasks.value.some(t => t.stage === 'BOOK'))
-const hasInterviewTasks = computed(() => yearFilteredTasks.value.some(t => t.stage === 'INTERVIEW'))
-const hasFinalTasks     = computed(() => yearFilteredTasks.value.some(t => t.stage === 'FINAL'))
+const hasBookTasks      = computed(() => tasks.value.some(t => t.stage === 'BOOK'))
+const hasInterviewTasks = computed(() => tasks.value.some(t => t.stage === 'INTERVIEW'))
+const hasFinalTasks     = computed(() => tasks.value.some(t => t.stage === 'FINAL'))
 
 // 数据加载完成后，自动切换到有待处理任务的 Tab（BOOK > INTERVIEW > FINAL）
 const autoSelectTab = () => {
   const order = ['BOOK', 'INTERVIEW', 'FINAL']
-  const available = yearFilteredTasks.value
   const firstWithPending = order.find(s =>
-    available.some(t => t.stage === s && ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status))
+    tasks.value.some(t => t.stage === s && ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status))
   )
   if (firstWithPending) {
     activeStageTab.value = firstWithPending
   } else {
-    const firstWithTasks = order.find(s => available.some(t => t.stage === s))
+    const firstWithTasks = order.find(s => tasks.value.some(t => t.stage === s))
     if (firstWithTasks) activeStageTab.value = firstWithTasks
   }
 }
 
-// 当前 tab 对应的待处理任务数（用于 badge 提示，基于年度过滤后的任务）
+// 当前 tab 对应的待处理任务数（用于 badge 提示）
 const stageTabCount = (stage) =>
-  yearFilteredTasks.value.filter(t => t.stage === stage && ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status)).length
+  tasks.value.filter(t => t.stage === stage && ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status)).length
 
-// 按当前 Tab 过滤（年度已过滤的任务中再按阶段过滤）
-const filteredTasks = computed(() => yearFilteredTasks.value.filter(t => t.stage === activeStageTab.value))
+// 按当前 Tab 过滤
+const filteredTasks = computed(() => tasks.value.filter(t => t.stage === activeStageTab.value))
 
 // ── 各状态分区（均基于 filteredTasks，随 Tab 切换）─────────────────
 
@@ -587,11 +610,12 @@ const submitAllDrafts = async () => {
 
 const loadData = async () => {
   loading.value = true
+  const compFilter = selectedCompId.value ? { competitionId: selectedCompId.value } : {}
   try {
     const [tasksRes, statsRes, finalRes] = await Promise.allSettled([
-      getMyReviewTasks({ page: 1, pageSize: 200 }),
-      getMyTaskStats(),
-      getFinalMyTasks()
+      getMyReviewTasks({ page: 1, pageSize: 200, ...compFilter }),
+      getMyTaskStats(compFilter),
+      getFinalMyTasks(compFilter)
     ])
     if (tasksRes.status === 'fulfilled' && tasksRes.value.success) {
       const raw = tasksRes.value.data
@@ -626,7 +650,6 @@ const loadData = async () => {
         }))
       }
       tasks.value = [...nonFinal, ...finalTasks]
-      autoSelectYear()
       autoSelectTab()
     } else if (tasksRes.status === 'fulfilled') {
       ElMessage.error(tasksRes.value.message || '加载失败')
@@ -826,9 +849,12 @@ const onResize = () => { isMobile.value = window.innerWidth <= 768 }
 
 // 移动端不再固定 Tab，保持当前选中
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('resize', onResize)
-  loadData()
+  await loadCompetitions()
+  await loadAllCompStats()
+  autoSelectComp()
+  await loadData()
 })
 
 onUnmounted(() => {
@@ -917,23 +943,27 @@ onUnmounted(() => {
   &::after { background: linear-gradient(90deg, #c8cacc, #909399); }
 }
 
-/* 年度筛选条 */
-.year-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
+/* 赛事 Tab 栏 */
+.comp-tab-bar {
+  margin-bottom: 4px;
+  .comp-tabs {
+    :deep(.el-tabs__header) { margin-bottom: 0; }
+    :deep(.el-tabs__item) { font-size: 14px; font-weight: 500; }
+  }
 }
 
-.year-filter-label {
-  font-size: 13px;
-  color: #606266;
-  white-space: nowrap;
-  flex-shrink: 0;
+.comp-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.comp-badge {
+  :deep(.el-badge__content) {
+    position: static;
+    transform: none;
+    margin-left: 2px;
+  }
 }
 
 /* 阶段 Tab 栏 */

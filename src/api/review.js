@@ -205,10 +205,11 @@ export function deleteReviewer(id) {
 /**
  * 获取我的任务统计（待提交、已评分、已规避）
  */
-export function getMyTaskStats() {
+export function getMyTaskStats(params = {}) {
   return request({
     url: '/reviews/my-tasks/stats',
-    method: 'get'
+    method: 'get',
+    params
   })
 }
 
@@ -275,8 +276,8 @@ export function cancelRecuse(taskId) {
 // ─────────────────────────────────────────────────────────────────
 
 /** 评委获取我的决赛任务列表 */
-export function getFinalMyTasks() {
-  return request({ url: '/reviews/final/my-tasks', method: 'get' })
+export function getFinalMyTasks(params = {}) {
+  return request({ url: '/reviews/final/my-tasks', method: 'get', params })
 }
 
 /** 保存决赛评分草稿 */
