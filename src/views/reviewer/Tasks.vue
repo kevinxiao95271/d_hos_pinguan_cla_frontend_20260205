@@ -52,7 +52,17 @@
     <!-- 阶段 Tab + 刷新 -->
     <div class="stage-tab-bar">
       <el-tabs v-model="activeStageTab" class="stage-tabs">
-        <el-tab-pane name="FINAL">
+        <el-tab-pane v-if="hasBookTasks" name="BOOK">
+          <template #label>
+            <span>书审评审 <el-badge :value="stageTabCount('BOOK')" :hidden="stageTabCount('BOOK') === 0" type="warning" /></span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane v-if="hasInterviewTasks" name="INTERVIEW">
+          <template #label>
+            <span>面谈评审 <el-badge :value="stageTabCount('INTERVIEW')" :hidden="stageTabCount('INTERVIEW') === 0" type="warning" /></span>
+          </template>
+        </el-tab-pane>
+        <el-tab-pane v-if="hasFinalTasks" name="FINAL">
           <template #label>
             <span>决赛评审 <el-badge :value="stageTabCount('FINAL')" :hidden="stageTabCount('FINAL') === 0" type="primary" /></span>
           </template>
@@ -281,8 +291,23 @@ const recuseRules = {
 // ── 阶段 Tab ─────────────────────────────────────────────────────
 const activeStageTab = ref('FINAL')
 
-// 是否存在决赛任务（动态显示 FINAL tab）
-const hasFinalTasks = computed(() => tasks.value.some(t => t.stage === 'FINAL'))
+const hasBookTasks      = computed(() => tasks.value.some(t => t.stage === 'BOOK'))
+const hasInterviewTasks = computed(() => tasks.value.some(t => t.stage === 'INTERVIEW'))
+const hasFinalTasks     = computed(() => tasks.value.some(t => t.stage === 'FINAL'))
+
+// 数据加载完成后，自动切换到有待处理任务的 Tab（BOOK > INTERVIEW > FINAL）
+const autoSelectTab = () => {
+  const order = ['BOOK', 'INTERVIEW', 'FINAL']
+  const firstWithPending = order.find(s =>
+    tasks.value.some(t => t.stage === s && ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status))
+  )
+  if (firstWithPending) {
+    activeStageTab.value = firstWithPending
+  } else {
+    const firstWithTasks = order.find(s => tasks.value.some(t => t.stage === s))
+    if (firstWithTasks) activeStageTab.value = firstWithTasks
+  }
+}
 
 // 当前 tab 对应的待处理任务数（用于 badge 提示）
 const stageTabCount = (stage) =>
@@ -543,6 +568,7 @@ const loadData = async () => {
         }))
       }
       tasks.value = [...nonFinal, ...finalTasks]
+      autoSelectTab()
     } else if (tasksRes.status === 'fulfilled') {
       ElMessage.error(tasksRes.value.message || '加载失败')
     }
@@ -739,10 +765,7 @@ const handleSubmitScore = async (task) => {
 const isMobile = ref(window.innerWidth <= 768)
 const onResize = () => { isMobile.value = window.innerWidth <= 768 }
 
-// 始终固定在决赛 Tab
-watch(isMobile, () => {
-  activeStageTab.value = 'FINAL'
-}, { immediate: true })
+// 移动端不再固定 Tab，保持当前选中
 
 onMounted(() => {
   window.addEventListener('resize', onResize)
