@@ -173,7 +173,12 @@
         </el-form-item>
       </el-form>
 
+      <div class="dual-scroll-wrapper">
+        <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
+          <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
+        </div>
       <el-table
+        ref="tableRef"
         v-loading="loading"
         :data="rows"
         border
@@ -234,6 +239,7 @@
           </template>
         </el-table-column>
       </el-table>
+      </div>
 
       <el-empty v-if="!loading && rows.length === 0" description="暂无反馈数据" />
     </el-card>
@@ -358,7 +364,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, onBeforeUnmount, reactive, ref, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import {
@@ -746,9 +752,57 @@ const handleExport = async () => {
   }
 }
 
+// 双向滚动轨同步
+const tableRef = ref(null)
+const topScrollRef = ref(null)
+const topScrollInnerRef = ref(null)
+let tableBodyEl = null
+let isSyncingTop = false
+let isSyncingTable = false
+let scrollResizeObserver = null
+
+const getTableBodyEl = () => tableRef.value?.$el?.querySelector('.el-scrollbar__wrap')
+
+const onTopScroll = () => {
+  if (isSyncingTable) return
+  isSyncingTop = true
+  const el = getTableBodyEl()
+  if (el) el.scrollLeft = topScrollRef.value.scrollLeft
+  isSyncingTop = false
+}
+
+const onTableBodyScroll = () => {
+  if (isSyncingTop) return
+  isSyncingTable = true
+  if (topScrollRef.value) topScrollRef.value.scrollLeft = tableBodyEl.scrollLeft
+  isSyncingTable = false
+}
+
+const updateTopScrollWidth = () => {
+  const el = getTableBodyEl()
+  if (el && topScrollInnerRef.value) {
+    topScrollInnerRef.value.style.width = el.scrollWidth + 'px'
+  }
+}
+
+const initDualScroll = () => {
+  tableBodyEl = getTableBodyEl()
+  if (!tableBodyEl) return
+  tableBodyEl.addEventListener('scroll', onTableBodyScroll)
+  updateTopScrollWidth()
+  scrollResizeObserver = new ResizeObserver(updateTopScrollWidth)
+  scrollResizeObserver.observe(tableBodyEl)
+}
+
+onBeforeUnmount(() => {
+  if (tableBodyEl) tableBodyEl.removeEventListener('scroll', onTableBodyScroll)
+  if (scrollResizeObserver) scrollResizeObserver.disconnect()
+})
+
 onMounted(() => {
   loadFilterOptions()
   loadData()
+  nextTick(() => { initDualScroll() })
 })
 </script>
 
@@ -879,4 +933,33 @@ onMounted(() => {
     white-space: nowrap;
   }
 }
+
+.dual-scroll-wrapper {
+  position: relative;
+  :deep(.el-scrollbar__bar.is-vertical),
+  :deep(.el-scrollbar__bar.is-vertical:hover) {
+    width: 10px !important;
+    opacity: 1 !important;
+    right: 0;
+  }
+  :deep(.el-scrollbar__bar.is-vertical .el-scrollbar__thumb) {
+    background: #6b7280;
+    border-radius: 5px;
+    opacity: 1 !important;
+    &:hover { background: #374151; }
+  }
+}
+
+.dual-scroll-track {
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  &::-webkit-scrollbar { height: 8px; }
+  &::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 4px; }
+  &::-webkit-scrollbar-thumb { background: #c0c4cc; border-radius: 4px;
+    &:hover { background: #909399; }
+  }
+}
+.dual-scroll-top { margin-bottom: 2px; }
+.dual-scroll-inner { height: 1px; min-width: 100%; }
 </style>
