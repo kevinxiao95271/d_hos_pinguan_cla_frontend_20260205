@@ -114,7 +114,8 @@ const loadData = async () => {
     ])
     
     if (competitionsRes.success) {
-      competitions.value = competitionsRes.data || []
+      // 参赛者只看已激活赛事
+      competitions.value = (competitionsRes.data || []).filter(c => c.status === 'ACTIVE')
     }
     
     if (myRegsRes.success) {

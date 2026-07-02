@@ -221,10 +221,6 @@
               <el-button type="primary" :loading="submitting" style="margin-left:10px" @click="submitScore">提交评分</el-button>
               <el-button v-if="canRecuse" type="warning" plain style="margin-left:10px" @click="openRecuseDialog">申请规避</el-button>
             </el-form-item>
-            <div class="back-btn-wrap" style="margin-bottom:24px">
-              <el-button @click="goBack">返回任务列表</el-button>
-            </div>
-
             <!-- 评分标准参考 -->
             <el-divider content-position="left" style="margin-top:8px">评分标准（供参考）</el-divider>
             <div style="margin-bottom:12px">
@@ -340,8 +336,8 @@
           </el-form-item>
         </el-form>
 
-        <!-- 返回按钮移到表单外，避免被表单的 disabled 影响 -->
-        <div v-if="!isInterviewStage" class="back-btn-wrap">
+        <!-- 返回按钮在表单外，不受 disabled 影响 -->
+        <div class="back-btn-wrap">
           <el-button @click="goBack">返回任务列表</el-button>
         </div>
         </div>
