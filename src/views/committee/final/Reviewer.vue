@@ -1,7 +1,7 @@
 <template>
   <div class="reviewer-assignment-page">
     <!-- 阶段进度 -->
-    <StageProgress :stages="stagesList" current-stage="FINAL" simple />
+    <StageProgress simple />
 
     <div class="page-header">
       <h2>决赛评委分配</h2>
@@ -312,12 +312,8 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MagicStick, User, Refresh, List } from '@element-plus/icons-vue'
 import { filterRegistrations, getReviewers, createReviewTask, autoAssignReviewers, getAdminReviewTasks } from '@/api/admin'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
-
-const { stagesList } = useCompetitionStages()
 
 const competitionId = ref(getCurrentCompetitionIdSync())
 

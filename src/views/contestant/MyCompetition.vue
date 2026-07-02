@@ -9,12 +9,7 @@
       </template>
       
       <!-- 阶段进度 -->
-      <stage-progress
-        :current-stage="competition.stage"
-        :stages="stagesList"
-      />
-      
-      <!-- 左侧导航 -->
+<!-- 左侧导航 -->
       <el-container class="content-container">
         <el-aside width="200px" class="sidebar">
           <el-menu :default-active="activeTab" @select="handleTabChange">
@@ -275,7 +270,6 @@ import { getRegistration, getRegistrationReviewDetails, getPublishedFeedback } f
 import { getCompetition } from '@/api/competition'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import { downloadMaterial } from '@/api/material'
-import StageProgress from '@/components/StageProgress.vue'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import { displayProjectCode } from '@/utils/registrationDisplay'
 import dayjs from 'dayjs'

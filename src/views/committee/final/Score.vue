@@ -1,6 +1,6 @@
 <template>
   <div class="score-page">
-    <StageProgress :stages="stagesList" current-stage="FINAL" simple />
+    <StageProgress simple />
 
     <el-card v-loading="loading">
       <template #header>
@@ -155,12 +155,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import { getFinalScores, getFinalSessions } from '@/api/admin'
 
-const { stagesList } = useCompetitionStages()
 const competitionId = ref(getCurrentCompetitionIdSync())
 
 const sessions = ref([])

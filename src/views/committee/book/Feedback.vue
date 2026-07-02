@@ -1,8 +1,6 @@
 <template>
   <div class="feedback-page">
-    <stage-progress current-stage="BOOK" :stages="stagesList" />
-
-    <el-card class="feedback-card">
+<el-card class="feedback-card">
       <template #header>
         <div class="card-header">
           <span>专家意见反馈</span>
@@ -362,8 +360,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId } from '@/utils/competition'
 import {
   getProjectFeedback,
@@ -375,8 +371,6 @@ import {
   exportFeedbackExcel
 } from '@/api/admin'
 import dayjs from 'dayjs'
-
-const { stagesList } = useCompetitionStages()
 
 const loading = ref(false)
 const saving = ref(false)

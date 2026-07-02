@@ -1,6 +1,6 @@
 <template>
   <div class="group-page">
-    <StageProgress :stages="stagesList" current-stage="FINAL" simple />
+    <StageProgress simple />
 
     <el-card v-loading="loading">
       <template #header>
@@ -137,12 +137,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import { getFinalSessionSchedule, assignFinalReviewer, getReviewers } from '@/api/admin'
 
-const { stagesList } = useCompetitionStages()
 const competitionId = ref(getCurrentCompetitionIdSync())
 
 // ── 场次数据 ────────────────────────────────────────────────

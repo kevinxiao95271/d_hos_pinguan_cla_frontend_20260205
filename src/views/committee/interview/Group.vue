@@ -1,8 +1,6 @@
 <template>
   <div class="interview-group-page">
-    <stage-progress current-stage="INTERVIEW" :stages="stagesList" />
-    
-    <el-card>
+<el-card>
       <template #header>
         <div class="card-header">
           <span>面谈分组（仅进阶组）</span>
@@ -403,8 +401,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
@@ -414,8 +410,6 @@ import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import { useCompetitionGroupPrefixes } from '@/composables/useCompetitionGroupPrefixes'
 import dayjs from 'dayjs'
-
-const { stagesList } = useCompetitionStages()
 
 // 分页
 const {

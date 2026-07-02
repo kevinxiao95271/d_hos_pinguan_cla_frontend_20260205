@@ -1,7 +1,7 @@
 <template>
   <div class="shortlist-management">
     <!-- 赛事进度条 -->
-    <StageProgress :current-stage="currentStageKey" :stages="stagesList" />
+    <StageProgress />
 
     <!-- 书审/面谈重叠时：切换入围操作场景（快照维度） -->
     <el-card class="shortlist-context-card" shadow="hover">
@@ -1015,8 +1015,6 @@
 import { ref, computed, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, QuestionFilled } from '@element-plus/icons-vue'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import {
   getRankings,
   getAdminShortlist,
@@ -1037,8 +1035,6 @@ import { getReviewScore } from '@/api/review'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 
 const competitionId = ref(getCurrentCompetitionIdSync())
-const { stagesList, currentStageKey } = useCompetitionStages()
-
 /** 规则说明折叠，默认收起 */
 const ruleCollapseActive = ref([])
 

@@ -1,6 +1,6 @@
 <template>
   <div class="ranking-page">
-    <StageProgress :stages="stagesList" current-stage="FINAL" simple />
+    <StageProgress simple />
 
     <el-card v-loading="loading">
       <template #header>
@@ -149,9 +149,7 @@
 import { ref, computed, onMounted } from 'vue'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import StageProgress from '@/components/StageProgress.vue'
 import CertificateDialog from '@/components/CertificateDialog.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getCurrentCompetitionId, getCurrentCompetitionIdSync } from '@/utils/competition'
 import { computeFinalRanking, computeTotalFinalRanking, exportFinalRanking, getFinalRanking } from '@/api/admin'
 import { getCurrentCompetition } from '@/api/competition'
@@ -162,7 +160,6 @@ const scoreFormTagType = (form) => form === 'QCC' ? 'primary' : form === 'QFD' ?
 const scoreFormText = (form) => form === 'NON_QCC' ? '非QCC' : (form || '-')
 
 // ── 状态 ─────────────────────────────────────────────────
-const { stagesList } = useCompetitionStages()
 const competitionId = ref(getCurrentCompetitionIdSync())
 const allRanking = ref([])
 const loading = ref(false)

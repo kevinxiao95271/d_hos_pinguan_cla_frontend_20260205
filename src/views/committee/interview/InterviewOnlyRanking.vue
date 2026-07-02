@@ -1,6 +1,6 @@
 <template>
   <div class="interview-only-ranking">
-    <StageProgress :current-stage="currentStageKey" :stages="stagesList" />
+    <StageProgress />
 
     <!-- 操作区 -->
     <el-card class="action-card" shadow="hover">
@@ -212,8 +212,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { QuestionFilled } from '@element-plus/icons-vue'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { getRankings } from '@/api/shortlist'
 import { useComputeRanking } from '@/composables/useComputeRanking'
 import { getCurrentCompetitionIdSync } from '@/utils/competition'
@@ -221,8 +219,6 @@ import { exportReviewScores } from '@/api/admin'
 import dayjs from 'dayjs'
 
 const competitionId = ref(getCurrentCompetitionIdSync())
-const { stagesList, currentStageKey } = useCompetitionStages()
-
 const loading = ref(false)
 const exporting = ref(false)
 

@@ -1,12 +1,7 @@
 <template>
   <div class="registration-page">
     <!-- 跑马灯 -->
-    <stage-progress
-      current-stage="BOOK"
-      :stages="stagesList"
-    />
-    
-    <el-card>
+<el-card>
       <template #header>
         <div class="card-header">
           <span>项目分组</span>
@@ -496,8 +491,6 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import StageProgress from '@/components/StageProgress.vue'
-import { useCompetitionStages } from '@/composables/useCompetitionStages'
 import { usePagination } from '@/composables/usePagination'
 import { filterRegistrations, batchClassifyRegistrations, autoGroupRegistrations } from '@/api/admin'
 import { getRegistration } from '@/api/registration'
@@ -535,8 +528,6 @@ const dictionaries = reactive({
 })
 
 // 使用 composable 获取跑马灯数据
-const { stagesList } = useCompetitionStages()
-
 const filters = reactive({
   competitionId: getCurrentCompetitionIdSync(),
   institutionName: '',
