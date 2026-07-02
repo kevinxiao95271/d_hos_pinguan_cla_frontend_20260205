@@ -945,10 +945,46 @@ onUnmounted(() => {
 
 /* 赛事 Tab 栏 */
 .comp-tab-bar {
-  margin-bottom: 4px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #e8f4ff 0%, #f0f7ff 100%);
+  border: 1px solid #c6dff7;
+  border-radius: 10px;
+
   .comp-tabs {
-    :deep(.el-tabs__header) { margin-bottom: 0; }
-    :deep(.el-tabs__item) { font-size: 14px; font-weight: 500; }
+    :deep(.el-tabs__header) {
+      margin-bottom: 0;
+      border-bottom: none;
+    }
+    :deep(.el-tabs__nav) {
+      border: none;
+    }
+    :deep(.el-tabs__item) {
+      font-size: 15px;
+      font-weight: 600;
+      color: #5a7a9e;
+      background: #fff;
+      border: 1.5px solid #c6dff7;
+      border-radius: 8px;
+      margin-right: 8px;
+      padding: 0 18px;
+      height: 38px;
+      line-height: 38px;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #409eff;
+        border-color: #409eff;
+        background: #ecf5ff;
+      }
+
+      &.is-active {
+        color: #fff;
+        background: #409eff;
+        border-color: #409eff;
+        box-shadow: 0 3px 10px rgba(64, 158, 255, 0.35);
+      }
+    }
   }
 }
 
