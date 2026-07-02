@@ -272,6 +272,7 @@ import {
   uploadRegistrationMaterial,
   getRegistrationCountByInstitution
 } from '@/api/registration'
+import { getCompetitions } from '@/api/competition'
 import { downloadMaterial } from '@/api/material'
 import FilePreviewDialog from '@/components/FilePreviewDialog.vue'
 import { displayProjectCode, contestantRegistrationPath } from '@/utils/registrationDisplay'
@@ -295,22 +296,8 @@ const isViewingCurrentCompetition = computed(() => {
   return Number(selectedCompetitionId.value) === Number(defaultCompetitionId.value)
 })
 
-/** 下拉选项：有数据的历届 + 当前届（尚无报名时也要能选） */
-const competitionOptions = computed(() => {
-  const list = [...myCompetitions.value]
-  const curId = defaultCompetitionId.value
-  if (curId && !list.some(c => Number(c.competitionId) === Number(curId))) {
-    list.unshift({
-      competitionId: curId,
-      competitionName: '当前赛事',
-      year: new Date().getFullYear(),
-      registrationCount: 0,
-      draftCount: 0,
-      current: true
-    })
-  }
-  return list
-})
+/** 下拉选项：所有 ACTIVE 赛事 + 历史报名赛事，去重合并，最新在前 */
+const competitionOptions = computed(() => myCompetitions.value)
 
 const selectedCompetitionMeta = computed(() =>
   competitionOptions.value.find(c => Number(c.competitionId) === Number(selectedCompetitionId.value))
@@ -329,21 +316,64 @@ const selectedCompetitionSummary = computed(() => {
 })
 
 const formatCompetitionOption = (item) => {
-  const year = item.year ? `${item.year}年 ` : ''
-  const counts = `正式${item.registrationCount ?? 0}/草稿${item.draftCount ?? 0}`
-  const cur = item.current ? ' · 当前' : ''
-  return `${year}${item.competitionName || '赛事'}（${counts}）${cur}`
+  const name = item.competitionName || '赛事'
+  const counts = item.registrationCount != null
+    ? `正式${item.registrationCount}/草稿${item.draftCount ?? 0}`
+    : '暂无报名'
+  const tags = []
+  if (item.active) tags.push('报名中')
+  if (item.current) tags.push('当前届')
+  const tagStr = tags.length ? ` · ${tags.join('·')}` : ''
+  return `${name}（${counts}）${tagStr}`
 }
 
 const loadMyCompetitions = async () => {
   competitionsLoading.value = true
   try {
-    const res = await getMyCompetitions()
-    if (res.success) {
-      myCompetitions.value = res.data || []
-    }
+    // 并行拉取：① 所有 ACTIVE 赛事  ② 我参与过报名的历届赛事
+    const [activeRes, mineRes] = await Promise.allSettled([
+      getCompetitions(),
+      getMyCompetitions()
+    ])
+
+    // 我已报名的历届（含报名统计）
+    const mine = (mineRes.status === 'fulfilled' && mineRes.value.success)
+      ? (mineRes.value.data || [])
+      : []
+
+    // 所有 ACTIVE 赛事（以 id 为 key 建索引）
+    const activeList = (activeRes.status === 'fulfilled' && activeRes.value.success)
+      ? (activeRes.value.data || []).filter(c => c.status === 'ACTIVE')
+      : []
+    const activeIds = new Set(activeList.map(c => String(c.id)))
+
+    // 给已报名赛事标记 active 字段
+    const mineIds = new Set(mine.map(c => String(c.competitionId)))
+    const mineEnriched = mine.map(c => ({
+      ...c,
+      active: activeIds.has(String(c.competitionId)),
+      current: String(c.competitionId) === String(defaultCompetitionId.value)
+    }))
+
+    // ACTIVE 但用户还没报过名的赛事 → 补充进来
+    const extraActive = activeList
+      .filter(c => !mineIds.has(String(c.id)))
+      .map(c => ({
+        competitionId: c.id,
+        competitionName: c.name,
+        year: c.createdAt ? new Date(c.createdAt).getFullYear() : null,
+        registrationCount: 0,
+        draftCount: 0,
+        active: true,
+        current: String(c.id) === String(defaultCompetitionId.value)
+      }))
+
+    // 合并，按 competitionId 降序（新赛事在前）
+    myCompetitions.value = [...mineEnriched, ...extraActive]
+      .sort((a, b) => Number(b.competitionId) - Number(a.competitionId))
+
   } catch (error) {
-    console.warn('加载历届赛事失败:', error)
+    console.warn('加载赛事列表失败:', error)
   } finally {
     competitionsLoading.value = false
   }
@@ -371,10 +401,13 @@ const loadRegistrations = async () => {
 const loadData = async () => {
   await loadMyCompetitions()
   if (!selectedCompetitionId.value) {
+    // 优先：userStore 当前届 → 列表里 current 标记 → 第一条 ACTIVE → 第一条
     const currentInList = myCompetitions.value.find(c => c.current)
+    const firstActive   = myCompetitions.value.find(c => c.active)
     selectedCompetitionId.value =
       defaultCompetitionId.value ??
       currentInList?.competitionId ??
+      firstActive?.competitionId ??
       myCompetitions.value[0]?.competitionId ??
       null
   }
