@@ -36,9 +36,6 @@
         </template>
         
         <el-space wrap>
-          <el-button type="primary" @click="createCompetition">
-            创建赛事
-          </el-button>
           <el-button type="success" @click="goToCompetitions">
             赛事管理
           </el-button>

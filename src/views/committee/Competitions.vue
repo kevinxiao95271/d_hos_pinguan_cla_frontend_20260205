@@ -4,9 +4,6 @@
       <template #header>
         <div class="card-header">
           <span>赛事管理</span>
-          <el-button type="primary" @click="createCompetition">
-            创建赛事
-          </el-button>
         </div>
       </template>
 
