@@ -19,12 +19,6 @@
                 :value="item.competitionId"
               />
             </el-select>
-            <el-button
-              v-if="!isViewingCurrentCompetition"
-              @click="backToCurrentCompetition"
-            >
-              回到当年
-            </el-button>
             <el-button type="primary" @click="goToCreate">
               新建报名
             </el-button>
