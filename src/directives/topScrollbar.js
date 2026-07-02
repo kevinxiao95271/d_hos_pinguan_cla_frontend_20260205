@@ -11,6 +11,10 @@ export const vTopScrollbar = {
     const wrapper = getWrapper()
     if (!wrapper) return
 
+    // 隐藏 header-wrapper 自身的原生滚动条（它和 body 同步靠 JS，不需要自己的滚动轨道）
+    const headerWrapper = el.querySelector('.el-table__header-wrapper')
+    if (headerWrapper) headerWrapper.style.overflow = 'hidden'
+
     // 顶部滚动条容器
     const bar = document.createElement('div')
     bar.className = 'v-top-scrollbar'
