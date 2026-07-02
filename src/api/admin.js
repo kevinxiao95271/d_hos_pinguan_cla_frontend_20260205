@@ -330,13 +330,13 @@ export function setReviewerEnabled(id, enabled) {
 
 /**
  * 批量禁用指定角色全部账号
- * POST /api/admin/reviewers/batch-disable?role=REVIEWER|STAFF
+ * POST /api/admin/reviewers/batch-disable  body: [id1, id2, ...]
  */
-export function batchDisableReviewers(role) {
+export function batchDisableReviewers(ids) {
   return request({
     url: '/admin/reviewers/batch-disable',
     method: 'post',
-    params: { role }
+    data: ids
   })
 }
 

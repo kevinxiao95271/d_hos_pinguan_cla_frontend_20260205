@@ -44,17 +44,21 @@
           <el-button type="warning" plain :loading="downloadingIdCards" @click="downloadIdCards">
             下载身份证照片
           </el-button>
-          <el-button type="danger" plain :loading="batchDisabling" @click="handleBatchDisable('REVIEWER')">
-            批量禁用评审专家
-          </el-button>
-          <el-button type="danger" plain :loading="batchDisabling" @click="handleBatchDisable('STAFF')">
-            批量禁用工作人员
+          <el-button
+            type="danger"
+            plain
+            :loading="batchDisabling"
+            :disabled="selectedReviewers.length === 0"
+            @click="handleBatchDisable"
+          >
+            批量禁用已选（{{ selectedReviewers.length }}）
           </el-button>
         </el-form-item>
       </el-form>
 
       <!-- 评委列表 -->
-      <el-table :data="reviewers" border stripe v-loading="loading">
+      <el-table :data="reviewers" border stripe v-loading="loading" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="46" align="center" />
         <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="phone" label="手机号" width="130" align="center" />
         <el-table-column prop="name" label="姓名" width="120" align="center" />
@@ -539,19 +543,25 @@ const handleToggleEnabled = async (row) => {
   }
 }
 
+const selectedReviewers = ref([])
+const handleSelectionChange = (val) => { selectedReviewers.value = val }
+
 const batchDisabling = ref(false)
-const handleBatchDisable = async (role) => {
-  const roleLabel = role === 'REVIEWER' ? '全部评审专家' : '全部工作人员'
+const handleBatchDisable = async () => {
+  const ids = selectedReviewers.value.map(r => r.id)
+  if (!ids.length) return
+  const names = selectedReviewers.value.map(r => r.name || r.phone).join('、')
   try {
     await ElMessageBox.confirm(
-      `确定要禁用 ${roleLabel} 账号吗？禁用后可通过单个账号操作恢复。`,
-      '批量禁用',
-      { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+      `确定要禁用以下 ${ids.length} 个账号？\n${names}\n\n禁用后可通过单个账号操作恢复。`,
+      '批量禁用已选账号',
+      { confirmButtonText: '确定禁用', cancelButtonText: '取消', type: 'warning' }
     )
     batchDisabling.value = true
-    const res = await batchDisableReviewers(role)
+    const res = await batchDisableReviewers(ids)
     if (res.success) {
-      ElMessage.success(`已禁用 ${res.data ?? 0} 个账号`)
+      ElMessage.success(`已禁用 ${res.data ?? ids.length} 个账号`)
+      selectedReviewers.value = []
       loadData()
     } else {
       ElMessage.error(res.message || '批量禁用失败')
