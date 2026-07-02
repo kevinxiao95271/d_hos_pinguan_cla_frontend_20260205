@@ -1,37 +1,37 @@
 /**
  * v-top-scrollbar 指令
- * 在 el-table 上方插入同步横向滚动条；仅当表格有横向溢出时才显示。
+ * 在 el-table 上方插入一个同步横向滚动条，无需滚动到底部即可左右滑动。
  */
 export const vTopScrollbar = {
   mounted(el) {
-    const getWrapper = () =>
-      el.querySelector('.el-table__body-wrapper') ||
-      el.querySelector('.el-scrollbar__wrap')
+    // el-table 的横向滚动容器
+    const getWrapper = () => el.querySelector('.el-table__body-wrapper') ||
+                             el.querySelector('.el-scrollbar__wrap')
 
     const wrapper = getWrapper()
     if (!wrapper) return
 
-    // 顶部滚动条容器（初始隐藏）
+    // 顶部滚动条容器
     const bar = document.createElement('div')
     bar.className = 'v-top-scrollbar'
     bar.style.cssText =
-      'overflow-x:auto;overflow-y:hidden;height:8px;margin-bottom:2px;display:none;'
+      'overflow-x:auto;overflow-y:hidden;height:8px;margin-bottom:2px;'
 
+    // 撑开宽度用的内部空元素
     const inner = document.createElement('div')
     inner.style.cssText = 'height:1px;'
     bar.appendChild(inner)
 
+    // 插到 el-table 上方
     el.parentNode.insertBefore(bar, el)
 
-    // 同步宽度，并决定是否显示
+    // 同步宽度（取表格实际内容宽度）
     const syncWidth = () => {
       const tableEl = el.querySelector('.el-table__body table') ||
                       el.querySelector('table')
-      const scrollW = tableEl ? tableEl.scrollWidth : wrapper.scrollWidth
-      const clientW = wrapper.clientWidth
-      inner.style.width = scrollW + 'px'
-      // 只在有溢出时显示
-      bar.style.display = scrollW > clientW + 2 ? 'block' : 'none'
+      inner.style.width = tableEl
+        ? tableEl.scrollWidth + 'px'
+        : wrapper.scrollWidth + 'px'
     }
 
     // 双向同步滚动
@@ -49,6 +49,7 @@ export const vTopScrollbar = {
       requestAnimationFrame(() => { syncing = false })
     })
 
+    // 监听表格尺寸变化，更新滚动条宽度
     const ro = new ResizeObserver(syncWidth)
     ro.observe(el)
     syncWidth()
