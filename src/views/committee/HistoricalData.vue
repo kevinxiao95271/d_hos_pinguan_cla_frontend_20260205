@@ -51,7 +51,7 @@
       </el-form>
 
       <!-- 数据表格 -->
-      <el-table 
+      <el-table v-top-scrollbar 
         :data="tableData" 
         border 
         v-loading="loading"

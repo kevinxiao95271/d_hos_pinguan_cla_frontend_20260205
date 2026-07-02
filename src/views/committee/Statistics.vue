@@ -56,7 +56,7 @@
             <template #header>
               <span style="font-weight: 600">组别统计</span>
             </template>
-            <el-table :data="stats.groupTypeStats" border stripe>
+            <el-table v-top-scrollbar :data="stats.groupTypeStats" border stripe>
               <el-table-column prop="groupTypeName" label="组别" width="120" align="center" />
               <el-table-column prop="institutionCount" label="机构数" width="120" align="center">
                 <template #default="{ row }">

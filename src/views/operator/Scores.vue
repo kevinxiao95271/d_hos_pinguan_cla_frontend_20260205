@@ -64,7 +64,7 @@
           <span class="session-name">{{ session }}</span>
           <el-tag type="info" size="small">{{ groupedScores[session]?.length }} 条</el-tag>
         </div>
-        <el-table :data="groupedScores[session]" border stripe size="small">
+        <el-table v-top-scrollbar :data="groupedScores[session]" border stripe size="small">
           <el-table-column prop="sessionOrder" label="顺序" width="55" align="center" />
           <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />
           <el-table-column prop="institutionName" label="参赛机构" width="150" show-overflow-tooltip />

@@ -155,7 +155,7 @@
             </el-card>
             
             <el-divider content-position="left">项目参与人员</el-divider>
-            <el-table :data="participants" border>
+            <el-table v-top-scrollbar :data="participants" border>
               <el-table-column prop="name" label="姓名" />
               <el-table-column prop="role" label="角色">
                 <template #default="{ row }">
@@ -167,14 +167,14 @@
             </el-table>
             
             <el-divider content-position="left">辅导员</el-divider>
-            <el-table :data="mentors" border>
+            <el-table v-top-scrollbar :data="mentors" border>
               <el-table-column prop="name" label="姓名" />
               <el-table-column prop="title" label="职称" />
             </el-table>
             
             <div v-if="registration.materials && registration.materials.length > 0" style="margin-top: 20px">
               <el-divider content-position="left">材料文件</el-divider>
-              <el-table :data="registration.materials" border>
+              <el-table v-top-scrollbar :data="registration.materials" border>
                 <el-table-column prop="fileName" label="文件名" min-width="200" />
                 <el-table-column prop="type" label="类型" width="180">
                   <template #default="{ row }">

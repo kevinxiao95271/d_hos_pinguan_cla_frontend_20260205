@@ -142,7 +142,7 @@
       </div>
       
       <div class="table-container" ref="tableContainer" @scroll="syncScroll('table')">
-        <el-table
+        <el-table v-top-scrollbar
           v-loading="loading"
           :data="registrations"
           border
@@ -429,7 +429,7 @@
         </el-card>
 
         <el-divider content-position="left">项目参与人员</el-divider>
-        <el-table 
+        <el-table v-top-scrollbar 
           v-if="currentDetail?.members" 
           :data="currentDetail.members.filter(m => m.role === 'PARTICIPANT')" 
           border
@@ -442,7 +442,7 @@
         <el-empty v-else description="暂无参与人员" :image-size="80" />
 
         <el-divider content-position="left">辅导员</el-divider>
-        <el-table 
+        <el-table v-top-scrollbar 
           v-if="currentDetail?.members" 
           :data="currentDetail.members.filter(m => m.role === 'MENTOR')" 
           border
@@ -457,7 +457,7 @@
         <!-- 材料文件 -->
         <div v-if="currentDetail?.materials && currentDetail.materials.length > 0">
           <el-divider content-position="left">材料文件</el-divider>
-          <el-table :data="currentDetail.materials" border>
+          <el-table v-top-scrollbar :data="currentDetail.materials" border>
             <el-table-column label="类型" width="160">
               <template #default="{ row }">
                 {{ getMaterialTypeLabel(row.type) }}

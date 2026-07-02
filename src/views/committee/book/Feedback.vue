@@ -175,7 +175,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table
+      <el-table v-top-scrollbar
         v-loading="loading"
         :data="rows"
         border
@@ -329,7 +329,7 @@
           ? '所有记录的替换内容已写入数据库'
           : `共 ${batchResultTotal} 条，以下记录保存失败，可点击重试`"
       />
-      <el-table
+      <el-table v-top-scrollbar
         v-if="batchResultFailedItems.length > 0"
         :data="batchResultFailedItems"
         border

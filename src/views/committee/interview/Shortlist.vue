@@ -120,7 +120,7 @@
           </el-form-item>
 
           <el-form-item v-if="bookScopeForm.scope === 'PER_GROUP'" label="分组入围">
-            <el-table
+            <el-table v-top-scrollbar
               v-loading="configLoading"
               :data="configRowsBookPerGroup"
               border
@@ -227,7 +227,7 @@
           </el-form-item>
 
           <el-form-item label="进阶入围">
-            <el-table
+            <el-table v-top-scrollbar
               v-loading="configLoading"
               :data="configRowsInterview"
               border
@@ -483,7 +483,7 @@
         暂无排名数据，请先触发算分计算
       </el-alert>
 
-      <el-table
+      <el-table v-top-scrollbar
         :data="filteredProjects"
         border
         stripe
@@ -754,7 +754,7 @@
           <el-tab-pane label="书审评分" name="BOOK">
             <div v-if="bookDetail && bookDetail.avgTotal !== null">
               <h4 style="margin-bottom: 15px">分项得分</h4>
-              <el-table :data="[bookDetail]" border style="margin-bottom: 30px">
+              <el-table v-top-scrollbar :data="[bookDetail]" border style="margin-bottom: 30px">
                 <el-table-column prop="avgPlan" label="计划" align="center" width="90">
                   <template #default="{ row }">
                     {{ row.avgPlan !== null ? row.avgPlan.toFixed(1) : '-' }}
@@ -894,7 +894,7 @@
                 {{ interviewDetail.scoredCount ?? 0 }} / {{ interviewDetail.taskCount }} 位评委已打分
               </p>
               <h4 style="margin-bottom: 15px">分项得分</h4>
-              <el-table :data="[interviewDetail]" border style="margin-bottom: 30px">
+              <el-table v-top-scrollbar :data="[interviewDetail]" border style="margin-bottom: 30px">
                 <el-table-column label="选题（满分10）" align="center" min-width="200">
                   <template #default="{ row }">
                     {{ formatAvgDim(row.avgTopic) }}

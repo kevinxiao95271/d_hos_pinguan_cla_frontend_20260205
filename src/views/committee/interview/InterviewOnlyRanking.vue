@@ -6,7 +6,7 @@
     <el-card class="action-card" shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="card-title">纯面谈排名</span>
+          <span class="card-title">面谈标化得分</span>
           <el-tag type="info" effect="plain">仅用面谈打分 · 系数调整 · 全组别</el-tag>
         </div>
       </template>
@@ -71,12 +71,12 @@
     <el-card shadow="hover">
       <template #header>
         <div class="card-header">
-          <span class="card-title">纯面谈排名 · 调整分列表</span>
+          <span class="card-title">面谈标化得分 · 调整分列表</span>
           <el-tag type="info">stage = INTERVIEW_ONLY</el-tag>
         </div>
       </template>
 
-      <el-table
+      <el-table v-top-scrollbar
         :data="filteredRows"
         v-loading="loading"
         border

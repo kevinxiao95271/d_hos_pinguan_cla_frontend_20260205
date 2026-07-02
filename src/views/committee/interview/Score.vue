@@ -15,7 +15,7 @@
     <el-card class="score-card">
       <template #header>
         <div class="card-header">
-          <span>面谈标化得分列表</span>
+          <span>面谈专家打分列表</span>
           <div class="filter-inline">
             <el-select v-model="filters.reviewerStatus" clearable placeholder="评审状态" size="small" style="width: 110px" @change="loadData">
               <el-option label="待评分" value="PENDING" />
@@ -38,7 +38,7 @@
         <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
           <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
         </div>
-        <el-table
+        <el-table v-top-scrollbar
           ref="tableRef"
           v-loading="loading"
           :data="scores"
@@ -359,8 +359,8 @@ const exportExcel = () => {
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '面谈标化得分')
-  XLSX.writeFile(wb, `面谈标化得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
+  XLSX.utils.book_append_sheet(wb, ws, '面谈专家打分')
+  XLSX.writeFile(wb, `面谈专家打分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
 }
 
 function formatScore1(v) {

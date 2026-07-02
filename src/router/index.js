@@ -155,7 +155,7 @@ const routes = [
         path: 'book-stage/score',
         name: 'BookStageScore',
         component: () => import('@/views/committee/book/Score.vue'),
-        meta: { title: '书审标化得分', parent: '书审阶段' }
+        meta: { title: '书审专家打分', parent: '书审阶段' }
       },
       {
         path: 'book-stage/feedback',
@@ -180,7 +180,7 @@ const routes = [
         path: 'interview-stage/score',
         name: 'InterviewStageScore',
         component: () => import('@/views/committee/interview/Score.vue'),
-        meta: { title: '面谈标化得分', parent: '面谈阶段' }
+        meta: { title: '面谈专家打分', parent: '面谈阶段' }
       },
       {
         path: 'interview-stage/shortlist',
@@ -192,7 +192,7 @@ const routes = [
         path: 'interview-stage/interview-only-ranking',
         name: 'InterviewOnlyRanking',
         component: () => import('@/views/committee/interview/InterviewOnlyRanking.vue'),
-        meta: { title: '纯面谈排名', parent: '面谈阶段' }
+        meta: { title: '面谈标化得分', parent: '面谈阶段' }
       },
       // 决赛阶段子路由
       {

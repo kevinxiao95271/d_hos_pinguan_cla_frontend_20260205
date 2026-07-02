@@ -17,7 +17,7 @@
         <el-tab-pane label="医疗质量安全" name="quality_topic" />
       </el-tabs>
       
-      <el-table :data="dictionaries" border>
+      <el-table v-top-scrollbar :data="dictionaries" border>
         <el-table-column prop="code" label="编码" />
         <el-table-column prop="label" label="名称" />
         <el-table-column prop="type" label="类型" />

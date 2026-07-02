@@ -15,7 +15,7 @@
         style="margin-bottom: 20px"
       />
       
-      <el-table
+      <el-table v-top-scrollbar
         :data="competitions"
         border
         highlight-current-row

@@ -3,7 +3,7 @@
     <el-card class="score-card">
       <template #header>
         <div class="card-header">
-          <span>书审标化得分列表</span>
+          <span>书审专家打分列表</span>
           <div class="filter-inline">
             <el-select v-model="filters.groupType" clearable placeholder="全部组别" size="small" style="width: 110px" @change="loadData">
               <el-option label="基层组" value="BASIC" />
@@ -31,7 +31,7 @@
         <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
           <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
         </div>
-        <el-table
+        <el-table v-top-scrollbar
           ref="tableRef"
           v-loading="loading"
           :data="scores"
@@ -302,8 +302,8 @@ const exportExcel = () => {
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, '书审标化得分')
-  XLSX.writeFile(wb, `书审标化得分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
+  XLSX.utils.book_append_sheet(wb, ws, '书审专家打分')
+  XLSX.writeFile(wb, `书审专家打分_${dayjs().format('YYYYMMDD_HHmm')}.xlsx`)
 }
 
 onMounted(() => {

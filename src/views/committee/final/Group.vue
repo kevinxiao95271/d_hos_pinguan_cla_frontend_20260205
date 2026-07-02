@@ -86,7 +86,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table
+      <el-table v-top-scrollbar
         :data="filteredReviewers"
         v-loading="loadingReviewers"
         @row-click="selectReviewer"

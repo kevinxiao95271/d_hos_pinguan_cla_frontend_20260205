@@ -166,7 +166,7 @@
         当前赛事暂无报名数据，请检查：1) 是否有参赛者报名 2) 筛选条件是否正确
       </el-alert>
       
-      <el-table
+      <el-table v-top-scrollbar
         v-loading="loading"
         :data="registrations"
         border
@@ -342,7 +342,7 @@
 
         <!-- 成员信息 -->
         <el-divider content-position="left">团队成员</el-divider>
-        <el-table v-if="currentDetail?.members && currentDetail.members.length > 0" :data="currentDetail.members" border>
+        <el-table v-top-scrollbar v-if="currentDetail?.members && currentDetail.members.length > 0" :data="currentDetail.members" border>
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="role" label="角色" width="100">
             <template #default="{ row }">
@@ -357,7 +357,7 @@
         <!-- 材料文件 -->
         <el-divider content-position="left">材料文件</el-divider>
         <div v-if="currentDetail?.materials && currentDetail.materials.length > 0">
-          <el-table :data="currentDetail.materials" border>
+          <el-table v-top-scrollbar :data="currentDetail.materials" border>
             <el-table-column prop="fileName" label="文件名" min-width="200" />
             <el-table-column prop="type" label="类型" width="120">
               <template #default="{ row }">
@@ -449,7 +449,7 @@
       width="600px"
     >
       <el-empty v-if="currentProofList.length === 0" description="暂无缴费凭证" />
-      <el-table v-else :data="currentProofList" border>
+      <el-table v-top-scrollbar v-else :data="currentProofList" border>
         <el-table-column type="index" label="#" width="50" align="center" />
         <el-table-column prop="fileName" label="文件名" min-width="220" show-overflow-tooltip />
         <el-table-column prop="uploadedAt" label="上传时间" width="160" align="center">

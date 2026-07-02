@@ -57,7 +57,7 @@
       </el-form>
 
       <!-- 评委列表 -->
-      <el-table :data="reviewers" border stripe v-loading="loading" @selection-change="handleSelectionChange">
+      <el-table v-top-scrollbar :data="reviewers" border stripe v-loading="loading" @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="46" align="center" />
         <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column prop="phone" label="手机号" width="130" align="center" />
@@ -259,7 +259,7 @@
           <div style="padding: 4px 0">
             <div style="font-weight:600; margin-bottom:12px">机构变更记录</div>
             <!-- 历史记录表格 -->
-            <el-table :data="instHistory" border size="small" v-loading="instHistoryLoading" empty-text="暂无变更记录">
+            <el-table v-top-scrollbar :data="instHistory" border size="small" v-loading="instHistoryLoading" empty-text="暂无变更记录">
               <el-table-column prop="oldInstitutionName" label="原机构" min-width="140" />
               <el-table-column prop="newInstitutionName" label="新机构" min-width="140" />
               <el-table-column prop="reason" label="原因" min-width="100" />
