@@ -330,47 +330,70 @@ const formatCompetitionOption = (item) => {
 const loadMyCompetitions = async () => {
   competitionsLoading.value = true
   try {
-    // 并行拉取：① 所有 ACTIVE 赛事  ② 我参与过报名的历届赛事
+    // ① 拉全量赛事（含 status 字段）
+    // ② 拉我已报名的历届（/registrations/my-competitions 后端路由目前有 bug，降级处理）
     const [activeRes, mineRes] = await Promise.allSettled([
       getCompetitions(),
       getMyCompetitions()
     ])
 
-    // 我已报名的历届（含报名统计）
+    const allComps = (activeRes.status === 'fulfilled' && activeRes.value.success)
+      ? (activeRes.value.data || [])
+      : []
+    const activeList = allComps.filter(c => c.status === 'ACTIVE')
+    const activeIds = new Set(activeList.map(c => String(c.id)))
+
+    // my-competitions 成功时用历史报名统计；400/失败时降级为空
     const mine = (mineRes.status === 'fulfilled' && mineRes.value.success)
       ? (mineRes.value.data || [])
       : []
-
-    // 所有 ACTIVE 赛事（以 id 为 key 建索引）
-    const activeList = (activeRes.status === 'fulfilled' && activeRes.value.success)
-      ? (activeRes.value.data || []).filter(c => c.status === 'ACTIVE')
-      : []
-    const activeIds = new Set(activeList.map(c => String(c.id)))
-
-    // 给已报名赛事标记 active 字段
     const mineIds = new Set(mine.map(c => String(c.competitionId)))
+
+    // 已报名赛事：补充 active 标记
     const mineEnriched = mine.map(c => ({
       ...c,
       active: activeIds.has(String(c.competitionId)),
       current: String(c.competitionId) === String(defaultCompetitionId.value)
     }))
 
-    // ACTIVE 但用户还没报过名的赛事 → 补充进来
+    // ACTIVE 赛事中用户尚未报名的 → 补充进来（暂无报名数据）
     const extraActive = activeList
       .filter(c => !mineIds.has(String(c.id)))
       .map(c => ({
         competitionId: c.id,
         competitionName: c.name,
         year: c.createdAt ? new Date(c.createdAt).getFullYear() : null,
-        registrationCount: 0,
-        draftCount: 0,
+        registrationCount: null,  // 未知，不显示报名数
+        draftCount: null,
         active: true,
         current: String(c.id) === String(defaultCompetitionId.value)
       }))
 
-    // 合并，按 competitionId 降序（新赛事在前）
+    // 合并，新赛事在前
     myCompetitions.value = [...mineEnriched, ...extraActive]
       .sort((a, b) => Number(b.competitionId) - Number(a.competitionId))
+
+    // my-competitions 接口失败时，fallback：用 /registrations 逐个赛事查报名数
+    if (!mine.length && activeList.length) {
+      const countResults = await Promise.allSettled(
+        activeList.map(c => getMyRegistrations({ competitionId: c.id }))
+      )
+      myCompetitions.value = activeList.map((c, i) => {
+        const res = countResults[i]
+        const regs = (res.status === 'fulfilled' && res.value.success) ? (res.value.data || []) : []
+        const submitted = regs.filter(r => r.status !== 'DRAFT').length
+        const drafts = regs.filter(r => r.status === 'DRAFT').length
+        return {
+          competitionId: c.id,
+          competitionName: c.name,
+          year: c.createdAt ? new Date(c.createdAt).getFullYear() : null,
+          registrationCount: submitted,
+          draftCount: drafts,
+          active: true,
+          current: String(c.id) === String(defaultCompetitionId.value)
+        }
+      }).sort((a, b) => Number(b.competitionId) - Number(a.competitionId))
+    }
 
   } catch (error) {
     console.warn('加载赛事列表失败:', error)

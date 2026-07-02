@@ -631,23 +631,31 @@ const loadData = async () => {
         !(t.stage === 'INTERVIEW' && INTERVIEW_HIDDEN.has(t.registrationId))
       ))
 
-      // 合并决赛任务
+      // /reviews/my-tasks 里的 FINAL task.id 已按 competitionId 正确过滤
+      // 用它做 cross-ref，修正 /reviews/final/my-tasks 不支持 competitionId 过滤的问题
+      const allowedFinalIds = new Set(
+        mapped.filter(t => t.stage === 'FINAL').map(t => t.id)
+      )
+
+      // 合并决赛任务（rich data 来自 final endpoint，过滤用 allowedFinalIds）
       let finalTasks = []
       if (finalRes.status === 'fulfilled' && finalRes.value.success) {
-        finalTasks = (finalRes.value.data || []).map(t => ({
-          id: t.taskId,
-          registrationId: t.registrationId,
-          projectName: t.projectName,
-          institutionName: t.institutionName,
-          scoreForm: t.scoreForm,
-          sessionCode: t.sessionCode,
-          sessionOrder: t.sessionOrder,
-          groupCode: t.groupCode,
-          stage: 'FINAL',
-          status: t.status,
-          total: t.draftScore?.total ?? null,
-          draftScore: t.draftScore || null
-        }))
+        finalTasks = (finalRes.value.data || [])
+          .filter(t => allowedFinalIds.size === 0 || allowedFinalIds.has(t.taskId))
+          .map(t => ({
+            id: t.taskId,
+            registrationId: t.registrationId,
+            projectName: t.projectName,
+            institutionName: t.institutionName,
+            scoreForm: t.scoreForm,
+            sessionCode: t.sessionCode,
+            sessionOrder: t.sessionOrder,
+            groupCode: t.groupCode,
+            stage: 'FINAL',
+            status: t.status,
+            total: t.draftScore?.total ?? null,
+            draftScore: t.draftScore || null
+          }))
       }
       tasks.value = [...nonFinal, ...finalTasks]
       autoSelectTab()
