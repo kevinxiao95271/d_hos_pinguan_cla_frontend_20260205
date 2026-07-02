@@ -49,6 +49,18 @@
       </div>
     </transition>
 
+    <!-- 年度筛选（多年度时才显示） -->
+    <div v-if="availableYears.length > 1" class="year-filter-bar">
+      <span class="year-filter-label">年度：</span>
+      <el-radio-group v-model="yearFilter" size="small">
+        <el-radio-button
+          v-for="y in availableYears"
+          :key="y"
+          :value="y"
+        >{{ y === 'all' ? '全部' : y + '年度' }}</el-radio-button>
+      </el-radio-group>
+    </div>
+
     <!-- 阶段 Tab + 刷新 -->
     <div class="stage-tab-bar">
       <el-tabs v-model="activeStageTab" class="stage-tabs">
@@ -288,33 +300,79 @@ const recuseRules = {
   ]
 }
 
+// ── 年度筛选 ──────────────────────────────────────────────────────
+const yearFilter = ref('')
+
+// 从 registrationId 推断年度（20260xxx → '2026'，短ID用 createdAt 年份兜底）
+const getTaskYear = (task) => {
+  const rid = task.registrationId
+  const ridNum = typeof rid === 'number' ? rid : Number(rid)
+  if (!isNaN(ridNum) && ridNum >= 20200000) {
+    return String(Math.floor(ridNum / 10000))
+  }
+  return task.createdAt?.substring(0, 4) || ''
+}
+
+// 可选年度列表（降序）+ 末尾加"全部"
+const availableYears = computed(() => {
+  const years = new Set()
+  tasks.value.forEach(t => {
+    const y = getTaskYear(t)
+    if (y) years.add(y)
+  })
+  const sorted = Array.from(years).sort().reverse()
+  return sorted.length > 1 ? [...sorted, 'all'] : sorted
+})
+
+// 数据加载后自动选最新有待处理任务的年度，否则选最新年度
+const autoSelectYear = () => {
+  const years = availableYears.value.filter(y => y !== 'all')
+  const withPending = years.find(y =>
+    tasks.value.some(t =>
+      getTaskYear(t) === y &&
+      ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status)
+    )
+  )
+  yearFilter.value = withPending || years[0] || ''
+}
+
+// 年度过滤后的任务（阶段 Tab 和各列表都基于此）
+const yearFilteredTasks = computed(() => {
+  if (!yearFilter.value || yearFilter.value === 'all') return tasks.value
+  return tasks.value.filter(t => getTaskYear(t) === yearFilter.value)
+})
+
+// 年度切换时自动重选最优 Tab
+watch(yearFilter, () => autoSelectTab())
+
 // ── 阶段 Tab ─────────────────────────────────────────────────────
 const activeStageTab = ref('FINAL')
 
-const hasBookTasks      = computed(() => tasks.value.some(t => t.stage === 'BOOK'))
-const hasInterviewTasks = computed(() => tasks.value.some(t => t.stage === 'INTERVIEW'))
-const hasFinalTasks     = computed(() => tasks.value.some(t => t.stage === 'FINAL'))
+const hasBookTasks      = computed(() => yearFilteredTasks.value.some(t => t.stage === 'BOOK'))
+const hasInterviewTasks = computed(() => yearFilteredTasks.value.some(t => t.stage === 'INTERVIEW'))
+const hasFinalTasks     = computed(() => yearFilteredTasks.value.some(t => t.stage === 'FINAL'))
 
 // 数据加载完成后，自动切换到有待处理任务的 Tab（BOOK > INTERVIEW > FINAL）
 const autoSelectTab = () => {
   const order = ['BOOK', 'INTERVIEW', 'FINAL']
+  const available = yearFilteredTasks.value
   const firstWithPending = order.find(s =>
-    tasks.value.some(t => t.stage === s && ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status))
+    available.some(t => t.stage === s && ['PENDING', 'CONFIRMED', 'RETURNED', 'DRAFT'].includes(t.status))
   )
   if (firstWithPending) {
     activeStageTab.value = firstWithPending
   } else {
-    const firstWithTasks = order.find(s => tasks.value.some(t => t.stage === s))
+    const firstWithTasks = order.find(s => available.some(t => t.stage === s))
     if (firstWithTasks) activeStageTab.value = firstWithTasks
   }
 }
 
-// 当前 tab 对应的待处理任务数（用于 badge 提示）
+// 当前 tab 对应的待处理任务数（用于 badge 提示，基于年度过滤后的任务）
 const stageTabCount = (stage) =>
-  tasks.value.filter(t => t.stage === stage && ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status)).length
+  yearFilteredTasks.value.filter(t => t.stage === stage && ['DRAFT', 'PENDING', 'CONFIRMED', 'RETURNED'].includes(t.status)).length
 
-// 按当前 Tab 过滤全量任务
-const filteredTasks = computed(() => tasks.value.filter(t => t.stage === activeStageTab.value))
+// 按当前 Tab 过滤（年度已过滤的任务中再按阶段过滤）
+const filteredTasks = computed(() => yearFilteredTasks.value.filter(t => t.stage === activeStageTab.value))
 
 // ── 各状态分区（均基于 filteredTasks，随 Tab 切换）─────────────────
 
@@ -568,6 +626,7 @@ const loadData = async () => {
         }))
       }
       tasks.value = [...nonFinal, ...finalTasks]
+      autoSelectYear()
       autoSelectTab()
     } else if (tasksRes.status === 'fulfilled') {
       ElMessage.error(tasksRes.value.message || '加载失败')
@@ -856,6 +915,25 @@ onUnmounted(() => {
   border-top: 3px solid #909399;
   .stat-value { color: #909399; }
   &::after { background: linear-gradient(90deg, #c8cacc, #909399); }
+}
+
+/* 年度筛选条 */
+.year-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+}
+
+.year-filter-label {
+  font-size: 13px;
+  color: #606266;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 阶段 Tab 栏 */
