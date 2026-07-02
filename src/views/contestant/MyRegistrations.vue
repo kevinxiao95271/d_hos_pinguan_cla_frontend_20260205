@@ -36,7 +36,7 @@
         {{ selectedCompetitionSummary }}
       </el-alert>
       
-      <el-table v-top-scrollbar :data="registrations" v-loading="loading" border>
+      <el-table :data="registrations" v-loading="loading" border>
         <el-table-column label="项目编号" width="100" align="center">
           <template #default="{ row }">
             {{ displayProjectCode(row) }}
@@ -172,7 +172,7 @@
     <el-dialog v-model="proofDialogVisible" :title="`缴费凭证 (${currentProofList.length} 张)`" width="560px">
       <div v-loading="proofLoading">
         <el-empty v-if="!proofLoading && currentProofList.length === 0" description="暂无缴费凭证" />
-        <el-table v-top-scrollbar v-else :data="currentProofList" border>
+        <el-table v-else :data="currentProofList" border>
           <el-table-column type="index" label="#" width="50" align="center" />
           <el-table-column prop="fileName" label="文件名" min-width="200" show-overflow-tooltip />
           <el-table-column prop="uploadedAt" label="上传时间" width="160" align="center">

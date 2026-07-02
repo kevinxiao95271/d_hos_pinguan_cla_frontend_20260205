@@ -33,7 +33,7 @@
         </div>
       </template>
       
-      <el-table v-top-scrollbar :data="recentTasks" border>
+      <el-table :data="recentTasks" border>
         <el-table-column prop="projectName" label="项目名称" />
         <el-table-column prop="institutionName" label="医疗机构" />
         <el-table-column prop="institutionLevel" label="机构等级" width="120">

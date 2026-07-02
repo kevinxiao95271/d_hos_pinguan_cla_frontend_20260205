@@ -97,7 +97,7 @@
 
     <!-- 用户列表 -->
     <el-card shadow="never" class="table-card">
-      <el-table v-top-scrollbar
+      <el-table
         :data="users"
         border
         stripe

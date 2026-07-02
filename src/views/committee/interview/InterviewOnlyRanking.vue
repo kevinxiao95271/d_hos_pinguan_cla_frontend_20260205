@@ -76,7 +76,7 @@
         </div>
       </template>
 
-      <el-table v-top-scrollbar
+      <el-table
         :data="filteredRows"
         v-loading="loading"
         border

@@ -31,7 +31,7 @@
         <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
           <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
         </div>
-        <el-table v-top-scrollbar
+        <el-table
           ref="tableRef"
           v-loading="loading"
           :data="scores"

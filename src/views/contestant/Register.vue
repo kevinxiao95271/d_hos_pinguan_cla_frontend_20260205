@@ -328,7 +328,7 @@
             报名表要求Word文档形式，请单位盖章后另上传PDF扫描件一份。
           </template>
         </el-alert>
-        <el-table v-top-scrollbar :data="materialsList" border>
+        <el-table :data="materialsList" border>
           <el-table-column prop="type" label="类型" width="200">
             <template #default="{ row }">
               {{ getMaterialTypeText(row.type) }}

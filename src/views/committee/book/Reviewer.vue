@@ -53,7 +53,7 @@
         </el-form>
 
         <!-- 报名表格 -->
-        <el-table v-top-scrollbar
+        <el-table
           :data="registrations"
           v-loading="loadingRegistrations"
           height="600"
@@ -138,7 +138,7 @@
         />
 
         <!-- 评委表格 -->
-        <el-table v-top-scrollbar
+        <el-table
           :data="reviewers"
           v-loading="loadingReviewers"
           @selection-change="handleReviewerSelectionChange"
@@ -272,7 +272,7 @@
           暂无已分配的评审任务
         </el-alert>
 
-        <el-table v-top-scrollbar 
+        <el-table 
           v-else
           :data="filteredAssignedTasks" 
           border 

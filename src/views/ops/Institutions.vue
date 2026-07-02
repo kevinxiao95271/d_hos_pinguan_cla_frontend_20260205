@@ -38,7 +38,7 @@
         </el-form-item>
       </el-form>
 
-      <el-table v-top-scrollbar v-loading="loading" :data="institutions" border>
+      <el-table v-loading="loading" :data="institutions" border>
         <el-table-column prop="name" label="机构名称" />
         <el-table-column prop="code" label="机构编号" />
         <el-table-column prop="level" label="机构等级" width="120">

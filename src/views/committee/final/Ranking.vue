@@ -52,7 +52,7 @@
             class="session-block"
           >
             <div class="session-title">{{ session }}</div>
-            <el-table v-top-scrollbar :data="byDateSession[date]?.[session] || []" border stripe size="small">
+            <el-table :data="byDateSession[date]?.[session] || []" border stripe size="small">
               <el-table-column label="排名" width="56" align="center">
                 <template #default="{ row }">
                   <span :class="['rank-badge', `rank-${row.rank}`]">{{ row.rank }}</span>

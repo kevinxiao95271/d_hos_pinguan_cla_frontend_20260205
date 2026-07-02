@@ -55,7 +55,7 @@
         </el-col>
       </el-row>
 
-      <el-table v-top-scrollbar :data="scores" border stripe max-height="600">
+      <el-table :data="scores" border stripe max-height="600">
         <el-table-column prop="sessionCode" label="专场" min-width="180" show-overflow-tooltip />
         <el-table-column prop="sessionOrder" label="顺序" width="60" align="center" />
         <el-table-column prop="projectName" label="项目名称" min-width="180" show-overflow-tooltip />

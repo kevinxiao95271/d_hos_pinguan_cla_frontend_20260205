@@ -45,7 +45,7 @@
               项目材料{{ projectDetail && projectDetail.materials && projectDetail.materials.length > 0 ? `（${projectDetail.materials.length}个）` : '' }}
             </div>
             <template v-if="projectDetail && projectDetail.materials && projectDetail.materials.length > 0">
-              <el-table v-top-scrollbar :data="projectDetail.materials" border size="small">
+              <el-table :data="projectDetail.materials" border size="small">
                 <el-table-column label="类型" width="160">
                   <template #default="{ row }">{{ getMaterialTypeLabel(row.type) }}</template>
                 </el-table-column>

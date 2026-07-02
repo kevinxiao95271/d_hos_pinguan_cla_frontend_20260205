@@ -7,7 +7,7 @@
         </div>
       </template>
 
-      <el-table v-top-scrollbar :data="competitions" border v-loading="loading">
+      <el-table :data="competitions" border v-loading="loading">
         <el-table-column prop="name" label="赛事名称" min-width="200" />
         <el-table-column label="状态" width="100">
           <template #default="{ row }">

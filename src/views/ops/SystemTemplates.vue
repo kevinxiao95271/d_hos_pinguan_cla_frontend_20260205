@@ -36,7 +36,7 @@
       </el-alert>
       
       <!-- 所有模版列表 -->
-      <el-table v-top-scrollbar :data="allTemplates" v-loading="loading" border>
+      <el-table :data="allTemplates" v-loading="loading" border>
         <el-table-column prop="id" label="模版ID" width="100" />
         <el-table-column prop="templateType" label="模版类型" min-width="180">
           <template #default="{ row }">
