@@ -4,12 +4,13 @@
     <!-- 顶部信息栏 -->
     <div class="page-header">
       <el-button :icon="ArrowLeft" plain @click="goBack">返回</el-button>
+      <!-- 大号序号徽标，方便老年专家快速确认当前项目顺序 -->
+      <div v-if="sessionOrder" class="seq-badge">{{ sessionOrder }}</div>
       <div class="project-info">
         <h2 class="project-title">{{ projectName }}</h2>
         <div class="meta-tags">
           <el-tag type="info" size="small">{{ institutionName }}</el-tag>
           <el-tag type="info" size="small" v-if="sessionCode">{{ sessionCode }}</el-tag>
-          <el-tag type="info" size="small" v-if="sessionOrder">第 {{ sessionOrder }} 个</el-tag>
           <el-tag :type="scoreFormTagType" size="small">{{ scoreFormText }}</el-tag>
           <el-tag v-if="isViewMode" type="success" size="small">查看模式</el-tag>
           <el-tag v-if="isScored" type="success" size="small">已提交</el-tag>
@@ -334,7 +335,7 @@ const scoreFormTagType = computed(() => {
 })
 
 // ── 表单 ────────────────────────────────────────────────────
-const form = ref({ total: 80 })
+const form = ref({ total: null })
 const saving    = ref(false)
 const submitting = ref(false)
 const showThankYou = ref(false)
@@ -452,6 +453,21 @@ onMounted(() => { loadDraftFromRoute() })
   align-items: flex-start;
   gap: 16px;
   margin-bottom: 20px;
+
+  .seq-badge {
+    flex-shrink: 0;
+    min-width: 48px;
+    height: 48px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: #409eff;
+    color: #fff;
+    font-size: 28px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   .project-info {
     flex: 1;

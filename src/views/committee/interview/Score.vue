@@ -15,16 +15,16 @@
     <el-card class="score-card">
       <template #header>
         <div class="card-header">
-          <span>面谈得分列表</span>
+          <span>面谈标化得分列表</span>
           <div class="filter-inline">
-            <el-select v-model="filters.reviewerStatus" clearable placeholder="评审状态" size="small" style="width: 110px" @change="loadData">
-              <el-option label="待评分" value="PENDING" />
+            <el-select v-model="filters.reviewerStatus" clearable placeholder="评审状�? size="small" style="width: 110px" @change="loadData">
+              <el-option label="待评�? value="PENDING" />
               <el-option label="草稿" value="DRAFT" />
-              <el-option label="已评分" value="SCORED" />
-              <el-option label="已驳回" value="RETURNED" />
-              <el-option label="已回避" value="RECUSED" />
+              <el-option label="已评�? value="SCORED" />
+              <el-option label="已驳�? value="RETURNED" />
+              <el-option label="已回�? value="RECUSED" />
             </el-select>
-            <el-input v-model="filters.keyword" clearable placeholder="项目名 / 机构名" size="small" style="width: 160px" @clear="loadData" @keyup.enter="loadData" />
+            <el-input v-model="filters.keyword" clearable placeholder="项目�?/ 机构�? size="small" style="width: 160px" @clear="loadData" @keyup.enter="loadData" />
             <el-input v-model="filters.reviewerName" clearable placeholder="评委姓名" size="small" style="width: 120px" @clear="loadData" @keyup.enter="loadData" />
             <el-button type="primary" size="small" @click="loadData">查询</el-button>
             <el-button size="small" @click="resetFilters">重置</el-button>
@@ -33,7 +33,7 @@
         </div>
       </template>
       
-      <!-- 评分列表：顶部 + 底部双向滚动轨 -->
+      <!-- 评分列表：顶�?+ 底部双向滚动�?-->
       <div class="dual-scroll-wrapper">
         <div ref="topScrollRef" class="dual-scroll-track dual-scroll-top" @scroll="onTopScroll">
           <div ref="topScrollInnerRef" class="dual-scroll-inner"></div>
@@ -113,13 +113,13 @@
       </div>
       
       <!-- 统计信息 -->
-      <div v-if="scores.length > 0" class="score-count-bar">共 {{ scores.length }} 条评委评分记录</div>
+      <div v-if="scores.length > 0" class="score-count-bar">�?{{ scores.length }} 条评委评分记�?/div>
 
-      <!-- 空状态 -->
+      <!-- 空状�?-->
       <el-empty v-if="!loading && scores.length === 0" description="暂无评分记录" />
     </el-card>
     
-    <!-- 驳回对话框 -->
+    <!-- 驳回对话�?-->
     <el-dialog
       v-model="returnDialogVisible"
       title="驳回评分"
@@ -135,7 +135,7 @@
         </el-form-item>
         
         <el-form-item label="总分">
-          <el-tag type="success">{{ formatScore1(currentScore?.total) }} 分</el-tag>
+          <el-tag type="success">{{ formatScore1(currentScore?.total) }} �?/el-tag>
         </el-form-item>
         
         <el-form-item label="驳回原因" prop="reason">
@@ -143,7 +143,7 @@
             v-model="returnForm.reason"
             type="textarea"
             :rows="4"
-            placeholder="请输入驳回原因"
+            placeholder="请输入驳回原�?
             maxlength="200"
             show-word-limit
           />
@@ -177,7 +177,7 @@ const userStore = useUserStore()
 
 const stageProgressVisible = ref(false)
 
-// 双向滚动轨同步
+// 双向滚动轨同�?
 const tableRef = ref(null)
 const topScrollRef = ref(null)
 const topScrollInnerRef = ref(null)
@@ -246,8 +246,8 @@ const returnForm = reactive({
 
 const returnRules = {
   reason: [
-    { required: true, message: '请输入驳回原因', trigger: 'blur' },
-    { min: 5, message: '驳回原因至少5个字符', trigger: 'blur' }
+    { required: true, message: '请输入驳回原�?, trigger: 'blur' },
+    { min: 5, message: '驳回原因至少5个字�?, trigger: 'blur' }
   ]
 }
 
@@ -256,7 +256,7 @@ const loadData = async () => {
   if (!competitionId) { ElMessage.warning('请先选择赛事'); return }
   loading.value = true
   try {
-    // 面谈仅限进阶组，groupType 固定传 ADVANCED
+    // 面谈仅限进阶组，groupType 固定�?ADVANCED
     const params = { competitionId, groupType: 'ADVANCED' }
     if (filters.reviewerStatus) params.reviewerStatus = filters.reviewerStatus
     if (filters.keyword && filters.keyword.trim()) params.keyword = filters.keyword.trim()
@@ -295,7 +295,7 @@ const confirmReturn = async () => {
     await returnFormRef.value.validate()
     
     await ElMessageBox.confirm(
-      `确认驳回【${currentScore.value.projectName}】的评分？评分记录将被删除，任务状态将变为"待重评"。`,
+      `确认驳回�?{currentScore.value.projectName}】的评分？评分记录将被删除，任务状态将变为"待重�?。`,
       '确认驳回',
       {
         confirmButtonText: '确认驳回',
@@ -306,7 +306,7 @@ const confirmReturn = async () => {
     
     const taskId = currentScore.value.reviewTaskId
     if (taskId == null) {
-      ElMessage.error('缺少 reviewTaskId，无法驳回')
+      ElMessage.error('缺少 reviewTaskId，无法驳�?)
       return
     }
 
@@ -347,11 +347,11 @@ const exportExcel = () => {
     '总分': r.total != null ? Number(Number(r.total).toFixed(1)) : '',
     '项目均分': r.avgTotal != null ? Number(Number(r.avgTotal).toFixed(2)) : '',
     '评委姓名': r.reviewerName ?? '',
-    '已打分/总评委': `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
+    '已打�?总评�?: `${r.scoredCount ?? '-'}/${r.totalReviewers ?? '-'}`,
     '提交时间': formatDate(r.submittedAt),
     '机构等级': r.institutionLevel ?? '',
     '评委机构': r.reviewerInstitutionName ?? '',
-    '评审状态': ({ PENDING: '待评分', DRAFT: '草稿', SCORED: '已评分', RETURNED: '已驳回', RECUSED: '已回避' }[r.status] || r.status || ''),
+    '评审状�?: ({ PENDING: '待评�?, DRAFT: '草稿', SCORED: '已评�?, RETURNED: '已驳�?, RECUSED: '已回�? }[r.status] || r.status || ''),
     '主题': r.topic != null ? Number(Number(r.topic).toFixed(1)) : '',
     '过程': r.process != null ? Number(Number(r.process).toFixed(1)) : '',
     '运作': r.interviewOperation != null ? Number(Number(r.interviewOperation).toFixed(1)) : '',
@@ -410,7 +410,7 @@ onMounted(() => {
 .dual-scroll-wrapper {
   position: relative;
 
-  // 纵向滚动条（el-table 内部）—— 深色常显、宽度固定不扩张
+  // 纵向滚动条（el-table 内部）—�?深色常显、宽度固定不扩张
   :deep(.el-scrollbar__bar.is-vertical),
   :deep(.el-scrollbar__bar.is-vertical:hover) {
     width: 10px !important;

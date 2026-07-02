@@ -15,7 +15,7 @@
     <el-card class="score-card">
       <template #header>
         <div class="card-header">
-          <span>书审得分列表</span>
+          <span>书审标化得分列表</span>
           <div class="filter-inline">
             <el-select v-model="filters.groupType" clearable placeholder="全部组别" size="small" style="width: 110px" @change="loadData">
               <el-option label="基层组" value="BASIC" />
